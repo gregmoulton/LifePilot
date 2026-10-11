@@ -1,0 +1,9 @@
+# Private profile exports must never enter the public application repository.
+*Profile*.json
+*profile*.json
+private/
+*.log
+
+# Local-only acceptance materials and fictional test fixtures.
+acceptance/
+tests/

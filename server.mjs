@@ -29,4 +29,4 @@ const server=http.createServer(async(req,res)=>{
     return send(res,200,{proposal});
   }catch(e){return send(res,400,{error:e.message==='Request too large'?'Request too large':'Unable to process request; no changes were made'})}
 });
-server.listen(port,'127.0.0.1',()=>console.log(`Life Pilot running at http://localhost:${port}`));
+server.listen(port,'0.0.0.0',()=>console.log(`Life Pilot running at http://localhost:${port}`));

@@ -1,33 +1,38 @@
-# Life Pilot v0.4
+# Life Pilot — AI CoPilot integration preview
 
-Static application: open `index.html`, or serve this directory with a local HTTP server. Deploy both `index.html` and `execution.js` together. No build or external runtime dependency is required.
+This is a **development package**, not a deployed service. The existing v0.25 task data stays in browser localStorage under the same key. No GitHub files are changed.
 
-## Implemented
-- Additive Goal → selected Program → measurable Milestone → scheduled Task records.
-- Required task prerequisites enforce the chosen program's sequence.
-- Actual minutes, completion/partial/missed results, and overdue commitment detection.
-- Predicted versus observed tests for initiation, effort, achievement, retention and efficiency.
-- Motivation Lab asks why before making a transparent rule-based recommendation.
-- Review, trade-off, retain-current-plan alternative, explicit approval, decision log and small experiment records.
-- Approved schedule adjustments retain prior task results in history. Other interventions are recorded experiments for the owner to carry out; no goal or program is automatically substituted.
+## Run on Chromebook or development machine
 
-## Compatibility and privacy
-The `lifepilot-v02-profile` storage key remains unchanged. Existing schema 0.1/0.2 goals and decisions remain supported. New data lives under an additive `execution` field; unknown existing profile and goal fields remain preserved. Import/export includes the new records. The legacy importer removes its original `import_status` draft marker, as before.
+Requires Node.js 20+ and an OpenAI API key with billing enabled.
 
-No personal profile is bundled. Clean-slate onboarding remains available. Profile JSON files are ignored by Git. Data remains local browser storage, without cloud sync, account separation or encryption. Keep exported backups. Loading locally uses a separate storage origin from GitHub Pages; do not expect the live browser profile to appear automatically in a local preview.
+```bash
+cd copilot-milestone
+export OPENAI_API_KEY='YOUR_KEY_HERE'
+node server.mjs
+```
 
-## Validation
-Automated acceptance checks passed for legacy profile compatibility, all execution workflows, prerequisite enforcement, approval gating, System Improvement Log entries, and backup round trips. The owner confirmed Chrome user acceptance testing on October 11, 2026, including legacy import, task execution, the System Improvement Log, and backup restoration.
+Open `http://localhost:8787` in the same machine's browser. Never paste the API key into chat, GitHub, or the HTML. If no key is set, the app runs and offline commands work, but Ask AI reports unavailable.
 
-Private profiles, test fixtures, and the isolated acceptance copy are excluded from the published release.
+## Scope
 
-## Limits
-Recommendations are transparent rules, not live AI or autonomous learning. Experiments provide descriptive completion/effort comparisons; they do not establish causal superiority. Performance tests are entered by the user and are not independently verified. Program steps are entered explicitly, with required prerequisites; external course content is not imported automatically. Experiment windows and interventions are owner-defined. Scheduling uses the browser's local time. Route Lab retains the existing illustrative allocation model.
+- AI converts conversational requests into **one proposed task addition or update**.
+- The browser displays a confirmation and applies nothing without approval.
+- Ambiguous/unsupported commands result in no proposed change.
+- Current tasks and command text are sent to OpenAI when **Ask AI** is clicked; local task storage remains in the browser.
+- No email, calendar, remote account access, automatic changes, or cloud sync.
+- No authentication/multiuser support. **Local development only. Do not expose this server to the public internet.**
 
-## Approval boundary
-The owner authorized committing and publishing the approved v0.4 release on October 11, 2026. This implements the locked v0.4 plan; consequential future changes require review and approval.
+## Deployment blockers
 
-## System Improvement Log addition
-A separate tab captures recommendation outcomes, user corrections, observed system failures and improvement proposals. Each entry includes a timestamp, summary, details, optional goal/reference and evidence. Proposals remain `proposed`; saving entries does not execute changes or alter approved plans or rules. Entries are user-recorded, with no background monitoring.
+Before a public daily-use deployment: add user authentication, persistent server-side storage and backup/sync, CSRF and request-size hardening, monitoring/cost caps, and HTTPS hosting. Review privacy disclosures and task conflict handling. No deployment is authorized yet.
 
-The additive top-level `system_improvement_log` array is included in normal profile backups/imports. Old profiles need no conversion; the array is created only when the first entry is saved. Tests cover all four types, safe text rendering, backup round trips, and unchanged goals, execution records, decisions and optimization policy.
+## Test
+
+```bash
+node --check server.mjs
+node --check app-check.js
+node test.mjs
+```
+
+The test starts a local server without a key and checks health, no-key handling, and disallowed origins. End-to-end AI calls require a configured key and human review.

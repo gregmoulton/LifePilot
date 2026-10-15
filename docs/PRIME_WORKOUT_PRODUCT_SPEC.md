@@ -39,3 +39,15 @@ Status: approved product direction; implementation pending. Owner: Greg. Target:
 ## Acceptance criteria for first-user MVP
 - Complete a real workout end-to-end, save/reopen/edit it without data loss, show baseline and trends, create versioned projections, export records, and surface a LifePilot progress summary.
 - No claims of a live app or validated predictive accuracy until tested.
+
+## User-defined goals and adaptive milestones
+- Accept natural-language goal requests, such as six-month checkup, target body-fat percentage, target strength or training frequency.
+- Translate requests into editable structured goals: metric, baseline, target, date or estimated arrival date, units, measurement method, and confidence/unknowns.
+- Support both date-driven assessments and outcome-driven forecasts; ask only for truly missing inputs. Never invent a target date when evidence is inadequate.
+- Mix session-level wins, weekly reviews, monthly assessments and longer-term milestones; user-defined schedules override defaults.
+- Reforecast after new observations and show why predictions changed. Allow users to accept/reject suggested milestone changes.
+
+## Development autonomy
+- Minimize owner busywork: make routine technical decisions, implement and test incrementally, and reuse existing LifePilot services.
+- Escalate only access/security, irreversible changes, product-defining tradeoffs, and specific new paid commitments.
+- No unsupervised background work is implied; development happens during active tool-enabled sessions or explicitly scheduled work.

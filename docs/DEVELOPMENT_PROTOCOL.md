@@ -24,3 +24,16 @@ DONE = tested and verified to the acceptance level reported.
 
 ## Delivery acceleration
 Prioritize Prime progress integration, Refresh proposal UI, unified storage/navigation, AI CoPilot security integration, then regression and release. Avoid expanding 1.0 scope with cross-device sync or autonomous background agents. Reestimate delivery windows if active development cadence changes.
+
+## Core requirement — visible, evidence-based development progress (all projects)
+This is mandatory for every current and future development project, not just Prime Workout.
+
+1. At the start of a session, display the project's current verified completion percentage and a clearly labeled progress bar, with the next milestone and target date if one is established.
+2. During a session, show updated checkpoints when material milestones have been completed and verified. Do not increase a percentage merely because code was written, committed, or a pull request was opened.
+3. Ground each percentage in a defined milestone/acceptance checklist or weighted roadmap. Distinguish implemented, tested, deployed, and owner-accepted work; identify unverified work separately.
+4. At the end of each session, report COMPLETED / TESTED / BLOCKED / NEXT, the verified percentage, and a link to the relevant change when available.
+5. Provide a one-click or copyable exact **Continue development** prompt so the owner can activate the next session without restating context. Ask the owner only for genuine blockers, consequential release approvals, or necessary device testing.
+6. Clearly state that progress updates occur during active assistant turns only; there is no background development or automatically moving progress bar between turns. Never imply otherwise.
+7. Protect the existing working release and user data; do not deploy consequential changes without explicit approval.
+
+This requirement applies to Life Pilot, Prime Workout, Refresh, CoPilot, Prime Life Recovery software, and subsequent software projects unless the owner explicitly changes it.

@@ -101,3 +101,26 @@ When a user **starts missing their current exercise Floor** (as determined by th
 - User should be able to change personalities whenever desired. Respect user-set verbosity, sound, and cue-frequency controls so long gushing speeches do not delay a time-sensitive round-ready alert or collide with other prompts.
 - Do not fabricate achievements. Celebrate improvements demonstrated by comparable workout records, and avoid urging unsafe exertion.
 - **Status:** Product character-design decision preserved; not a claim that audio coaching is currently deployed.
+
+
+## Script-first character development and later AI adaptation
+
+**Owner's plan, October 18, 2026:** The owner will write sample coaching lines and scenes for each personality, defining distinctive vocabulary, pacing, attitude, humor, warmth, praise, criticism, and recovery cues. These **owner-authored scripts** are used directly before the AI is capable of reliably recreating the characters in new circumstances; later, they become style examples for generating original contextual remarks.
+
+### Phase 1 — Owner-authored scripted voices (does not require paid generative AI)
+- Maintain a versioned library of original dialogue for each persona: Drill Sergeant, Zen Hippie, and future coaches.
+- Tag each line by **coach**, **trigger** (ready after HR recovery, start, record, Floor miss, ordinary completion, end-of-workout, encouragement), **tone/intensity**, **duration**, and **delivery directions** (e.g. Drill Sergeant's *curt, authoritative, highly coveted* "Outstanding." vs. Zen Hippie's exuberant, proud celebratory remarks).
+- Deterministic triggers select suitable approved lines from each persona; rotate carefully without spamming, overlapping with timely recovery alerts, or repeating remarks that depend on unverified personal records.
+- Preserve spoken exact wording or an approved recording; offer voice previews, mute, and instant coach switching. User chooses whether profanity is enabled.
+
+### Phase 2 — Adaptive AI coached dialogue
+- Use the owner-written scripts as a persona **style guide and examples** in prompts or a future authorized custom model setup, rather than assuming that an AI will automatically learn personality from audio or that model training is required.
+- Supply verified event context (exercise, current round, actual recent history, floor/PR comparisons) to generate *new* lines consistent with that coach and situation.
+- Add tests for tone consistency, unsupported performance claims, excessive harshness, safety, length, voice latency and repetition. Provide fallback to approved scripted clips when generation fails or the response is late.
+- Keep choice to use prewritten scripts even after adaptive generation is available; user can switch characters anytime.
+- Do not claim live AI voice generation or automatic model learning is implemented today. No third-party AI calls or heart-rate/workout-data transfers without owner approval and appropriate user consent.
+
+### Suggested creator workflow
+For each new character, owner drafts **10–20 signature lines**, covering at least: ready-to-begin, 110 BPM round-ready, a floor miss, ordinary effort, recovery/waiting, personal best, and workout completion. This is a *suggested starting authoring package*, not a committed release criterion. AI can help organize and test the character guide; final creative decisions belong to the owner.
+
+**Business potential:** The owner-written characters are original product IP and can form the seed library for a premium catalogue of coaching voices. Paid tier decisions remain deferred.

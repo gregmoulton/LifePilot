@@ -92,43 +92,35 @@ The Pure adapted that compact structure into bodyweight **pull-ups, squats, and 
 - Keep in-workout controls minimal. Ceiling qualification and updated workout flows are **planned**, not already implemented.
 
 
-## Per-rung minimum/maximum rep eligibility (owner confirmed)
+## LOCKED: adaptive Push/Pull rung selection — 10 to 15 clean reps (October 18, 2026)
 
-**October 18, 2026 design insight:** Each progression ladder exercise must have BOTH a minimum acceptable tested clean maximum (lower bound for suitable challenge) and a clean-rep unlock maximum (upper bound triggering trial of a harder exercise). This is DISTINCT from the 70% per-round workout Floor.
+**Latest owner decision — supersedes the earlier experimental 6–15 range.** Following the hypothetical test of 7 push-ups / 60 squats / 14 inverted rows, the owner determined seven maximum push-ups is too few for a sustainably productive three-circuit program and explicitly approved **10 as the Push/Pull rung minimum** while retaining **15 as the Ceiling/Unlock**. A conventional full pull-up is particularly hard; the ladder must contain suitable easier Pull variations (e.g., assisted pull-ups and adjustable inverted rows), so *ten clean reps* is a requirement of the **selected variation**, not an assumption that a beginner must do ten unassisted pull-ups.
 
-**Approved provisional Push/Pull rung range:**
-- Tested fresh maximum **below 6 clean reps**: current exercise is too challenging for this rung; regress to an easier variation and establish the new baseline.
-- Tested fresh maximum **6–14 clean reps**: remain on the current exercise rung. For a baseline maximum of **6**, trial 70% workout Floor rounds to **4** reps (4.2, rounded to nearest whole); workout Floor 4 is not the rung minimum of 6.
-- Tested fresh maximum **15 or more clean reps**: demonstrate qualification for the next, harder exercise variation. Retest the new variation, selecting an appropriate rung based on its tested maximum rather than simply requiring more reps on the old exercise.
-- This 6–15 range has been explicitly affirmed by the user as the intended ladder logic; apply per-exercise rules and set other ranges by testing, not by assuming one uniform bound. Squat/leg range is not agreed yet.
-- **Terminology:** "Rung minimum" (e.g., 6 max reps) vs. "Workout Floor" (e.g., 70% of 6 = 4 per round) vs. "Ceiling/Unlock" (15 in a fresh benchmark set). Label all three unambiguously. Do not automatically interpret a routine working set below six as grounds for regression.
-- Quality and safety always trump rep targets. The intended purpose is mechanically challenging strength work, not accumulating easy endurance repetitions.
+### Three thresholds — do not conflate
 
+1. **Rung minimum / entry eligibility:** fresh technically clean benchmark maximum of **10 reps** on the currently selected Push or Pull variation. **Below 10**: the variation is too hard for the program's present range; recommend an easier version, test a fresh clean maximum, and select one that fits. An exercise's ladder minimum is an *eligibility benchmark*, not the rep minimum in every training set.
+2. **Workout Floor:** prescribed per-circuit minimum, for the next experimental workout **70% of the fresh benchmark maximum**, rounded to the nearest whole clean repetition. For max **10**, the Floor is **7 reps per round**. For max **14**, the Floor is **10 reps per round**. If the athlete genuinely cannot complete the Floor with good form, offer an easier variation or stop and recover; **never compel bad reps, interpret inability as laziness, or require a punishment round for honest fatigue**. Document and validate any substitution, and do not permanently downgrade the person's baseline due to one fatigued set.
+3. **Ceiling / Unlock:** fresh technically clean maximum of **15 or more reps** on the selected Push/Pull exercise. Qualifies the athlete to **test the next harder variation**, not automatically impose it without verifying they can do **at least 10 clean reps** on the harder variation. If not, preserve a suitable current rung or introduce an intermediate adjustment (incline, body angle, assistance, resistance).
 
-## LOCKED: exercise difficulty self-correction when minimum cannot be performed
+### Push/Pull exercise-selection algorithm
 
-**Owner explicitly approved, October 18, 2026. This is an essential design invariant, not a vague suggestion.**
+- **Max 0–9:** offer and benchmark an easier exercise in the same movement family.
+- **Max 10–14:** exercise rung accepted; calculate the 70%-of-max Floor.
+- **Max 15+:** unlock harder-rung trial; keep that rung only when the harder variation can itself meet the **10-rep minimum**.
+- The **70% rule is a workout Floor trial** and must be assessed for effort, recovery, technique and adherence. It is **not a validated universal hypertrophy threshold**, and never demands knowingly unsafe repetitions.
+- These rules are initially for **Push and Pull**. **Leg/Squat minimum and Ceiling remain undecided**; do not apply 10–15 by default to all leg variations. A case of 60 regular squats plainly needs a harder strength-oriented variation, but the cutoff and progression step still need testing.
+- **Next real workout** remains Push **7**, Pull **7**, Squat **19** per round from recorded fresh baseline maxima 10/10/27; three circuits, no forced rest between movements, and the experimental 110-BPM ready cue between circuits.
+- Distinguish **self-admitted insufficient effort** from genuine strength exhaustion, poor technique or recovery needs. The future optional conditioning consequence for deliberately failing effort is separate, and must not override safety.
+- Keep adaptation prompt **brief and user-confirmed**; automatic rep counting, auto-exercise choice and floor enforcement are **not yet implemented** in the lab prototype.
 
-The Pure is a **strength-first** progressive-exercise ladder where the difficulty must fit the person's demonstrated capacity. Every exercise within each movement family (Push, Pull, Legs) has **minimum and maximum acceptable rep criteria** that permit meaningful muscular work without accumulating junk endurance reps. The protocol has three different quantities; never conflate them:
+### Test cases
 
-1. **Rung minimum — eligibility:** minimum clean repetitions possible in a *fresh maximal benchmark test* for the selected variation. If the user cannot reach the rung minimum, **the current variation is too difficult; find an easier exercise** in the same family and measure the appropriate starting capacity. **Push/Pull provisional rung minimum = 6 reps.** Leg/squat rung minimum remains TBD.
-2. **Workout Floor — each set's required minimum:** derived from an observed baseline maximum and an owner-selected percentage or subsequent adaptive calculation. **The next test uses 70%**, nearest whole clean rep: Push 7, Pull 7, Squat 19 per circuit, based on baselines 10/10/27. **If the participant physically cannot produce the workout Floor with correct form, The Pure must find/offer an easier exercise variation** in that movement family, so the circuit remains achievable and productive. It must not demand low-quality repetitions, hard grinding, or a conditioning penalty for honest inability. Retest/recalibrate the easier variation as appropriate. A single failed set warrants immediate safe modification; do not automatically claim a lasting loss in capability from one fatigued set.
-3. **Ceiling / Unlock — advancement:** verified fresh-set clean benchmark count at which the user is eligible to try a harder variation. **Push/Pull provisional Ceiling = 15 clean reps in a fresh test.** This is not the old personal max, not the workout Floor, and not 15 in all three rounds. Legs/squats Ceiling remains TBD. The harder variation must also pass its rung minimum; otherwise choose another difficulty or remain at current rung.
+- Fresh maximum **7 standard push-ups**: do **not** prescribe 5 standard push-ups; try a more accessible incline/knee-assisted Push rung, for example 12 clean max -> 8-rep Floor (12 x 0.7 = 8.4, rounded to 8). The 12 is illustrative, not a measured performance.
+- Fresh maximum **14 inverted rows**: current rung fits; Floor = 10; not unlocked until 15 clean fresh reps.
+- Fresh maximum **15 inverted rows**, but next harder row variation yields **8 clean max**: do not select this too-difficult rung; adjust the angle/difficulty to find an intermediate rung with >=10 clean reps.
+- User's earlier exercise maximum **10 push-ups**: accepted rung; next test Floor = 7. A session set of 6 genuine clean reps would warrant a temporary easier variation or stopping appropriately, not a definitive reassessment of maximum.
+- A fresh maximum of **9** on a *harder* Pull exercise should not imply that the user is unfit for Pull training: choose an easier Pull rung capable of >=10.
 
-### Basic rule algorithm, for design / implementation
+### Historical design record
 
-- In an initial benchmark for a Push/Pull variation: <6 clean max → select easier variation; 6–14 → variation fits; >=15 → qualify to test the next harder variation.
-- Per workout, calculate the session's **Floor** from the *selected* variation's tested baseline and approved fraction; do not confuse it with the eligibility minimum (e.g., tested max 6 gives 70% Floor of **4** rounded reps; **4 in a workout is acceptable even though the rung minimum is 6**).
-- If the athlete **cannot** do their planned workout Floor in an active circuit, immediately provide a straightforward path to an easier variation or a safe stop, rather than insisting on more reps. Capture actual clean reps, selected substitute, and the reason; recalibrate the substitute without overstating fitness changes.
-- Distinguish **genuine inability/form loss/medical concern** from **self-reported avoidable under-effort**: do not diagnose willingness solely from floor failure, heart rate or an algorithm. Accountability/optional conditioning for deliberately missed effort is a separate design requiring consent and sensible recovery, never a reflex to honest fatigue or a health warning.
-- Never auto-change an exercise level silently; make exercise recommendation obvious and user-confirmed. Keep this workflow unobtrusive: no long forms during strenuous exercise.
-- For current hardware prototyping these are agreed **design rules**; the running app does not yet enforce/recommend step-down automatically.
-
-**Owner's precise directive:** “If you can't do the minimum we require for each exercise in the workout, then we must find you an easier exercise. Let's lock in this design as it's tricky but elegant.”
-
-### Acceptance examples
-
-- User fresh-max push-up capacity **6**: selected variation qualifies (rung minimum 6); 70% workout Floor = **4**. Four high-quality reps is not an eligibility miss.
-- User fresh-max push-up capacity **5**: fails rung minimum; suggest/try an easier Push variation and recalibrate.
-- User previously tested a fresh max of **10** (Floor 7) but due to genuine exercise fatigue can currently perform only **5 clean**: record 5, then suggest/elect an easier appropriate variation or stop as appropriate; **do not require 2 bad-form reps**, do not accuse of under-effort, and do not permanently demote solely from this isolated event.
-- User reaches **15 clean** in a fresh benchmark of the current Push variation: offer to test the harder Push variation; assess whether it can achieve its minimum.
+The earlier **6–15** suggestion was deliberately explored and subsequently **replaced by 10–15** following the 7-push-up hypothetical scenario. It is not the active rule. The user's original design invariant still stands: “If you can't do the minimum we require for each exercise in the workout, then we must find you an easier exercise.”

@@ -145,3 +145,27 @@ For each new character, owner drafts **10–20 signature lines**, covering at le
 - Possible future premium packaging is not approved pricing/tier design; exact availability of explicit voices may depend on the eventual audio provider and platform policies.
 
 **Implementation status:** Character script policy added to spec. Neither persona's adaptive voice generation nor an R/PG setting is asserted to be in the currently deployed app.
+
+
+## Five launch personalities plus No Coach: proposed catalogue and preference experiment
+
+**Owner direction, October 18, 2026:** Aim to offer approximately **five distinct selectable coach characters**, with **No Coach** as a fully supported option. Users can switch any time. The Drill Sergeant has two tone variants (PG and optional profanity-enabled R), but remains **one character** in a five-character roster. Other personalities and final character names are provisional creative proposals, subject to the owner's writing and choice.
+
+### Candidate roster (only two previously established)
+1. **Drill Sergeant** — already established; PG/R variants, terse "Outstanding." achievement reward.
+2. **Zen Hippie** — already established; calm during setbacks, exuberant, affectionate pride at achievement.
+3. **Championship Coach** — proposed; motivational sports-style competitiveness.
+4. **The Stoic** — proposed; calm, minimal, disciplined acknowledgment.
+5. **The Wiseass** — proposed; playful sarcastic teasing and humor.
+6. **No Coach** — explicit independent user option: all exercise data, visible workout prompts and configurable practical audio cues work without a personality. Never coerce coaching into the workout.
+
+### Learn what real users prefer
+The owner predicts the Drill Sergeant may be the most popular even across gender groups; this is a hypothesis, **not observed preference data**. Test:
+- First coach selected versus coach used for the most sessions.
+- Actual session retention and completion by chosen persona (avoid confusing causal effect with self-selection).
+- Frequency of switching; intensity/profanity version selections; mute and No Coach rates.
+- Brief opt-in satisfaction/entertainment ratings, without relying only on survey feedback.
+- Interpret demographics cautiously, respecting privacy and not assuming preference by gender.
+- Enable low-cost character preview and voluntary coach changing; compare uptake and continued use before choosing marketing claims or premium positioning.
+
+**Status:** Catalogue expansion proposed, not approved final character writing, implementation, or commercialization.

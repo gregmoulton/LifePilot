@@ -1,0 +1,221 @@
+# The Pure — AI Coach Personalities & Event-Driven Motivation
+
+**Decision captured:** October 18, 2026
+**Status:** Product concept approved for preservation; implementation, pricing and launch not approved.
+**Project:** The Pure workout application (distinct from the Life Pilot operating system and Prime Life Recovery business).
+
+## Vision
+
+Make the workout experience feel coached rather than merely tracked. Let each user select from multiple clearly differentiated AI Coach personalities and **switch coaches whenever they wish**, including during an active workout. The coaching style changes; the user's exercise data, workout protocol, and safety controls do not.
+
+A **potential paid / premium feature** if The Pure is commercialized: expanded AI voices, personas, and adaptive live coaching. Pricing, tier boundaries, provider costs, privacy arrangements, and commercialization remain decisions for later. A user should be able to exercise and view their own data without needing the premium coach.
+
+## Personalities — initial concepts
+
+- **Drill Sergeant:** Loud, intense, rough language / profanity if explicitly chosen, direct action cues. Example at recovery: "110! REST IS OVER! GET OFF YOUR ASS AND MOVE!"
+- **Zen Hippie:** Calm, reassuring, playful yoga-instructor persona. Example at recovery: "You've found your rhythm. Gently return to your next movement, and enjoy the flow."
+- Future: build a growing, extensible coach library (e.g. sports trainer, straightforward minimal coach, playful coach), allow choice and instant switching, with optional separate intensity/profanity and voice controls. These are additional concepts, not a fixed approved lineup.
+
+## Coaching opportunities / event triggers
+
+1. **Workout / exercise start:** A short get-ready cue; respects user-selected audio settings.
+2. **During each exercise:** Optional short encouragement when the recorded heart-rate trace indicates increasing effort / an individually high observed HR, without equating HR alone with effort, form, fitness, or safe exertion.
+3. **End of movement / start of rest:** When the user actively marks a set/exercise as completed (or future trustworthy auto-rep/movement detection confirms it), coach tells user they can rest. Heart rate by itself must not infer that exercise is finished.
+4. **Recovery checkpoint:** After a complete circuit, when the connected HW401 supplies a **credible** heart-rate reading at or below the trial threshold **110 BPM**, issue the chosen coach's **immediate** round-ready cue. Current experiment: zero added 30-second minimum and zero added 10-second delay; handle spurious readings with minimal confirmation and log that logic, not an arbitrary long pause.
+5. **Resuming exercise:** Capture both checkpoint-reached time and actual movement-start time / BPM, to quantify real delay after the alert. Alert does not automatically begin an exercise.
+6. **Future automated rep counting:** Enable context-aware prompts during reps, near a genuine prior record, after completion, on a measured unlock, and at exercise transitions. **Not implemented; accuracy and permission required.**
+
+## The Pure workout context
+
+- The October 15, 2026 baseline test date is known. No assumed numeric maximums or fictional completed sessions.
+- Trial protocol: each round consists of the maximum number of **clean, technically acceptable** repetitions; log each round's reps and variation separately.
+- Recovery 110 BPM is a **user-selected experimental checkpoint**, not a universal physiological readiness or safety threshold.
+- Store heart-rate readings and timing (where consented/available), exercise name, round index, round completion, current coach and cue type. Keep historical rule/settings snapshots when changed.
+- Exercise ladder and unlock criteria are provisional and data-driven; no silent promotion to a harder rung.
+- Stop or skip coaching when safety / technique / user intent warrants it; a coach must never insist the user ignore warning symptoms or push beyond safe form.
+
+## Coach engine implementation guidance
+
+- Separate a **deterministic, auditable trigger engine** from the personality content layer. One recovery event triggers one cue independent of coach.
+- Start with an offline library of voice/text scripts and browser speech synthesis. Later evaluate paid AI-generated adaptive messages and more natural voice; no paid APIs without specific approval.
+- Throttle and prioritize cues to prevent overlapping speeches, spam, and distraction; respect audio focus and Bluetooth/headset route.
+- User controls: select/switch coach anytime, preview voice, volume, mute/quiet mode, opt into coarse or profane language, disable in-exercise cues, and choose visual-only alerts.
+- In-session personality switching affects **future** cues and does not alter workout results or thresholds.
+- The heart rate monitor measures cardiovascular response, not exercise technique, readiness, perceived effort, or safety; prompts should reflect this limitation.
+- Mobile browsers may block speech/vibration without user interaction or in the background; always provide visible cues and manual recovery/round controls.
+- Protect workout history and privacy. Do not transmit health/heart-rate data to third-party AI providers without separate consent and approved integration.
+
+## Test-pilot and research opportunities
+
+The first user's real-world tests provide initial usability / behavior data, not evidence that a style is universally more effective.
+
+Log coach persona, cue event/time, heart rate (when available), time until the next exercise starts, actual reps/quality, missed / skipped rounds, and self-reported usefulness if opted in. This can support later comparison of prompt styles and evidence-based iteration, distinguishing correlations from causal effects.
+
+## Scope & delivery
+
+This is a saved **future product feature** and commercialization hypothesis. It does not assert live AI voice generation, automated rep counting, or automatic exertion recognition in the current prototype. Priority next: verify immediate 110 BPM round-ready audio reliably on the actual HW401 and headset; then test coach switching with deterministic scripts in an isolated build. Do not alter the user's live version or existing workout records without review.
+
+
+## Personal-history coaching: floor misses and performance changes
+
+**User concept, October 18, 2026:** AI should learn from each individual's logged workout history and coach dynamically based on changing performance, rather than relying solely on generic spoken scripts or one universal threshold.
+
+### Example: Drill Sergeant reacts to slipping below the Floor
+
+When a user **starts missing their current exercise Floor** (as determined by the recorded, then-current floor rule), the opt-in Drill Sergeant should notice and give a forceful, character-consistent pep talk. Sample tone, paraphrasing the owner's creative direction:
+
+> "You're slipping, soldier! Don't turn into a half-stepper on me! That doesn't fly in my beloved corps. You got me, soldier? Now bring your best clean reps!"
+
+- The persona is deliberately theatrical, gruff, humorous, and potentially profane, and is **expressly selected by the user**. Users can switch to Zen Hippie or mute coaching at any point.
+- Use the user's actual prior workouts to reference verifiable trends: same exercise and variation, same round/circuit position, similar test protocol and effort conditions. Example: "Last three comparable second rounds: 9, 9, 8. Today: 6." Never fabricate personal records or claim to know motivation from one bad set.
+- **Not all rep declines are underperformance.** In the proposed protocol, each round is a max-clean-rep effort and later-round fatigue is expected. Compare with appropriate historical round-level baselines and the floor's exact scope. A missed minimum should prompt inquiry / encouragement, not automatic blame or pressure to perform unsafe repetitions.
+- When repeated misses emerge, the coach can offer a **performance observation**, ask whether something changed (sleep, recovery, pain, variation, schedule, etc.), and suggest adjusting a plan only after confirmation. Do not infer health conditions or assume a user's effort from heart rate.
+- Recognize improvement, PRs, best-ever recovery, consistency, improved drop-off and milestones with the selected coach's personality; balance criticism with meaningful reinforcement.
+- Keep the deterministic events/data layer independent of LLM persona generation. AI uses past workouts, user preferences and consented contextual notes to produce grounded, short spoken coaching with citations/provenance internally for metrics cited. No background monitoring or model training on sensitive heart-rate data without opt-in.
+- User controls: voice style and intensity, explicit profanity opt-in, coaching frequency, no-harassment and safety override, and immediate personality switching.
+- Treat pain, dizziness, illness, form breakdown, or explicit stop/rest as higher-priority than a floor target or persona. The coach must never demand ignoring those signals.
+- Evaluate both user enjoyment and objective outcomes: voluntary restart latency, completed sessions, rep counts, floor consistency, performance trends. Do not treat early single-user correlation as proof of coaching efficacy.
+
+**Status:** Concept documented, not yet implemented. Historical comparisons, adaptive personalized AI speech and automated missed-Floor detection require development, quality tests and opt-in user testing.
+
+
+## Drill Sergeant reinforcement: rare, curt praise
+
+**Owner's creative direction, October 18, 2026:** On a genuine new personal record or a particularly good performance, the Drill Sergeant delivers his highest praise as a single curt **"Outstanding."** with all the limited nicety a true drill instructor can muster. Deliberately no excessive cheerleading, long congratulatory monologue, or upbeat fanfare. The contrast with abrasive floor-miss feedback is essential to the character.
+
+- Treat *"Outstanding."* as a **rare, high-value positive reinforcement cue**, reserved for evidence-based accomplishments such as a verified comparable personal record or meaningful milestone. Make the milestone rules clear and grounded in the user's actual logs, not an AI-invented result.
+- Direction for voice delivery: clipped, authoritative, terse, low-fuss, with a discernible hint of approval; a beat of silence afterward. Make it a meaningful earned reward within this selected fictional coach persona.
+- Include a restrained success hierarchy: ordinary session completion need not earn the coveted word; more routine achievements might receive shorter neutral acknowledgments. No artificial scarcity schedule or withholding earned recognition beyond transparent configurable rules.
+- The Zen Hippie and other personas express the **same measured achievement** in their own voices and emotional register.
+- User controls still govern coach choice, intensity and mute. Avoid making praise dependent on unsafe repetitions or ignoring pain.
+- **Status:** Writing/behavior design specification; no new voice system or production change is implied.
+
+
+## Zen Hippie reinforcement: exuberant delight
+
+**Owner's creative direction, October 18, 2026:** In sharp contrast to the Drill Sergeant's rare curt "Outstanding," the Zen Hippie should **gush over genuine accomplishments**, glowing with pride and openly celebrating the user's achievements.
+
+- On a verified personal record, milestone, or other meaningful improvement, deliver warm, affectionate, expansive, almost comically delighted praise, with playful yoga/peace-and-love styling.
+- Sample creative tone: "Ohhhh, my beautiful friend! Look at you! You've blossomed into a whole new level of magnificent! I'm just radiating pride and positive energy for you right now! Namaste!"
+- Preserve the coach's personality across both setbacks and successes: gentle encouragement after a rough set, enthusiastic celebrations after achievements. Personality changes **expression**, not the measured fact or its validity.
+- User should be able to change personalities whenever desired. Respect user-set verbosity, sound, and cue-frequency controls so long gushing speeches do not delay a time-sensitive round-ready alert or collide with other prompts.
+- Do not fabricate achievements. Celebrate improvements demonstrated by comparable workout records, and avoid urging unsafe exertion.
+- **Status:** Product character-design decision preserved; not a claim that audio coaching is currently deployed.
+
+
+## Script-first character development and later AI adaptation
+
+**Owner's plan, October 18, 2026:** The owner will write sample coaching lines and scenes for each personality, defining distinctive vocabulary, pacing, attitude, humor, warmth, praise, criticism, and recovery cues. These **owner-authored scripts** are used directly before the AI is capable of reliably recreating the characters in new circumstances; later, they become style examples for generating original contextual remarks.
+
+### Phase 1 — Owner-authored scripted voices (does not require paid generative AI)
+- Maintain a versioned library of original dialogue for each persona: Drill Sergeant, Zen Hippie, and future coaches.
+- Tag each line by **coach**, **trigger** (ready after HR recovery, start, record, Floor miss, ordinary completion, end-of-workout, encouragement), **tone/intensity**, **duration**, and **delivery directions** (e.g. Drill Sergeant's *curt, authoritative, highly coveted* "Outstanding." vs. Zen Hippie's exuberant, proud celebratory remarks).
+- Deterministic triggers select suitable approved lines from each persona; rotate carefully without spamming, overlapping with timely recovery alerts, or repeating remarks that depend on unverified personal records.
+- Preserve spoken exact wording or an approved recording; offer voice previews, mute, and instant coach switching. User chooses whether profanity is enabled.
+
+### Phase 2 — Adaptive AI coached dialogue
+- Use the owner-written scripts as a persona **style guide and examples** in prompts or a future authorized custom model setup, rather than assuming that an AI will automatically learn personality from audio or that model training is required.
+- Supply verified event context (exercise, current round, actual recent history, floor/PR comparisons) to generate *new* lines consistent with that coach and situation.
+- Add tests for tone consistency, unsupported performance claims, excessive harshness, safety, length, voice latency and repetition. Provide fallback to approved scripted clips when generation fails or the response is late.
+- Keep choice to use prewritten scripts even after adaptive generation is available; user can switch characters anytime.
+- Do not claim live AI voice generation or automatic model learning is implemented today. No third-party AI calls or heart-rate/workout-data transfers without owner approval and appropriate user consent.
+
+### Suggested creator workflow
+For each new character, owner drafts **10–20 signature lines**, covering at least: ready-to-begin, 110 BPM round-ready, a floor miss, ordinary effort, recovery/waiting, personal best, and workout completion. This is a *suggested starting authoring package*, not a committed release criterion. AI can help organize and test the character guide; final creative decisions belong to the owner.
+
+**Business potential:** The owner-written characters are original product IP and can form the seed library for a premium catalogue of coaching voices. Paid tier decisions remain deferred.
+
+
+## Drill Sergeant variants: PG and R (user-selectable)
+
+**Owner's creative decision, October 18, 2026:** The Drill Sergeant comes in **two separately selectable personality variants** and users can switch at any time, even mid-workout. "PG" and "R" are descriptive product tone labels, not official film ratings.
+
+1. **Drill Sergeant — PG (default):** Forceful military bearing, shouting, humorous mock intimidation and stern admonishment without profanity. Sample rest-end line: "SOLDIER! YOUR REST IS OVER! QUIT DRAGGING YOUR FEET AND GET MOVING!"
+2. **Drill Sergeant — R (explicit opt-in):** A more authentic, theatrical drill-instructor persona with coarse language, profanity, salty sarcasm and colorful nonidentity-directed insults (e.g. calling a user a "half-stepper"). Sample rest-end line: "WHAT THE HELL ARE YOU WAITING FOR, SOLDIER?! YOUR ASS HAS RESTED LONG ENOUGH! GET BACK TO FUCKING WORK!"
+
+**Important characterization:** Both variants remain the *same* recognizable Drill Sergeant, with the same timing, supportive intent, performance comparisons, and rare, curt top praise ("Outstanding."). The R version changes language/intensity, not exercise thresholds, risk decisions, or factual performance claims.
+
+### Product controls and guardrails
+- PG is selected by default. R requires an affirmative user choice; no surprise explicit language in ordinary mode.
+- Persona selection is user-controlled and immediately switchable. Switching changes future prompts without modifying historic workout data.
+- Offer preview clips for both variants and easy mute/volume/verbosity controls; R-rated script variants should be clearly tagged and kept out of PG cue pools.
+- Only use reality-grounded workout metrics and floor/PR events. No yelling at a user for normal muscular fatigue as if it proves lack of effort, no pressure through injury/dizziness, no targeting protected traits or sensitive personal vulnerabilities. Users may always stop/rest.
+- Use authentic comic intensity while avoiding dehumanizing harassment, slurs, or discriminatory material.
+- Use a deterministic event engine with selectable scripts first, then context-grounded adaptive AI later. AI text-to-speech, device voice support and provider-specific policies must be separately tested and approved before commercialization.
+- Possible future premium packaging is not approved pricing/tier design; exact availability of explicit voices may depend on the eventual audio provider and platform policies.
+
+**Implementation status:** Character script policy added to spec. Neither persona's adaptive voice generation nor an R/PG setting is asserted to be in the currently deployed app.
+
+
+## Five launch personalities plus No Coach: proposed catalogue and preference experiment
+
+**Owner direction, October 18, 2026:** Aim to offer approximately **five distinct selectable coach characters**, with **No Coach** as a fully supported option. Users can switch any time. The Drill Sergeant has two tone variants (PG and optional profanity-enabled R), but remains **one character** in a five-character roster. Other personalities and final character names are provisional creative proposals, subject to the owner's writing and choice.
+
+### Candidate roster (only two previously established)
+1. **Drill Sergeant** — already established; PG/R variants, terse "Outstanding." achievement reward.
+2. **Zen Hippie** — already established; calm during setbacks, exuberant, affectionate pride at achievement.
+3. **Championship Coach** — proposed; motivational sports-style competitiveness.
+4. **The Stoic** — proposed; calm, minimal, disciplined acknowledgment.
+5. **The Wiseass** — proposed; playful sarcastic teasing and humor.
+6. **No Coach** — explicit independent user option: all exercise data, visible workout prompts and configurable practical audio cues work without a personality. Never coerce coaching into the workout.
+
+### Learn what real users prefer
+The owner predicts the Drill Sergeant may be the most popular even across gender groups; this is a hypothesis, **not observed preference data**. Test:
+- First coach selected versus coach used for the most sessions.
+- Actual session retention and completion by chosen persona (avoid confusing causal effect with self-selection).
+- Frequency of switching; intensity/profanity version selections; mute and No Coach rates.
+- Brief opt-in satisfaction/entertainment ratings, without relying only on survey feedback.
+- Interpret demographics cautiously, respecting privacy and not assuming preference by gender.
+- Enable low-cost character preview and voluntary coach changing; compare uptake and continued use before choosing marketing claims or premium positioning.
+
+**Status:** Catalogue expansion proposed, not approved final character writing, implementation, or commercialization.
+
+
+## Additional candidate personalities: Aerobics Barbie and Gym Bro
+
+**Owner's concepts, October 18, 2026:** Add two candidates to the previously discussed approximately-five-character lineup, bringing the brainstorming roster to seven coaches plus No Coach. These are candidate characters; the final launch count and names remain open.
+
+- **Aerobics Barbie (working character nickname):** Bubbly, lively, upbeat aerobics-instructor energy, colorful visual appeal / on-screen character presentation, enthusiastic and playful exercise encouragement. The owner particularly imagines a character that is *fun to look at*, so audiovisual/avatar design matters as well as spoken words. The "Barbie" name is a working creative shorthand, **not cleared for commercial branding**; use an original name, voice, visual design, and persona before any commercial release.
+- **Gym Bro:** Humorous gym-obsessed "bro science" trainer: exaggerated confidence, bro slang, jokes, and over-the-top workout folklore. The owner plans to show a **YouTuber who performs a very similar comedic persona** as creative inspiration. Wait for the user's actual reference before analyzing examples. Build an original character inspired by broad comedic conventions; do not copy the creator's distinctive script, voice, performance, likeness or branding without proper permission. Factual coaching, exercise thresholds, and safety advice must remain trustworthy: inaccurate bro-science claims, if parodied, should be clearly comedic rather than provided as real exercise/health guidance.
+
+**Concept status:** Saved as character brainstorming, not currently implemented. The core workout and recovery cues remain unchanged; all characters are user-switchable with No Coach available. Future avatar/video content and AI-generated speech require separate feasibility and cost testing.
+
+
+## Gym Bro creative reference: BroScienceLife
+
+**Owner-provided reference:** **BroScienceLife**, featuring the satirical gym-bro character **Dom Mazzetti**, portrayed by **Mike Tornabene**. The owner said the YouTuber plays the exact comedic character he has in mind for The Pure's candidate Gym Bro. See https://www.youtube.com/channel/UCduKuJToxWPizJ7I2E6n1kA
+
+### What to learn from this reference
+- The performance satirizes overconfident gym culture and "bro science." Humor comes from wild confidence in absurd premises and intensely committed, self-serious delivery.
+- He uses gym jargon, exaggerated expertise, unexpected comparisons, fast turns and comedic bravado. For our original character, emphasize **earnest ridiculousness**, not a generic motivational trainer merely saying "bro" repeatedly.
+- Coaching contexts: direct round-ready cues ("110 BPM, bro!"), positive reinforcement for actual PRs, good-natured teasing for poor sessions, and situational jokes drawn from VERIFIED recent performance. Preserve current user-selected script intensity and frequency.
+- Provide actual workout parameters from validated app data; never pass fake bro-science as serious physiology or use parody to pressure someone past pain, technique breakdown or safety concerns.
+
+### Originality boundary
+Treat BroScienceLife / Dom Mazzetti as a **creative reference**, not a licensed product character. The Pure's Gym Bro must have an original name, backstory, voice, avatar, jokes, catchphrases and distinct dialogue. Do not clone Tornabene's voice/likeness, reproduce recognizable original scripts, suggest official endorsement, or market it as Dom Mazzetti without explicit rights/permission.
+
+This extends the previously saved *Gym Bro* proposal; the seven-character candidate lineup and final-launch-count decision are unchanged. **Status:** Inspiration/reference recorded, not a new production implementation.
+
+
+## Voice coach as workout interface: reps, rest, and recovery
+
+**Owner design direction — October 18, 2026:** When optional AI trainers are introduced, they should be a natural **spoken interface** for the mobile, music-friendly Pure, not merely an ornamental motivational overlay. The athlete can report reps to their chosen coach; the coach confirms the values recorded, announces rest after the three-exercise circuit, and gives a personalized cue when the measured recovery threshold is met.
+
+### Example interaction (illustrative, not deployed)
+- Athlete: “Finished push-ups, ten reps.” Coach: “Ten push-ups recorded. Next exercise.”
+- Athlete: “Thirty-three squats; eleven rows.” Coach: “Squats 33, rows 11, recorded. Round one finished. Rest up for round two.”
+- HW401 reaches the configured trial <=110 BPM after a complete circuit. Coach: “Recovery target reached. Round two is ready whenever you are.”
+- Coach tone can be Drill Sergeant, Zen Hippie, Championship Coach, Stoic, Wiseass, Aerobics Barbie, Gym Bro, or **No Coach**. Style varies; the **numeric record, rules, safety and phase transitions do not**. No Coach still gets clear minimal alerts and manual interaction.
+
+### Workflow and acceptance requirements
+1. **Phone first; single screen after Start Workout.** User may speak each set immediately, or report a batch of three after finishing the uninterrupted circuit, or enter numbers on that same screen. Both spoken and manual paths write into the same editable exercise entries; do not require extra workflow steps for coach selection or operation mid-exertion.
+2. **Speech understanding before personality response:** Parse exercise label/synonym, variation, rep count, and round; check the currently expected session context; ask for a correction on uncertainty or conflicting values. Confirm the **recorded user report**, never claim to have objectively sensed/verified reps. Never silently convert an unrecorded exercise to zero.
+3. **Fast spoken feedback:** Short acknowledgments by default, ideally not interrupting music or the next movement. Optional longer coach chatter at rest intervals or after a genuine Unlock/PR, not while user is trying to perform uninterrupted reps.
+4. **Finish and recover:** Completion of three exercises (or an explicit “round complete”) starts the **actual** recovery timer immediately, even if manual rep fields are still being filled. Coach can announce “Rest up” once, optionally report current BPM. BLE HR collection continues throughout, including rep entry.
+5. **Recovery-ready event:** On first credible BLE reading <=user-defined experimental threshold (currently **110 BPM**), trigger visual “Round N ready” and attempt a short **selected-coach spoken** prompt. This is a signal that cardiovascular recovery criterion was met, not proof of total physical readiness. User chooses when to start moving again. Refrain from pressuring athletes with persistent muscle exhaustion, unsafe symptoms or form decline.
+6. **Distinct responsibilities:** Workout engine owns thresholds, set counts, Floor/Unlock, transitions, recorded values and data integrity. Voice recognizer handles opt-in capture/parsing/corrections. Persona/AI coach formats *the engine's verified events* into short utterances. The AI never invents measurements or changes thresholds.
+7. **Music/headphones practicalities:** Test voice input and TTS while music plays; consider microphone noise, speech errors, browser wake and screen-lock limitations, audio focus/ducking, and OS-selected Bluetooth headset output. The Chromebook 110-BPM visual alert passed in the first workout, but live audio was not heard. Do not claim truly hands-free always-listening works in a phone web browser until tested; manual fallback remains complete.
+8. **Privacy and reliability:** Opt-in microphone, clear listening state, editable/transcribed numbers, fail-safe neutral text cues, avoid storing raw audio by default. Voice failure must not impair heart-rate monitoring or round progression.
+9. **Unlock integration:** If a clean reported set reaches **15 Push/Pull** or **30 Legs** in any one round, celebrate briefly but continue the existing three-round session. A fresh clean maximum test of the harder variation is required before the subsequent normal workout to lock new Floor settings. An enthusiastic AI coach must never turn optional all-out effort into required failure training.
+
+**Status:** This is an owner-supported design specification; not a claim that speech recognition or AI-coach voice commands are already implemented.

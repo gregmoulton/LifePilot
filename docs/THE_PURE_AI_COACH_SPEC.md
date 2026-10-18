@@ -54,3 +54,26 @@ Log coach persona, cue event/time, heart rate (when available), time until the n
 ## Scope & delivery
 
 This is a saved **future product feature** and commercialization hypothesis. It does not assert live AI voice generation, automated rep counting, or automatic exertion recognition in the current prototype. Priority next: verify immediate 110 BPM round-ready audio reliably on the actual HW401 and headset; then test coach switching with deterministic scripts in an isolated build. Do not alter the user's live version or existing workout records without review.
+
+
+## Personal-history coaching: floor misses and performance changes
+
+**User concept, October 18, 2026:** AI should learn from each individual's logged workout history and coach dynamically based on changing performance, rather than relying solely on generic spoken scripts or one universal threshold.
+
+### Example: Drill Sergeant reacts to slipping below the Floor
+
+When a user **starts missing their current exercise Floor** (as determined by the recorded, then-current floor rule), the opt-in Drill Sergeant should notice and give a forceful, character-consistent pep talk. Sample tone, paraphrasing the owner's creative direction:
+
+> "You're slipping, soldier! Don't turn into a half-stepper on me! That doesn't fly in my beloved corps. You got me, soldier? Now bring your best clean reps!"
+
+- The persona is deliberately theatrical, gruff, humorous, and potentially profane, and is **expressly selected by the user**. Users can switch to Zen Hippie or mute coaching at any point.
+- Use the user's actual prior workouts to reference verifiable trends: same exercise and variation, same round/circuit position, similar test protocol and effort conditions. Example: "Last three comparable second rounds: 9, 9, 8. Today: 6." Never fabricate personal records or claim to know motivation from one bad set.
+- **Not all rep declines are underperformance.** In the proposed protocol, each round is a max-clean-rep effort and later-round fatigue is expected. Compare with appropriate historical round-level baselines and the floor's exact scope. A missed minimum should prompt inquiry / encouragement, not automatic blame or pressure to perform unsafe repetitions.
+- When repeated misses emerge, the coach can offer a **performance observation**, ask whether something changed (sleep, recovery, pain, variation, schedule, etc.), and suggest adjusting a plan only after confirmation. Do not infer health conditions or assume a user's effort from heart rate.
+- Recognize improvement, PRs, best-ever recovery, consistency, improved drop-off and milestones with the selected coach's personality; balance criticism with meaningful reinforcement.
+- Keep the deterministic events/data layer independent of LLM persona generation. AI uses past workouts, user preferences and consented contextual notes to produce grounded, short spoken coaching with citations/provenance internally for metrics cited. No background monitoring or model training on sensitive heart-rate data without opt-in.
+- User controls: voice style and intensity, explicit profanity opt-in, coaching frequency, no-harassment and safety override, and immediate personality switching.
+- Treat pain, dizziness, illness, form breakdown, or explicit stop/rest as higher-priority than a floor target or persona. The coach must never demand ignoring those signals.
+- Evaluate both user enjoyment and objective outcomes: voluntary restart latency, completed sessions, rep counts, floor consistency, performance trends. Do not treat early single-user correlation as proof of coaching efficacy.
+
+**Status:** Concept documented, not yet implemented. Historical comparisons, adaptive personalized AI speech and automated missed-Floor detection require development, quality tests and opt-in user testing.

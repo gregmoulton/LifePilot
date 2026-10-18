@@ -124,3 +124,22 @@ The Pure adapted that compact structure into bodyweight **pull-ups, squats, and 
 ### Historical design record
 
 The earlier **6–15** suggestion was deliberately explored and subsequently **replaced by 10–15** following the 7-push-up hypothetical scenario. It is not the active rule. The user's original design invariant still stands: “If you can't do the minimum we require for each exercise in the workout, then we must find you an easier exercise.”
+
+
+## Movement-family-agnostic Big 3 and calibrated progression steps
+
+**October 18, 2026 — owner confirmed design direction:** The Pure began as three specific exercises ("the Big 3" in the owner's informal terminology) but is now **exercise-agnostic within three movement families: Push, Pull, and Squat/Legs**. "Big 3" is a structural identity referring to these three slots, not a fixed inventory of bodyweight movements and not the conventional powerlifting Big Three (squat, bench, deadlift).
+
+The engine selects an appropriate exercise variation in each family based on the athlete's clean benchmark capacity, rather than assuming standard push-ups, inverted rows and bodyweight squats forever. This enables beginner through advanced use and preserves the strength-first objective.
+
+**Approved provisional Push/Pull transition goal:**
+- The athlete demonstrates **15+ technically sound clean reps** on their current exercise in a fresh benchmark and therefore earns an opportunity to **test** the next harder variation.
+- Ideally, the harder variation's new fresh clean maximum is **approximately 10 reps**, fitting within the agreed 10–14 acceptable current-rung range.
+- The **15 → approximately 10** transition is the intended *observed rep performance*, NOT a mathematical conversion or guarantee, and NOT a prescription of 10 workout reps (the current 70% Floor on new tested max 10 is 7 reps in each of three circuits).
+- If the proposed harder variation yields **fewer than 10 clean max reps**, it is too abrupt a leap: remain on a suitable current variation and/or introduce an *intermediate adjustment*, then retest (e.g., less steep incline for Push, body angle / assistance for Pull).
+- If the proposed new variation yields **15+**, it may be too small an intensity step: consider the next reasonable harder variation while preserving technical quality.
+- Never automatically replace the exercise, claim a rep estimate as a measured baseline, or assume a universal ratio of difficulty across different users/equipment. User controls and confirms the substitution.
+- Progression libraries should be **calibratable and optionally finely adjustable** (angle, leverage, range, assistance, external resistance) rather than a brittle static ordered catalog. Benchmark clean reps to validate suitability; exact physical relationships and degree of change require empirical trials.
+- Leg/Squat difficulty progression also follows the family-agnostic principle, but **numerical rung minimum and ceiling for leg exercises are not yet approved**. A fresh maximum of 60 plain squats should lead to evaluating harder leg work rather than prescribing 42 easy-rep squats per circuit.
+
+This concept must stay separate from the **Workout Floor** (current experiment 70% of tested variation-specific maximum, a sustainable per-round target) and from heart-rate readiness (experimental between-circuit 110 BPM).

@@ -40,7 +40,7 @@ Potential categories to **evaluate later, not approve now**: banded or weighted 
 
 ## Origin of The Pure: user's corrected Push / Squat / Pull training model
 
-**Correction supplied October 18, 2026:** The owner clarified that the prior successful training routine he and Robert followed was organized by **three movement slots**, not literally deadlift + squat + bench in every session. The actual exercise options were:
+**Correction supplied October 18, 2026:** In *powerlifting*, the conventional **Big Three** are squat, bench press, and deadlift. The owner and Robert used a related but **different three-movement-category routine: Push, Pull, and Legs (squat or deadlift)**. Their personal three-slot training model should not be described as the powerlifting Big Three or as performing all three powerlifts in each workout. The actual exercise options were:
 
 | Slot | Exercises used in prior weight-training routine |
 |---|---|

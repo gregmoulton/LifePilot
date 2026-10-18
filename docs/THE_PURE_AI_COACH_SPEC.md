@@ -179,3 +179,19 @@ The owner predicts the Drill Sergeant may be the most popular even across gender
 - **Gym Bro:** Humorous gym-obsessed "bro science" trainer: exaggerated confidence, bro slang, jokes, and over-the-top workout folklore. The owner plans to show a **YouTuber who performs a very similar comedic persona** as creative inspiration. Wait for the user's actual reference before analyzing examples. Build an original character inspired by broad comedic conventions; do not copy the creator's distinctive script, voice, performance, likeness or branding without proper permission. Factual coaching, exercise thresholds, and safety advice must remain trustworthy: inaccurate bro-science claims, if parodied, should be clearly comedic rather than provided as real exercise/health guidance.
 
 **Concept status:** Saved as character brainstorming, not currently implemented. The core workout and recovery cues remain unchanged; all characters are user-switchable with No Coach available. Future avatar/video content and AI-generated speech require separate feasibility and cost testing.
+
+
+## Gym Bro creative reference: BroScienceLife
+
+**Owner-provided reference:** **BroScienceLife**, featuring the satirical gym-bro character **Dom Mazzetti**, portrayed by **Mike Tornabene**. The owner said the YouTuber plays the exact comedic character he has in mind for The Pure's candidate Gym Bro. See https://www.youtube.com/channel/UCduKuJToxWPizJ7I2E6n1kA
+
+### What to learn from this reference
+- The performance satirizes overconfident gym culture and "bro science." Humor comes from wild confidence in absurd premises and intensely committed, self-serious delivery.
+- He uses gym jargon, exaggerated expertise, unexpected comparisons, fast turns and comedic bravado. For our original character, emphasize **earnest ridiculousness**, not a generic motivational trainer merely saying "bro" repeatedly.
+- Coaching contexts: direct round-ready cues ("110 BPM, bro!"), positive reinforcement for actual PRs, good-natured teasing for poor sessions, and situational jokes drawn from VERIFIED recent performance. Preserve current user-selected script intensity and frequency.
+- Provide actual workout parameters from validated app data; never pass fake bro-science as serious physiology or use parody to pressure someone past pain, technique breakdown or safety concerns.
+
+### Originality boundary
+Treat BroScienceLife / Dom Mazzetti as a **creative reference**, not a licensed product character. The Pure's Gym Bro must have an original name, backstory, voice, avatar, jokes, catchphrases and distinct dialogue. Do not clone Tornabene's voice/likeness, reproduce recognizable original scripts, suggest official endorsement, or market it as Dom Mazzetti without explicit rights/permission.
+
+This extends the previously saved *Gym Bro* proposal; the seven-character candidate lineup and final-launch-count decision are unchanged. **Status:** Inspiration/reference recorded, not a new production implementation.

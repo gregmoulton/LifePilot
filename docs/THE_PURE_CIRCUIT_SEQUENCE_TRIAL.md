@@ -36,3 +36,19 @@ This file is a development decision note only; it does not claim that the app se
 - **Movement selection:** Choose a technique-safe, clearly measurable progression that can be tested for clean maximum reps without turning fatigue into unreliable form.
 
 Potential categories to **evaluate later, not approve now**: banded or weighted Romanian deadlift variants, unweighted good mornings, or hip-thrust/bridge alternatives (not identical hinge mechanics). Test feasibility, joint comfort, load adequacy, rep-count reliability, and session duration before adding a fourth movement. Preserve the simple existing three-exercise workout while collecting the first real-world data.
+
+
+## Origin of The Pure: translating the Big Three
+
+**User's firsthand account, October 18, 2026:** The Pure originated from a straightforward lifting routine the owner used with Robert during a prior successful return to fitness: their favorite **Big Three** were **deadlifts, squats, and bench press**. When designing a practical bodyweight version, the owner initially selected **pull-ups, bodyweight squats, and push-ups** to retain a small set of fundamental movements. Planks were added later because the workout initially felt too short. At that time, the owner had **not considered an exercise progression ladder**; the ladder was developed collaboratively during later design work so the bodyweight movements can become progressively harder rather than accumulating unlimited reps.
+
+### Biomechanical distinction
+- Deadlift is a loaded hip-hinge / posterior-chain-dominant movement, while pull-ups and inverted rows are predominantly upper-body pulls: the substitutions retain a pulling *category*, not a one-for-one deadlift movement pattern.
+- Bodyweight squats and push-ups align more directly with their loaded squat and bench-press movement families, although loading and stabilization differ.
+- The missing hinge category explains the rationale for someday evaluating a fourth movement—**but it does not justify adding one before suitable equipment, measurable movement selection, and testing**.
+
+### Design principles supported by the history
+- Favor a compact workout of core movements, performed with sound form, logged honestly and progressively challenged.
+- Preserve the currently proposed **Pull → Squat → Push** sequence as a trial, not a proven optimal arrangement.
+- Add complexity (hinge movement, plank, more apparatus, ladder transitions, voice coaches) only when it earns its place in actual sessions and measurements.
+- Respect that the owner and Robert's former routine was a successful personal experience, not proof of superiority for general users.

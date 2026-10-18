@@ -169,3 +169,13 @@ The owner predicts the Drill Sergeant may be the most popular even across gender
 - Enable low-cost character preview and voluntary coach changing; compare uptake and continued use before choosing marketing claims or premium positioning.
 
 **Status:** Catalogue expansion proposed, not approved final character writing, implementation, or commercialization.
+
+
+## Additional candidate personalities: Aerobics Barbie and Gym Bro
+
+**Owner's concepts, October 18, 2026:** Add two candidates to the previously discussed approximately-five-character lineup, bringing the brainstorming roster to seven coaches plus No Coach. These are candidate characters; the final launch count and names remain open.
+
+- **Aerobics Barbie (working character nickname):** Bubbly, lively, upbeat aerobics-instructor energy, colorful visual appeal / on-screen character presentation, enthusiastic and playful exercise encouragement. The owner particularly imagines a character that is *fun to look at*, so audiovisual/avatar design matters as well as spoken words. The "Barbie" name is a working creative shorthand, **not cleared for commercial branding**; use an original name, voice, visual design, and persona before any commercial release.
+- **Gym Bro:** Humorous gym-obsessed "bro science" trainer: exaggerated confidence, bro slang, jokes, and over-the-top workout folklore. The owner plans to show a **YouTuber who performs a very similar comedic persona** as creative inspiration. Wait for the user's actual reference before analyzing examples. Build an original character inspired by broad comedic conventions; do not copy the creator's distinctive script, voice, performance, likeness or branding without proper permission. Factual coaching, exercise thresholds, and safety advice must remain trustworthy: inaccurate bro-science claims, if parodied, should be clearly comedic rather than provided as real exercise/health guidance.
+
+**Concept status:** Saved as character brainstorming, not currently implemented. The core workout and recovery cues remain unchanged; all characters are user-switchable with No Coach available. Future avatar/video content and AI-generated speech require separate feasibility and cost testing.

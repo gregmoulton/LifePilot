@@ -209,24 +209,20 @@ This concept must stay separate from the **Workout Floor** (current experiment 7
 - Preserve the separately approved **fresh maximum eligibility bands** (Push/Pull 10–14, unlock fresh 15+; Legs 20–29, unlock fresh 30+), while comparing whether the **voluntary session total-rep method** can safely replace or supplement fresh max tests. No unilateral replacement without owner decision.
 
 
-## Candidate simpler barbell-inspired ANY-SET Unlock
+## LOCKED: barbell-inspired ANY-SET Unlock — October 18, 2026
 
-**October 18, 2026 — historical user-tested favorite and design inspiration (candidate rule, NOT yet explicitly approved as The Pure's replacement Unlock).**
+**Owner explicitly approved:** Reproduce the motivational reward from their favorite heavy barbell double-progression routine. In that prior program, they used the powerlifting Big Three and weighted pull-ups, performed roughly 3 or 4 through 6 reps per set, and added 10% weight when they achieved **7 clean reps in ANY one set**; the heavier load brought reps back to ~3–4. The exact remembered lower bound (3 or 4) remains uncertain.
 
-Owner's favorite heavy barbell training involved the three powerlifting movements (squat, bench, deadlift) plus weighted pull-ups, on a very compact progression system:
-- Lift a load permitting approximately **3 or 4 through 6 repetitions per set**.
-- On achieving **7 clean reps in ANY ONE set** — not necessarily all 3 sets — increase external weight **10%**.
-- The heavier weight typically reduced attainable repetitions to **about 3–4 per set**.
-- Build strength and repeat. User especially appreciated simplicity and strength emphasis. Note exact initial minimum (3 or 4) was recalled uncertainly; do not rewrite it as a fixed historical fact.
+### The Pure's approved unlock rule
 
-**Candidate Pure analogous rule:** Reuse the **one-set trigger**, not the absolute powerlifting rep range or pretend calisthenics difficulty rises by a predictable 10%.
+- **Push:** **15+ clean reps in ANY ONE set** of the normal three-circuit workout earns the chance to **test** a harder pushing variation.
+- **Pull:** **15+ clean reps in ANY ONE set** earns the chance to **test** a harder pulling variation.
+- **Squat/Legs:** **30+ clean reps in ANY ONE set** earns the chance to **test** a harder leg variation.
+- **This replaces the proposed workout-total Unlock and the requirement that Unlock must be demonstrated in a separately scheduled fresh max benchmark.** An optional fresh benchmark can still establish or recalibrate exercise eligibility; a qualifying in-workout set is itself enough to trigger *the invitation to test* a harder rung. Do not require the threshold in all three rounds, or in fatigued Round 3.
+- **Why owner approved:** The athlete can occasionally go all-out **when feeling strong**, especially in a fresh **first set**, and get a tangible reward for exceptional performance. This is **optional**, not an instruction to max out all sets or all workouts. Prior trial at 80% of fresh max on every set was unsustainably difficult, especially Rounds 2–3.
+- **Daily workout Floor** remains a separate experimental prescription of **70% of the verified maximum** on the current exercise (nearest clean whole rep); stable regular sessions should be possible without chasing Unlock.
+- **Fresh maximum eligibility** on any new variant remains **10–14 Push/Pull** and **20–29 Legs**, with a new variant ideally delivering an observed fresh maximum near **10 Push/Pull** or **20 Legs**. Any-set Unlock *does not automatically impose* an untested next variation; user tests its performance and confirms the selection. Adjust leverage/angle/assistance or use intermediate levels if progression is too abrupt. Do not pretend a bodyweight difficulty jump is a calculable +10% weight increment.
+- A **clean** qualifying set with correct movement technique matters more than whether the athlete can grind out lower-quality repetitions. If chasing an optional Unlock in Round 1 creates unacceptable fatigue or Floor failure later, log the achievement and the later quality/fatigue separately; don't accuse the athlete of insufficient effort or apply automatic conditioning for genuine fatigue. Examine effort sustainability in testing.
+- **Current status:** Owner-approved design rule saved in GitHub; it is **not yet implemented** in the active experimental app. We still need to design the visual reward, notification, how to schedule the newly earned rung test, and safe session-continuation behavior.
 
-- Push/Pull: already approved **fresh-rung eligibility band of 10–14 clean fresh maximum reps** and 15+ fresh Unlock. New candidate is a 15-rep achievement in **ANY single circuit set** rather than requiring a separate scheduled fresh max benchmark or a session total score.
-- Legs: approved-for-trial fresh-rung eligibility band of 20–29 and 30+ fresh Unlock; analog candidate is **30 clean reps in any one circuit set**.
-- A qualifying set would **unlock a test** of a slightly harder exercise in that movement family; **not auto-promote** without testing whether the harder variation yields a clean fresh maximum near **10 Push/Pull or 20 Legs**, or adjusting to an intermediate step.
-- Current tested **70% workout Floor** is the day-to-day minimum prescription and does **not** mean that the person must chase Unlock every workout. Voluntary quality reps beyond Floor are a possibility on stronger days, so the qualifying ceiling can happen without multiple all-out sets.
-- **Terminology caveat:** The approved 10–14 Push/Pull and 20–29 Legs bands are *fresh benchmark maximum* suitability ranges, not prescribed in-workout working-set numbers. Example: a fresh Push max of 10 gives working Floor 7 per round.
-- **Design tension to test:** If the most obvious way to hit an ANY-SET ceiling is an all-out first set, the system may conflict with the user's objective of sustainable, non-grinding sessions. Options include an occasional planned fresh benchmark, optional user-selected bonus effort, and/or a confirmation that the ceiling was achieved with technically clean reps and recoverable effort. Never require near-failure reps in normal sessions solely to trigger an Unlock.
-- Relative resistance increments for calisthenics are not linear or reliably equivalent to +10% external barbell weight; choose user-appropriate leverage/assistance/angle/variation and validate the new maximum empirically.
-
-**Decision status:** Preserve this as a *strong candidate for mathematical simplification*; user has recounted the old program and its attraction but has not yet explicitly approved replacing the previously agreed fresh-benchmark Unlock with ANY-SET Unlock. Ask before committing the replacement into the app.
+**Core idea: a sustained, attainable Floor; discretionary high-effort first-set opportunity; immediate ANY-SET Unlock reward.**

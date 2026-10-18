@@ -143,3 +143,15 @@ The engine selects an appropriate exercise variation in each family based on the
 - Leg/Squat difficulty progression also follows the family-agnostic principle, but **numerical rung minimum and ceiling for leg exercises are not yet approved**. A fresh maximum of 60 plain squats should lead to evaluating harder leg work rather than prescribing 42 easy-rep squats per circuit.
 
 This concept must stay separate from the **Workout Floor** (current experiment 70% of tested variation-specific maximum, a sustainable per-round target) and from heart-rate readiness (experimental between-circuit 110 BPM).
+
+
+## Unlock performance is not Round 3 fatigue performance
+
+**October 18, 2026, Test Pilot observation:** Reaching 15 clean reps in circuit Round 3 is markedly more demanding than reaching 15 in a fresh set, due to accumulated fatigue across movements and circuits. Do not treat those achievements as interchangeable.
+
+- For the current **Push/Pull 15-rep Ceiling/Unlock**, use a **standardized fresh benchmark maximum** after sufficient recovery, *not* a requirement to hit 15 in Round 3 or in every circuit.
+- **10-rep Push/Pull minimum eligibility** also refers to fresh clean maximum on the selected movement variation, not an expectation of ten reps in every fatigued training set.
+- **70% workout Floor** refers to a training prescription for each circuit, derived from an appropriate tested maximum. Fatigue, form and safe recovery can override it; inability to complete clean reps triggers safe adaptation rather than grinding or a punitive workout.
+- A person who achieves 15 in a controlled fresh push-up benchmark can qualify to test a harder push variation even if their ordinary workout would yield lower reps in Rounds 2–3.
+- **Standardize baseline / progression tests** as a separate test condition (well recovered, recorded selected variation, consistent technique and setup). The exact schedule, whether a test can be incorporated into Round 1, and how to minimize test fatigue without disrupting the usual strength session remain to be decided. Round 1 is NOT automatically equivalent to truly fresh if preceded by other circuit exercises.
+- Preserve exercise-agnostic and strength-first principles: do not force fatigue-endurance performance just to earn unlocks; avoid conflating 15 repetitions in a last circuit with 15 fresh maximum repetitions.

@@ -195,3 +195,27 @@ The owner predicts the Drill Sergeant may be the most popular even across gender
 Treat BroScienceLife / Dom Mazzetti as a **creative reference**, not a licensed product character. The Pure's Gym Bro must have an original name, backstory, voice, avatar, jokes, catchphrases and distinct dialogue. Do not clone Tornabene's voice/likeness, reproduce recognizable original scripts, suggest official endorsement, or market it as Dom Mazzetti without explicit rights/permission.
 
 This extends the previously saved *Gym Bro* proposal; the seven-character candidate lineup and final-launch-count decision are unchanged. **Status:** Inspiration/reference recorded, not a new production implementation.
+
+
+## Voice coach as workout interface: reps, rest, and recovery
+
+**Owner design direction — October 18, 2026:** When optional AI trainers are introduced, they should be a natural **spoken interface** for the mobile, music-friendly Pure, not merely an ornamental motivational overlay. The athlete can report reps to their chosen coach; the coach confirms the values recorded, announces rest after the three-exercise circuit, and gives a personalized cue when the measured recovery threshold is met.
+
+### Example interaction (illustrative, not deployed)
+- Athlete: “Finished push-ups, ten reps.” Coach: “Ten push-ups recorded. Next exercise.”
+- Athlete: “Thirty-three squats; eleven rows.” Coach: “Squats 33, rows 11, recorded. Round one finished. Rest up for round two.”
+- HW401 reaches the configured trial <=110 BPM after a complete circuit. Coach: “Recovery target reached. Round two is ready whenever you are.”
+- Coach tone can be Drill Sergeant, Zen Hippie, Championship Coach, Stoic, Wiseass, Aerobics Barbie, Gym Bro, or **No Coach**. Style varies; the **numeric record, rules, safety and phase transitions do not**. No Coach still gets clear minimal alerts and manual interaction.
+
+### Workflow and acceptance requirements
+1. **Phone first; single screen after Start Workout.** User may speak each set immediately, or report a batch of three after finishing the uninterrupted circuit, or enter numbers on that same screen. Both spoken and manual paths write into the same editable exercise entries; do not require extra workflow steps for coach selection or operation mid-exertion.
+2. **Speech understanding before personality response:** Parse exercise label/synonym, variation, rep count, and round; check the currently expected session context; ask for a correction on uncertainty or conflicting values. Confirm the **recorded user report**, never claim to have objectively sensed/verified reps. Never silently convert an unrecorded exercise to zero.
+3. **Fast spoken feedback:** Short acknowledgments by default, ideally not interrupting music or the next movement. Optional longer coach chatter at rest intervals or after a genuine Unlock/PR, not while user is trying to perform uninterrupted reps.
+4. **Finish and recover:** Completion of three exercises (or an explicit “round complete”) starts the **actual** recovery timer immediately, even if manual rep fields are still being filled. Coach can announce “Rest up” once, optionally report current BPM. BLE HR collection continues throughout, including rep entry.
+5. **Recovery-ready event:** On first credible BLE reading <=user-defined experimental threshold (currently **110 BPM**), trigger visual “Round N ready” and attempt a short **selected-coach spoken** prompt. This is a signal that cardiovascular recovery criterion was met, not proof of total physical readiness. User chooses when to start moving again. Refrain from pressuring athletes with persistent muscle exhaustion, unsafe symptoms or form decline.
+6. **Distinct responsibilities:** Workout engine owns thresholds, set counts, Floor/Unlock, transitions, recorded values and data integrity. Voice recognizer handles opt-in capture/parsing/corrections. Persona/AI coach formats *the engine's verified events* into short utterances. The AI never invents measurements or changes thresholds.
+7. **Music/headphones practicalities:** Test voice input and TTS while music plays; consider microphone noise, speech errors, browser wake and screen-lock limitations, audio focus/ducking, and OS-selected Bluetooth headset output. The Chromebook 110-BPM visual alert passed in the first workout, but live audio was not heard. Do not claim truly hands-free always-listening works in a phone web browser until tested; manual fallback remains complete.
+8. **Privacy and reliability:** Opt-in microphone, clear listening state, editable/transcribed numbers, fail-safe neutral text cues, avoid storing raw audio by default. Voice failure must not impair heart-rate monitoring or round progression.
+9. **Unlock integration:** If a clean reported set reaches **15 Push/Pull** or **30 Legs** in any one round, celebrate briefly but continue the existing three-round session. A fresh clean maximum test of the harder variation is required before the subsequent normal workout to lock new Floor settings. An enthusiastic AI coach must never turn optional all-out effort into required failure training.
+
+**Status:** This is an owner-supported design specification; not a claim that speech recognition or AI-coach voice commands are already implemented.

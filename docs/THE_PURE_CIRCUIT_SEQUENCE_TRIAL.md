@@ -90,3 +90,16 @@ The Pure adapted that compact structure into bodyweight **pull-ups, squats, and 
 - The 80% test was completed but the second and third circuits approached maximal effort, with slowing explosive squats and poor perceived day-to-day sustainability. Prescribe productive, recoverable strength work instead of routine maximal repetitions.
 - Maintain zero software-imposed rest between three exercises, and use an experimental 110-BPM recovery cue between circuits while allowing the participant to choose when ready.
 - Keep in-workout controls minimal. Ceiling qualification and updated workout flows are **planned**, not already implemented.
+
+
+## Per-rung minimum/maximum rep eligibility (owner confirmed)
+
+**October 18, 2026 design insight:** Each progression ladder exercise must have BOTH a minimum acceptable tested clean maximum (lower bound for suitable challenge) and a clean-rep unlock maximum (upper bound triggering trial of a harder exercise). This is DISTINCT from the 70% per-round workout Floor.
+
+**Approved provisional Push/Pull rung range:**
+- Tested fresh maximum **below 6 clean reps**: current exercise is too challenging for this rung; regress to an easier variation and establish the new baseline.
+- Tested fresh maximum **6–14 clean reps**: remain on the current exercise rung. For a baseline maximum of **6**, trial 70% workout Floor rounds to **4** reps (4.2, rounded to nearest whole); workout Floor 4 is not the rung minimum of 6.
+- Tested fresh maximum **15 or more clean reps**: demonstrate qualification for the next, harder exercise variation. Retest the new variation, selecting an appropriate rung based on its tested maximum rather than simply requiring more reps on the old exercise.
+- This 6–15 range has been explicitly affirmed by the user as the intended ladder logic; apply per-exercise rules and set other ranges by testing, not by assuming one uniform bound. Squat/leg range is not agreed yet.
+- **Terminology:** "Rung minimum" (e.g., 6 max reps) vs. "Workout Floor" (e.g., 70% of 6 = 4 per round) vs. "Ceiling/Unlock" (15 in a fresh benchmark set). Label all three unambiguously. Do not automatically interpret a routine working set below six as grounds for regression.
+- Quality and safety always trump rep targets. The intended purpose is mechanically challenging strength work, not accumulating easy endurance repetitions.

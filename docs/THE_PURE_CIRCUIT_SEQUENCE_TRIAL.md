@@ -155,3 +155,16 @@ This concept must stay separate from the **Workout Floor** (current experiment 7
 - A person who achieves 15 in a controlled fresh push-up benchmark can qualify to test a harder push variation even if their ordinary workout would yield lower reps in Rounds 2–3.
 - **Standardize baseline / progression tests** as a separate test condition (well recovered, recorded selected variation, consistent technique and setup). The exact schedule, whether a test can be incorporated into Round 1, and how to minimize test fatigue without disrupting the usual strength session remain to be decided. Round 1 is NOT automatically equivalent to truly fresh if preceded by other circuit exercises.
 - Preserve exercise-agnostic and strength-first principles: do not force fatigue-endurance performance just to earn unlocks; avoid conflating 15 repetitions in a last circuit with 15 fresh maximum repetitions.
+
+
+## Design invariant: fixed performance rules, flexible movement mechanics
+
+**Owner agreement, October 18, 2026.** Do not treat a fixed ladder of named exercises as more important than the training rules. The Pure aims to reproduce the consistency of a barbell-like *rep-range plus adjustable resistance* prescription through variable bodyweight exercise mechanics.
+
+- **Preserve a reasonably tight rep-performance band as a design constraint.** For the current Push and Pull pilot, benchmark-tested max of **10–14 clean reps** = appropriate rung, **<10** = make the exercise easier, **>=15** = qualify to test a harder variant. Ideally, upgrading a ~15-rep movement yields **~10 clean fresh maximum reps** on the next variant.
+- The **exercise implementation is flexible:** angle, leverage, assistance, range of motion (subject to technique intent), external loading, hand/foot position, or other carefully specified adjustments can provide intermediate increments. Some variations change muscle recruitment/skill and are not proportional “weight increments”; **empirical testing decides**.
+- **Do not rigidly force preset transitions.** If harder variation produces <10, adjust to a smaller increment or retain the prior variation until a suitable change is identified; if 15+ after transition, seek a more meaningful increment.
+- **Workout Floor** is a separate intensity prescription currently being tested at **70% of the verified current exercise's fresh maximum**, not an established universal minimum-effective growth dose. Keep technique, safety, perceived effort and recovery in view.
+- Strength is the purpose of the program; the consistent rep band should prevent long, low-value endurance sets. The integrated cardio stimulus comes from the three-exercise circuit and HR-guided inter-circuit recovery.
+- The numerical thresholds for **Squat/Legs** are *not finalized*; consider whether a single common rep band is appropriate as part of controlled testing rather than presuming the Push/Pull 10–15 band applies mechanically to every leg movement.
+- In software, separate a configurable **rule engine** (range eligibility, Floor, Unlock, qualification and test logs) from an extensible **movement library** with individualized progression variants and equipment constraints. Every proposed adjustment requires safe, user-confirmed selection and a measured rebenchmark; no automatic rep-count inference from leverage.

@@ -38,17 +38,27 @@ This file is a development decision note only; it does not claim that the app se
 Potential categories to **evaluate later, not approve now**: banded or weighted Romanian deadlift variants, unweighted good mornings, or hip-thrust/bridge alternatives (not identical hinge mechanics). Test feasibility, joint comfort, load adequacy, rep-count reliability, and session duration before adding a fourth movement. Preserve the simple existing three-exercise workout while collecting the first real-world data.
 
 
-## Origin of The Pure: translating the Big Three
+## Origin of The Pure: user's corrected Push / Squat / Pull training model
 
-**User's firsthand account, October 18, 2026:** The Pure originated from a straightforward lifting routine the owner used with Robert during a prior successful return to fitness: their favorite **Big Three** were **deadlifts, squats, and bench press**. When designing a practical bodyweight version, the owner initially selected **pull-ups, bodyweight squats, and push-ups** to retain a small set of fundamental movements. Planks were added later because the workout initially felt too short. At that time, the owner had **not considered an exercise progression ladder**; the ladder was developed collaboratively during later design work so the bodyweight movements can become progressively harder rather than accumulating unlimited reps.
+**Correction supplied October 18, 2026:** The owner clarified that the prior successful training routine he and Robert followed was organized by **three movement slots**, not literally deadlift + squat + bench in every session. The actual exercise options were:
 
-### Biomechanical distinction
-- Deadlift is a loaded hip-hinge / posterior-chain-dominant movement, while pull-ups and inverted rows are predominantly upper-body pulls: the substitutions retain a pulling *category*, not a one-for-one deadlift movement pattern.
-- Bodyweight squats and push-ups align more directly with their loaded squat and bench-press movement families, although loading and stabilization differ.
-- The missing hinge category explains the rationale for someday evaluating a fourth movement—**but it does not justify adding one before suitable equipment, measurable movement selection, and testing**.
+| Slot | Exercises used in prior weight-training routine |
+|---|---|
+| **Pull** | Pull-ups, typically **weighted** |
+| **Legs / "Squat"** | **Squats or deadlifts**, as alternatives for the leg slot |
+| **Push** | **Bench press or weighted dips**, as alternatives for the push slot |
 
-### Design principles supported by the history
-- Favor a compact workout of core movements, performed with sound form, logged honestly and progressively challenged.
-- Preserve the currently proposed **Pull → Squat → Push** sequence as a trial, not a proven optimal arrangement.
-- Add complexity (hinge movement, plank, more apparatus, ladder transitions, voice coaches) only when it earns its place in actual sessions and measurements.
-- Respect that the owner and Robert's former routine was a successful personal experience, not proof of superiority for general users.
+This corrected account **supersedes** the previous shorthand that portrayed the prior routine as simply "deadlifts, squats, and bench press." In the owner's structure, the three **categories** (Pull, Squat/legs, Push) are what define the Big Three model, with substitutions within slots. In particular, *deadlifts were classified in the leg/"Squat" slot in that routine*, even though a deadlift is biomechanically a hip-hinge movement rather than a squat.
+
+The Pure adapted that compact structure into bodyweight **pull-ups, squats, and push-ups**. Planks were later added because the original bodyweight session felt too short. A progressive difficulty ladder was added collaboratively later; the owner had not included a ladder in the original model. Pull → Squat → Push is the current **proposed trial order**, not yet a fixed production rule.
+
+### Biomechanical and fourth-movement considerations
+- A weighted pull-up supplies a vertical upper-body pull and was **already part of the original lifting routine**, rather than a substitute for deadlift.
+- Squat and deadlift can fill one *programming* slot as the owner historically grouped them, but they have substantially different biomechanics: squat is knee-dominant; deadlift emphasizes hip hinging and posterior-chain loading.
+- Bench press and weighted dips are both pushing exercises; current bodyweight push-up approximates a horizontal push.
+- A dedicated hinge movement remains a future optional fourth candidate for The Pure, subject to workable equipment and technique-sound progression testing, not a mandatory correction to the owner's historical categories.
+
+### Design principles
+- Preserve three fundamental workout slots, high-effort clean reps, individual round measurements and exercise difficulty progression.
+- Keep the three-movement protocol simple during initial live tests; avoid prematurely expanding to a fourth exercise.
+- Do not describe the historically used exercise combinations as all occurring within the same session unless supported by actual workout records.

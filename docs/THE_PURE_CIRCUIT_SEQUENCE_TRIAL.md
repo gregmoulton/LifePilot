@@ -168,3 +168,16 @@ This concept must stay separate from the **Workout Floor** (current experiment 7
 - Strength is the purpose of the program; the consistent rep band should prevent long, low-value endurance sets. The integrated cardio stimulus comes from the three-exercise circuit and HR-guided inter-circuit recovery.
 - The numerical thresholds for **Squat/Legs** are *not finalized*; consider whether a single common rep band is appropriate as part of controlled testing rather than presuming the Push/Pull 10–15 band applies mechanically to every leg movement.
 - In software, separate a configurable **rule engine** (range eligibility, Floor, Unlock, qualification and test logs) from an extensible **movement library** with individualized progression variants and equipment constraints. Every proposed adjustment requires safe, user-confirmed selection and a measured rebenchmark; no automatic rep-count inference from leverage.
+
+
+## Legs use a higher rep band than Push/Pull
+
+**October 18, 2026 owner decision:** Keep the **Squat/Legs** progression band higher than Push/Pull. User finds higher-rep leg training subjectively effective; imposing the Push/Pull 10–15 clean-max band on lower-body exercise might lead prematurely to demanding movements like full pistol squats. The Pure remains a strength-first program, so avoid endless endurance-only repetitions and use safely scalable leg variations.
+
+- **Locked principle:** The three movement families may use **different appropriate clean fresh-max rep bands**, rather than rigidly imposing universal 10–15 on the legs.
+- **Proposed, NOT yet approved numeric Squat/Leg pilot:** **20–29 clean fresh-max reps** as the appropriate rung; **below 20** => seek easier, **30+** => test harder. Aim for next harder variation to yield **approximately 20 fresh clean reps**, calibrating difficulty through stance, range, support, height, leverage, resistance, or equipment. Do not assume exact equivalence between movements.
+- The owner's current standard squat fresh maximum **27** fits the proposed 20–29 eligibility band; current experimental 70% Floor is **19 per round** (which can be lower than the rung's 20-rep *fresh maximum eligibility*; these must not be confused).
+- Hypothetical max of **60** ordinary squats would be outside proposed upper limit, so select and benchmark an appropriately harder leg variation rather than prescribe **42 ordinary squats per round** and let the routine become endurance-focused.
+- **Unilateral edge case:** For split squats, lunges, step-ups and pistols, define whether test maximums and training Floors are **per leg or total**, and calibrate rep counts accordingly; 20 reps per leg differs markedly from 20 bilateral squats. Don't silently treat them as equivalent or imply a direct transfer of thresholds before testing. Consider adjacent progression adjustments before attempting unsupported pistols.
+- The claim that higher repetitions are generally more effective for every lifter's leg growth is **not established here**; treat user's bodybuilder/weightlifting observation as a design preference to evaluate, not conclusive comparative evidence.
+- Squat/Legs 20–30 numbers are an **assistant proposal awaiting explicit owner acceptance**. Push/Pull 10-to-15 eligibility and 70% workout-floor trial remain as previously agreed.

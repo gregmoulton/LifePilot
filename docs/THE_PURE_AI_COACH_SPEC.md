@@ -89,3 +89,15 @@ When a user **starts missing their current exercise Floor** (as determined by th
 - The Zen Hippie and other personas express the **same measured achievement** in their own voices and emotional register.
 - User controls still govern coach choice, intensity and mute. Avoid making praise dependent on unsafe repetitions or ignoring pain.
 - **Status:** Writing/behavior design specification; no new voice system or production change is implied.
+
+
+## Zen Hippie reinforcement: exuberant delight
+
+**Owner's creative direction, October 18, 2026:** In sharp contrast to the Drill Sergeant's rare curt "Outstanding," the Zen Hippie should **gush over genuine accomplishments**, glowing with pride and openly celebrating the user's achievements.
+
+- On a verified personal record, milestone, or other meaningful improvement, deliver warm, affectionate, expansive, almost comically delighted praise, with playful yoga/peace-and-love styling.
+- Sample creative tone: "Ohhhh, my beautiful friend! Look at you! You've blossomed into a whole new level of magnificent! I'm just radiating pride and positive energy for you right now! Namaste!"
+- Preserve the coach's personality across both setbacks and successes: gentle encouragement after a rough set, enthusiastic celebrations after achievements. Personality changes **expression**, not the measured fact or its validity.
+- User should be able to change personalities whenever desired. Respect user-set verbosity, sound, and cue-frequency controls so long gushing speeches do not delay a time-sensitive round-ready alert or collide with other prompts.
+- Do not fabricate achievements. Celebrate improvements demonstrated by comparable workout records, and avoid urging unsafe exertion.
+- **Status:** Product character-design decision preserved; not a claim that audio coaching is currently deployed.

@@ -193,3 +193,17 @@ This concept must stay separate from the **Workout Floor** (current experiment 7
 - **Unilateral edge case:** For split squats, lunges, step-ups and pistols, define whether test maximums and training Floors are **per leg or total**, and calibrate rep counts accordingly; 20 reps per leg differs markedly from 20 bilateral squats. Don't silently treat them as equivalent or imply a direct transfer of thresholds before testing. Consider adjacent progression adjustments before attempting unsupported pistols.
 - The claim that higher repetitions are generally more effective for every lifter's leg growth is **not established here**; treat user's bodybuilder/weightlifting observation as a design preference to evaluate, not conclusive comparative evidence.
 - Squat/Legs 20–30 numbers were **explicitly accepted by the owner for testing on October 18, 2026**; not yet validated or implemented. Push/Pull 10-to-15 eligibility and 70% workout-floor trial remain as previously agreed.
+
+
+## Floor-led voluntary rep progression — October 18, 2026
+
+**User's observation and evolving protocol:** With the workout Floor set experimentally at **70% of the tested fresh maximum**, the athlete is likely to attempt extra repetitions only when they feel noticeably stronger, because excess effort early in the three-exercise circuit risks fatigue and a Floor miss in a later circuit. Treat that interaction as a possible **natural self-regulation mechanism**, to be validated from testing rather than guaranteed.
+
+- **Floor = guaranteed target when physically able, not a demand to max out** each circuit. Clean controlled form and sustainable effort take priority over bonus reps.
+- After completing the Floor, **additional clean reps are voluntary and conservatively chosen** when the athlete has capacity for the remainder of the workout. Do not automatically escalate targets every workout or pressure users to perform to failure for an Unlock.
+- Example for a Push variation with tested fresh max 10 and trial 70% floor 7/round: regular session 7/7/7 = **21 total**; a stronger day might produce **8/7/7 = 22**, later **8/8/7 = 23**, or **8/8/8 = 24**, without scheduled forced increments.
+- Record **per-round reps, floor met, voluntary surplus vs. floor, movement quality**, and whether later rounds retain their Floors. Optional effort/RIR report may help distinguish a safe performance improvement from a forced grind.
+- The workout score concept should **not reward an all-out early set that leads to later Floor failure**. Extra early reps are not automatically superior to preserving repeatable circuit quality.
+- **110 BPM** remains an experimental between-circuit *cardiovascular* alert; it is **not proof of muscular recovery**. The user can wait, modify, or stop when muscles/form/respiration have not recovered adequately.
+- **Total-rep Unlock** (earlier illustrative 30 push/pull or 75 squat totals) is only a candidate; not approved as a fixed formula. Requiring too high a total can recreate the 80% near-failure experience. Avoid presenting those figures as deployed / agreed progression thresholds until tested.
+- Preserve the separately approved **fresh maximum eligibility bands** (Push/Pull 10–14, unlock fresh 15+; Legs 20–29, unlock fresh 30+), while comparing whether the **voluntary session total-rep method** can safely replace or supplement fresh max tests. No unilateral replacement without owner decision.

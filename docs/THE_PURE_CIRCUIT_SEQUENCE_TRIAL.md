@@ -226,3 +226,20 @@ This concept must stay separate from the **Workout Floor** (current experiment 7
 - **Current status:** Owner-approved design rule saved in GitHub; it is **not yet implemented** in the active experimental app. We still need to design the visual reward, notification, how to schedule the newly earned rung test, and safe session-continuation behavior.
 
 **Core idea: a sustained, attainable Floor; discretionary high-effort first-set opportunity; immediate ANY-SET Unlock reward.**
+
+
+## LOCKED: complete current workout, calibrate harder variation before next
+
+**Owner explicitly agreed October 18, 2026.** When an athlete meets the Any-Set Unlock threshold (15 clean Push/Pull reps in any set; 30 clean Legs reps in any set), the athlete has earned a **test of a harder variation**, not permission to skip sets or immediately replace an exercise during that same workout.
+
+### Required sequence
+1. **Any-set ceiling met:** Mark Unlock earned with a concise, motivating reward. An exceptional first set may earn it; do not require success in all three sets.
+2. **Complete current three-circuit workout as planned:** Keep the original variation and three sets for the unlocked family. **Do not omit rounds 2 and 3** just because an Unlock was earned. Owner specifically rejected that alternative because removing one movement's workload could also make the remainder of the workout easier and less comparable. Retain the original per-round Floor but permit safe recovery, easier adjustment, or stopping when clean form and physical readiness warrant.
+3. **Prerequisite for adopting a harder rung before the next normal workout:** Athlete must **max-test the candidate harder exercise in a sufficiently fresh/recovered state** and record the exact clean maximum. This can be a separate calibration/test visit, or a well-recovered assessment before the next full workout if appropriately spaced; don't put an exhausting benchmark immediately ahead of a high-fatigue session with inadequate recovery.
+4. **Validate new exercise eligibility:** For Push/Pull, a tested clean maximum **10–14** fits the new rung; for Legs, **20–29** fits. If the result is below the lower bound, test a smaller jump/intermediate variant or stay on prior exercise; if at or above the Unlock threshold, consider another harder variant. User approves exercise choice; no assumptions that +10% weight corresponds to a specific bodyweight geometry change.
+5. **Lock in the new exercise and numerical Floor:** Calculate **70% of the new fresh max**, rounded to a whole rep for each circuit, as the current experimental per-set Floor (e.g., harder Push max 11 => Floor 8; 11×0.7=7.7). Track that benchmark as a new variation-specific baseline; use it for subsequent workouts only after calibration.
+6. **Continue three exercises x three rounds** with heart-rate-guided between-circuit recovery. An Unlock in one family never removes the other families' work.
+
+**Implementation status:** Approved design only; the currently tested prototype does not yet automatically enforce the full progression or the pre-next-workout calibration prerequisite.
+
+**Design rationale:** This preserves consistent work, protects a strength-first training intent, delivers an immediate reward for occasional high-effort performance, and avoids changing an athlete's exercise level mid-session when already fatigued.

@@ -77,3 +77,15 @@ When a user **starts missing their current exercise Floor** (as determined by th
 - Evaluate both user enjoyment and objective outcomes: voluntary restart latency, completed sessions, rep counts, floor consistency, performance trends. Do not treat early single-user correlation as proof of coaching efficacy.
 
 **Status:** Concept documented, not yet implemented. Historical comparisons, adaptive personalized AI speech and automated missed-Floor detection require development, quality tests and opt-in user testing.
+
+
+## Drill Sergeant reinforcement: rare, curt praise
+
+**Owner's creative direction, October 18, 2026:** On a genuine new personal record or a particularly good performance, the Drill Sergeant delivers his highest praise as a single curt **"Outstanding."** with all the limited nicety a true drill instructor can muster. Deliberately no excessive cheerleading, long congratulatory monologue, or upbeat fanfare. The contrast with abrasive floor-miss feedback is essential to the character.
+
+- Treat *"Outstanding."* as a **rare, high-value positive reinforcement cue**, reserved for evidence-based accomplishments such as a verified comparable personal record or meaningful milestone. Make the milestone rules clear and grounded in the user's actual logs, not an AI-invented result.
+- Direction for voice delivery: clipped, authoritative, terse, low-fuss, with a discernible hint of approval; a beat of silence afterward. Make it a meaningful earned reward within this selected fictional coach persona.
+- Include a restrained success hierarchy: ordinary session completion need not earn the coveted word; more routine achievements might receive shorter neutral acknowledgments. No artificial scarcity schedule or withholding earned recognition beyond transparent configurable rules.
+- The Zen Hippie and other personas express the **same measured achievement** in their own voices and emotional register.
+- User controls still govern coach choice, intensity and mute. Avoid making praise dependent on unsafe repetitions or ignoring pain.
+- **Status:** Writing/behavior design specification; no new voice system or production change is implied.

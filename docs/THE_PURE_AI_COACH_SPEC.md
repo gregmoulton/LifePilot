@@ -124,3 +124,24 @@ When a user **starts missing their current exercise Floor** (as determined by th
 For each new character, owner drafts **10–20 signature lines**, covering at least: ready-to-begin, 110 BPM round-ready, a floor miss, ordinary effort, recovery/waiting, personal best, and workout completion. This is a *suggested starting authoring package*, not a committed release criterion. AI can help organize and test the character guide; final creative decisions belong to the owner.
 
 **Business potential:** The owner-written characters are original product IP and can form the seed library for a premium catalogue of coaching voices. Paid tier decisions remain deferred.
+
+
+## Drill Sergeant variants: PG and R (user-selectable)
+
+**Owner's creative decision, October 18, 2026:** The Drill Sergeant comes in **two separately selectable personality variants** and users can switch at any time, even mid-workout. "PG" and "R" are descriptive product tone labels, not official film ratings.
+
+1. **Drill Sergeant — PG (default):** Forceful military bearing, shouting, humorous mock intimidation and stern admonishment without profanity. Sample rest-end line: "SOLDIER! YOUR REST IS OVER! QUIT DRAGGING YOUR FEET AND GET MOVING!"
+2. **Drill Sergeant — R (explicit opt-in):** A more authentic, theatrical drill-instructor persona with coarse language, profanity, salty sarcasm and colorful nonidentity-directed insults (e.g. calling a user a "half-stepper"). Sample rest-end line: "WHAT THE HELL ARE YOU WAITING FOR, SOLDIER?! YOUR ASS HAS RESTED LONG ENOUGH! GET BACK TO FUCKING WORK!"
+
+**Important characterization:** Both variants remain the *same* recognizable Drill Sergeant, with the same timing, supportive intent, performance comparisons, and rare, curt top praise ("Outstanding."). The R version changes language/intensity, not exercise thresholds, risk decisions, or factual performance claims.
+
+### Product controls and guardrails
+- PG is selected by default. R requires an affirmative user choice; no surprise explicit language in ordinary mode.
+- Persona selection is user-controlled and immediately switchable. Switching changes future prompts without modifying historic workout data.
+- Offer preview clips for both variants and easy mute/volume/verbosity controls; R-rated script variants should be clearly tagged and kept out of PG cue pools.
+- Only use reality-grounded workout metrics and floor/PR events. No yelling at a user for normal muscular fatigue as if it proves lack of effort, no pressure through injury/dizziness, no targeting protected traits or sensitive personal vulnerabilities. Users may always stop/rest.
+- Use authentic comic intensity while avoiding dehumanizing harassment, slurs, or discriminatory material.
+- Use a deterministic event engine with selectable scripts first, then context-grounded adaptive AI later. AI text-to-speech, device voice support and provider-specific policies must be separately tested and approved before commercialization.
+- Possible future premium packaging is not approved pricing/tier design; exact availability of explicit voices may depend on the eventual audio provider and platform policies.
+
+**Implementation status:** Character script policy added to spec. Neither persona's adaptive voice generation nor an R/PG setting is asserted to be in the currently deployed app.

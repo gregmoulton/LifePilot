@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "module": "Life Pilot Decision Registry",
+  "purpose": "Preserve approved decisions and prevent accidental redesign; suggestions must reference current approved baseline.",
+  "states": [
+    "proposed",
+    "approved",
+    "in_development",
+    "testing",
+    "implemented",
+    "reopened",
+    "superseded"
+  ],
+  "rules": [
+    "Approved decisions are the baseline; do not re-debate without new evidence, implementation constraints, or explicit user request.",
+    "When a topic recurs, show the existing decision, its rationale, status, and only genuinely new advice.",
+    "No change to approved scope or priority without explicit approval.",
+    "Record provenance and date of future decisions before marking them approved."
+  ],
+  "decisions": [
+    {
+      "id": "optimizer-intelligent-rerouting",
+      "title": "Optimizer — Intelligent Rerouting for Real Life",
+      "status": "approved",
+      "rationale": "Proactive, evidence-based optimization across life goals; preserve user priorities and agency.",
+      "principles": [
+        "discover opportunities and ask targeted questions",
+        "investigate in an Optimization Lab",
+        "show savings, tradeoffs and confidence",
+        "accept, dismiss or show alternatives",
+        "measure outcomes and learn",
+        "never sacrifice higher-priority goals without explicit approval"
+      ],
+      "sequence": [
+        "basic recommendations",
+        "calendar and maps integration",
+        "advanced continuous optimization"
+      ],
+      "implementation": "future work after The Pure core functionality"
+    },
+    {
+      "id": "pure-development-order",
+      "title": "The Pure development sequence",
+      "status": "approved",
+      "sequence": [
+        "reliable voice workout control and rep logging",
+        "useful AI personal workout assistant",
+        "automatic camera or sensor rep counting later"
+      ],
+      "implementation": "active development"
+    },
+    {
+      "id": "decision-continuity",
+      "title": "Decision continuity protocol",
+      "status": "approved",
+      "rules": [
+        "remind user when topic already approved",
+        "summarize decision and new advice rather than repeat debate",
+        "reopen only with meaningful new evidence, technical limitation, or explicit request"
+      ]
+    }
+  ],
+  "notes": "Initial seed from approved conversation decisions; not a synced user-facing registry. Avoid presenting as production persistence."
+}

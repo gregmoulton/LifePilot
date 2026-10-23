@@ -11,7 +11,7 @@ function harness(map = new Map(), sharedLocks) {
     if (!elements.has(id)) elements.set(id, { value: '', style: {}, dataset: {}, hidden: false, innerHTML: '', textContent: '', insertAdjacentHTML() {}, append() {}, setAttribute() {}, scrollIntoView() {}, click() {}, classList: { toggle() {} } });
     return elements.get(id);
   };
-  let fail = false, queue = Promise.resolve();
+  let fail = false, confirmAnswer = true, queue = Promise.resolve();
   const locks = sharedLocks || { request(name, fn) { const result = queue.then(fn); queue = result.catch(() => {}); return result; } };
   const context = vm.createContext({ console, Blob, navigator: { locks }, localStorage: {
     getItem: k => map.get(k) ?? null,
@@ -19,12 +19,12 @@ function harness(map = new Map(), sharedLocks) {
     removeItem(k) { if (fail) throw Error('Synthetic storage failure'); map.delete(k); }
   }, document: { getElementById: element, createElement: () => element('anchor'), querySelector: () => element('nav'), querySelectorAll: () => [] },
   URL: { createObjectURL(blob) { blobs.push(blob); return 'blob:synthetic'; }, revokeObjectURL() {} },
-  confirm: () => true, prompt: () => null, alert: s => alerts.push(s), setTimeout() {} });
+  confirm: () => confirmAnswer, prompt: () => null, alert: s => alerts.push(s), setTimeout() {} });
   const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
   for (const script of html.matchAll(/<script(?: src="([^"]+)")?>([\s\S]*?)<\/script>/g)) {
     vm.runInContext(script[1] ? fs.readFileSync(path.join(root, script[1]), 'utf8') : script[2], context);
   }
-  return { map, element, blobs, alerts, context, fail(value = true) { fail = value; }, run(s) { return vm.runInContext(s, context); } };
+  return { map, element, blobs, alerts, context, confirm(value) { confirmAnswer = value; }, fail(value = true) { fail = value; }, run(s) { return vm.runInContext(s, context); } };
 }
 function legacy() { return { schema_version: '0.1', goals: Array.from({ length: 8 }, (_, i) => ({ id: 'g' + i, name: 'Synthetic goal ' + i, status: 'active', custom: 'retain' })), decision_register: [], custom_top: { keep: true } }; }
 const event = '{preventDefault(){}}';
@@ -95,4 +95,46 @@ test('invalid import preserves the existing saved profile', async () => {
   await h.run('importFile({text:async()=>JSON.stringify({goals:[],execution:{tasks:{}}})})');
   assert.equal(map.get(KEY), raw); assert.equal(h.run('profile.goals.length'), 8);
   assert.equal(h.element('toast').textContent, '');
+});
+
+test('guided recovery restores a previous backup, preserves corrupt bytes and survives restart', async () => {
+  const raw = JSON.stringify(legacy()), map = new Map([[KEY, 'BROKEN'], [KEY + ':last-good', raw]]), h = harness(map);
+  await h.run('restoreLocalBackup()');
+  assert.equal(h.run('profile.goals.length'), 8); assert.equal(map.get(KEY + ':recovery-original'), 'BROKEN');
+  assert.equal(h.element('toast').textContent, 'Backup restored successfully');
+  assert.equal(harness(map).run('profile.custom_top.keep'), true);
+});
+test('cancelled recovery and invalid file recovery never replace the stored data', async () => {
+  const raw = JSON.stringify(legacy()), map = new Map([[KEY, 'BROKEN'], [KEY + ':last-good', raw]]), h = harness(map);
+  h.confirm(false); await h.run('restoreLocalBackup()'); assert.equal(map.get(KEY), 'BROKEN');
+  h.confirm(true); await h.run('restoreLocalBackup({text:async()=>JSON.stringify({goals:{}})})'); assert.equal(map.get(KEY), 'BROKEN');
+});
+test('failed recovery never shows a success notice', async () => {
+  const map = new Map([[KEY, 'BROKEN'], [KEY + ':last-good', JSON.stringify(legacy())]]), h = harness(map); h.fail();
+  await h.run('restoreLocalBackup()'); assert.equal(map.get(KEY), 'BROKEN');
+  assert.notEqual(h.element('toast').textContent, 'Backup restored successfully'); assert.equal(h.run('profile'), null);
+});
+test('legacy caught errors cannot leak partial approval mutations without a save', async () => {
+  const p = legacy(); p.execution = { reviews: [{ id: 'review', goal_id: 'g0', status: 'proposed', reason: 'schedule' }], tasks: [{ id: 'task', goal_id: 'g0', status: 'missed' }] };
+  const map = new Map([[KEY, JSON.stringify(p)]]), h = harness(map);
+  h.element('start-review').value = '2026-10-23'; h.element('end-review').value = '2026-10-30'; h.element('due-review').value = '2026-10-24T10:00';
+  await h.run("approveReview('review')");
+  assert.equal(h.run('records().reviews[0].status'), 'proposed');
+  assert.equal(JSON.parse(map.get(KEY)).execution.reviews[0].status, 'proposed'); assert.equal(h.alerts.length, 1);
+});
+test('reset then guided restore recovers the existing profile without format migration', async () => {
+  const raw = JSON.stringify(legacy()), map = new Map([[KEY, raw]]), h = harness(map);
+  await h.run('switchProfile()'); await h.run('restoreLocalBackup()');
+  assert.equal(map.get(KEY), raw); assert.equal(h.run('profile.custom_top.keep'), true);
+});
+test('guided valid backup-file recovery preserves unknown fields without ordinary import rewriting', async () => {
+  const h = harness(new Map([[KEY, 'BROKEN']])); h.context.fixture = legacy();
+  await h.run('restoreLocalBackup({text:async()=>JSON.stringify(fixture)})');
+  assert.equal(h.run('profile.schema_version'), '0.1'); assert.equal(h.run('profile.custom_top.keep'), true);
+  assert.equal(h.run('profile.goals[0].custom'), 'retain');
+});
+test('missing previous backup is explained without resetting the current profile', async () => {
+  const raw = JSON.stringify(legacy()), map = new Map([[KEY, raw]]), h = harness(map);
+  await h.run('restoreLocalBackup()'); assert.equal(map.get(KEY), raw);
+  assert.match(h.element('storageMessage').textContent, /No previous backup/);
 });

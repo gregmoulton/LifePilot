@@ -58,3 +58,57 @@ test('candidate is snapshotted before waiting on a lock', async () => {
   assert.equal(f.open().value.goals[0].name, 'before');
 });
 module.exports = { fixture, key };
+test('corrupt data can be explicitly restored while retaining exact original bytes', async () => {
+  const f = fixture(); f.map.set(key, 'SYNTHETIC-BROKEN');
+  const store = f.open(); await store.restore(profile('recovered'));
+  assert.equal(store.blocked, false); assert.equal(store.recoveryOriginal(), 'SYNTHETIC-BROKEN');
+  assert.equal(f.open().value.goals[0].name, 'recovered');
+  await store.commit(profile('next')); assert.equal(f.open().value.goals[0].name, 'next');
+});
+test('restore rejects invalid data and preserves an earlier recovery copy', async () => {
+  const f = fixture(); f.map.set(key, 'BROKEN'); const store = f.open();
+  await assert.rejects(store.restore({ goals: [null] })); assert.equal(f.map.get(key), 'BROKEN');
+  f.map.set(key + ':recovery-original', 'EARLIER-RECOVERY');
+  await assert.rejects(store.restore(profile('new')), /earlier recovery/);
+  assert.equal(f.map.get(key), 'BROKEN'); assert.equal(store.recoveryOriginal(), 'EARLIER-RECOVERY');
+});
+test('restore failure at preservation or main write keeps original and previous backup', async () => {
+  for (const failKey of [key + ':recovery-original', key]) {
+    const f = fixture(); f.map.set(key, 'BROKEN'); const backup = JSON.stringify(profile('good')); f.map.set(key + ':last-good', backup);
+    const store = f.open(); f.fail(failKey); await assert.rejects(store.restore(profile('good'), backup));
+    assert.equal(f.map.get(key), 'BROKEN'); assert.equal(store.backup(), backup); assert.equal(store.blocked, true);
+  }
+});
+test('stale recovery and changed backup are rejected', async () => {
+  const f = fixture(); f.map.set(key, 'BROKEN'); const store = f.open();
+  await f.open().restore(profile('other'));
+  await assert.rejects(store.restore(profile('stale')), /Another tab/);
+  const current = f.open(); f.map.set(key + ':last-good', JSON.stringify(profile('changed')));
+  await assert.rejects(current.restore(profile('stale'), 'old backup'), /backup changed/);
+  assert.equal(f.open().value.goals[0].name, 'other');
+});
+test('commit and restore receipts cannot mutate the internal checkpoint', async () => {
+  const f = fixture(), store = f.open(), receipt = await store.commit(profile('saved'));
+  receipt.goals[0].name = 'tampered'; assert.equal(store.value.goals[0].name, 'saved');
+  const restored = await store.restore(profile('restored')); restored.goals.length = 0;
+  assert.equal(store.value.goals.length, 1);
+});
+test('invalid goal and record collection shapes fail closed instead of crashing rendering', () => {
+  for (const p of [{ goals: [{ next_actions: 'bad' }] }, { goals: [], execution: { tasks: [null] } }, { goals: [], system_improvement_log: [null] }]) {
+    const f = fixture(); f.map.set(key, JSON.stringify(p)); assert.equal(f.open().blocked, true);
+  }
+});
+
+test('silent backup-write failure blocks the main write', async () => {
+  const f = fixture(), raw = JSON.stringify(profile('old')); f.map.set(key, raw);
+  const original = f.storage.setItem; f.storage.setItem = (k, v) => { if (k !== key + ':last-good') original(k, v); };
+  await assert.rejects(f.open().commit(profile('new')), /verify the previous backup/);
+  assert.equal(f.map.get(key), raw);
+});
+test('uncertain main readback blocks further writes until reload', async () => {
+  const f = fixture(), store = f.open(), original = f.storage.setItem;
+  f.storage.setItem = (k, v) => { if (k !== key) original(k, v); };
+  await assert.rejects(store.commit(profile('new')), /outcome is uncertain/);
+  assert.equal(store.blocked, true); await assert.rejects(store.commit(profile('retry')));
+  assert.equal(f.map.has(key), false);
+});

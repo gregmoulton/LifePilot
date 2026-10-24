@@ -61,6 +61,11 @@ function transactional(handler) {
         if (writeRequested) deferredNotices.forEach(originalNotify);
         return result;
       } catch (error) {
+        if (!writeRequested) {
+          profile = before;
+          storageWarning('Change was not applied: ' + (error.message || 'Check your input.'));
+          return undefined;
+        }
         // Preserve the attempted version for local download; never claim it saved.
         unsavedProfile = profile === null ? before : JSON.parse(JSON.stringify(profile));
         profile = before;
@@ -76,7 +81,7 @@ function transactional(handler) {
     return operation;
   };
 }
-for (const name of ['fresh', 'setStatus', 'submitGoal', 'addDecision', 'saveLabel', 'importFile', 'switchProfile', 'createStructure', 'createTask', 'completeTask', 'taskResult', 'recordObservation', 'proposeReview', 'explainMisses', 'approveAdjustment', 'approveReview', 'rejectReview', 'finishExperiment', 'recordImprovement', 'submitImprovement']) {
+for (const name of ['agendaAdd', 'agendaAction', 'fresh', 'setStatus', 'submitGoal', 'addDecision', 'saveLabel', 'importFile', 'switchProfile', 'createStructure', 'createTask', 'completeTask', 'taskResult', 'recordObservation', 'proposeReview', 'explainMisses', 'approveAdjustment', 'approveReview', 'rejectReview', 'finishExperiment', 'recordImprovement', 'submitImprovement']) {
   if (typeof globalThis[name] === 'function') globalThis[name] = transactional(globalThis[name]);
 }
 render();

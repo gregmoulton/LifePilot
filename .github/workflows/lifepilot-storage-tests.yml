@@ -1,10 +1,13 @@
 name: Life Pilot profile storage checks
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'fix/**']
     paths:
       - index.html
       - execution.js
+      - forward-radar.js
+      - agenda-model.js
+      - agenda.js
       - storage.js
       - persistence.js
       - 'test/**'
@@ -19,4 +22,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - run: TZ=America/Phoenix node test/radar-original.cjs
       - run: node --test test/*.test.cjs prime-workout/structure.test.mjs prime-workout/regression.test.mjs

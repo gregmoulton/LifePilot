@@ -17,6 +17,7 @@
     for (const key of ['decision_register', 'system_improvement_log']) {
       if (value[key] !== undefined && !collection(value[key])) return false;
     }
+    if (value.agenda !== undefined && (!object(value.agenda) || value.agenda.version !== 1 || !['events', 'proposals', 'rejections'].every(key => collection(value.agenda[key])))) return false;
     if (value.execution !== undefined) {
       if (!object(value.execution)) return false;
       for (const key of ['programs', 'milestones', 'tasks', 'observations', 'experiments', 'reviews']) {

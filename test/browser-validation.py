@@ -1,0 +1,312 @@
+"""Fictional-data acceptance checks using native Chromium Web Locks and downloads.
+
+Run: python3 -m pip install playwright
+     python3 -m playwright install chromium
+     python3 test/browser-validation.py
+CHROMIUM_PATH can select an installed Chromium. No external app/service is used.
+"""
+import functools
+import http.server
+import json
+import os
+from pathlib import Path
+import shutil
+import tempfile
+import threading
+import unittest
+
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parents[1]
+KEY = 'lifepilot-v02-profile'
+
+
+def fictional_profile():
+    return {
+        'schema_version': '0.2', 'product': 'Life Pilot',
+        'profile_label': 'Fictional browser validation',
+        'goals': [dict(id=f'g{i}', name=f'Fictional goal {i}', status='active',
+                       known_context=[], next_actions=[], custom={'retain': i}) for i in range(8)],
+        'decision_register': [],
+        'system_improvement_log': [dict(id='log', summary='Fictional evidence', details='Retain me')],
+        'unknown_top': {'unicode': 'Fictional café ✦', 'nested': [1, {'retain': True}]},
+        'execution': {
+            'programs': [dict(id='p', goal_id='g0', name='Fictional program')],
+            'milestones': [dict(id='m', goal_id='g0', program_id='p', name='Fictional milestone')],
+            'tasks': [dict(id='task', name='Fictional linked task', status='planned',
+                           goal_id='g0', program_id='p', milestone_id='m',
+                           due='2020-01-01', planned_minutes=10, custom='retain')],
+            'observations': [], 'experiments': [], 'reviews': [],
+        },
+        'agenda': {'version': 1, 'events': [], 'proposals': [], 'rejections': []},
+    }
+
+
+class QuietHandler(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+
+class BrowserValidation(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.server = http.server.ThreadingHTTPServer(
+            ('127.0.0.1', 0), functools.partial(QuietHandler, directory=str(ROOT)))
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.url = f'http://localhost:{cls.server.server_port}/'
+        cls.playwright = sync_playwright().start()
+        cls.browser = cls.playwright.chromium.launch(
+            executable_path=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium'),
+            args=['--no-sandbox'])
+        print(f'Chromium {cls.browser.version}; secure localhost; native locks; '
+              f'timezone={os.environ.get("LIFEPILOT_TEST_TIMEZONE", "America/Phoenix")}', flush=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.close()
+        cls.playwright.stop()
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join()
+
+    def setUp(self):
+        self.context = self.browser.new_context(
+            accept_downloads=True,
+            timezone_id=os.environ.get('LIFEPILOT_TEST_TIMEZONE', 'America/Phoenix'))
+        self.errors = []
+        self.context.on('page', lambda page: page.on('pageerror', lambda err: self.errors.append(str(err))))
+        self.page = self.context.new_page()
+        self.page.goto(self.url)
+        self.temp = tempfile.TemporaryDirectory(prefix='lifepilot-fictional-')
+
+    def tearDown(self):
+        self.context.close()
+        self.temp.cleanup()
+        self.assertEqual(self.errors, [])
+
+    def saved(self, page=None):
+        return (page or self.page).evaluate('(key)=>localStorage.getItem(key)', KEY)
+
+    def seed(self, value=None):
+        raw = json.dumps(fictional_profile() if value is None else value, ensure_ascii=False)
+        self.page.evaluate('([key,raw])=>localStorage.setItem(key,raw)', [KEY, raw])
+        self.page.reload()
+        return raw
+
+    def wait_saved(self, page=None):
+        (page or self.page).wait_for_function('!transactionRunning')
+
+    def download(self, button, page=None):
+        page = page or self.page
+        with page.expect_download() as event:
+            page.get_by_role('button', name=button, exact=True).click()
+        download = event.value
+        target = Path(self.temp.name) / download.suggested_filename
+        download.save_as(target)
+        self.assertIsNone(download.failure())
+        self.assertGreater(target.stat().st_size, 0)
+        return target
+
+    def agenda(self, page=None):
+        (page or self.page).get_by_role('button', name="Today's Agenda", exact=True).click()
+
+    def test_native_lock_queue_stale_tab_download_and_reload(self):
+        original = self.seed()
+        a = self.page
+        b = self.context.new_page(); b.goto(self.url)
+        holder = self.context.new_page(); holder.goto(self.url)
+        self.assertEqual(a.evaluate('({secure:isSecureContext, locks:typeof navigator.locks.request})'),
+                         {'secure': True, 'locks': 'function'})
+        holder.evaluate("""() => {
+            window.lockHeld = false;
+            window.heldLock = navigator.locks.request('life-pilot-storage:' + KEY, () => {
+                window.lockHeld = true;
+                return new Promise(resolve => window.releaseTestLock = resolve);
+            });
+        }""")
+        holder.wait_for_function('window.lockHeld')
+        for page, name in [(a, 'Fictional tab A'), (b, 'Fictional tab B')]:
+            self.agenda(page)
+            page.locator('#agendaName').fill(name)
+            page.get_by_role('button', name='Add task', exact=True).click()
+        holder.wait_for_function("""async () =>
+            (await navigator.locks.query()).pending.filter(l => l.name === 'life-pilot-storage:' + KEY).length === 2""")
+        self.assertEqual(self.saved(), original)
+        holder.evaluate('window.releaseTestLock()')
+        for page in [a, b]: self.wait_saved(page)
+        winner, loser = (a, b) if a.locator('#storageWarning').is_hidden() else (b, a)
+        saved = json.loads(self.saved())
+        self.assertEqual(len(saved['execution']['tasks']), 2)
+        self.assertIn('Another tab changed', loser.locator('#storageMessage').inner_text())
+        attempted = json.loads(self.download('Download unsaved changes', loser).read_text())
+        self.assertEqual(len(attempted['execution']['tasks']), 2)
+        self.assertNotEqual(attempted['execution']['tasks'][-1]['name'], saved['execution']['tasks'][-1]['name'])
+        self.assertNotIn('Task saved', loser.locator('#toast').inner_text())
+        loser.reload(); self.agenda(loser)
+        loser.locator('#agendaName').fill(attempted['execution']['tasks'][-1]['name'])
+        loser.get_by_role('button', name='Add task', exact=True).click(); self.wait_saved(loser)
+        self.assertEqual(len(json.loads(self.saved())['execution']['tasks']), 3)
+
+    def test_actual_export_import_and_file_restore_preserve_every_field(self):
+        expected = fictional_profile(); self.seed(expected)
+        self.agenda()
+        self.page.get_by_role('button',name='Refresh proposals',exact=True).click(); self.wait_saved()
+        self.page.locator('[data-action=reject]').click(); self.wait_saved()
+        self.page.once('dialog',lambda d:d.accept('7'))
+        self.page.locator('[data-action=complete][data-id=task]').click(); self.wait_saved()
+        expected = json.loads(self.saved())
+        self.assertEqual(len(expected['agenda']['rejections']),1)
+        self.assertEqual(expected['agenda']['proposals'][0]['status'],'rejected')
+        self.assertGreaterEqual(len(expected['agenda']['events']),3)
+        self.assertEqual(expected['execution']['tasks'][0]['actual_minutes'],7)
+        exported = self.download('Export Backup')
+        self.assertEqual(json.loads(exported.read_text()), expected)
+        self.page.evaluate('localStorage.clear()'); self.page.reload()
+        self.page.locator('#welcomeFile').set_input_files(str(exported))
+        self.page.wait_for_function('profile!==null && !transactionRunning')
+        self.assertEqual(json.loads(self.saved()), expected)
+        self.page.reload()
+        self.assertEqual(self.page.evaluate('profile'), expected)
+        # Corrupt only this disposable context, then use the real file input.
+        broken = 'FICTIONAL { corrupt bytes ✦\n'
+        self.page.evaluate('([key,raw])=>localStorage.setItem(key,raw)', [KEY, broken]); self.page.reload()
+        self.page.once('dialog', lambda d: d.accept())
+        self.page.locator('#storageWarning input[type=file]').set_input_files(str(exported))
+        self.page.wait_for_function("document.getElementById('toast').textContent==='Backup restored successfully'")
+        self.assertEqual(json.loads(self.saved()), expected)
+        self.assertEqual(self.download('Download pre-recovery data').read_text(), broken)
+        self.page.reload()
+        self.assertEqual(self.page.evaluate('profile'), expected)
+
+    def test_previous_backup_reset_restore_and_cancel(self):
+        original = self.seed()
+        self.page.once('dialog', lambda d: d.accept())
+        self.page.get_by_role('button', name='Switch / Reset', exact=True).click(); self.wait_saved()
+        self.assertIsNone(self.saved())
+        self.page.once('dialog', lambda d: d.dismiss())
+        self.page.get_by_role('button', name='Restore previous backup', exact=True).last.click()
+        self.page.evaluate('transactionQueue'); self.assertIsNone(self.saved())
+        self.page.once('dialog', lambda d: d.accept())
+        self.page.get_by_role('button', name='Restore previous backup', exact=True).last.click()
+        self.page.evaluate('transactionQueue')
+        self.assertEqual(json.loads(self.saved()), json.loads(original))
+        self.assertEqual(self.download('Download previous backup').read_text(), original)
+
+    def test_invalid_import_and_cancelled_file_restore_preserve_bytes(self):
+        original = self.seed()
+        self.page.get_by_role('button', name='Profile & Import', exact=True).click()
+        self.page.once('dialog', lambda d: d.accept())
+        self.page.locator('#app input[type=file]').set_input_files(
+            {'name':'fictional-invalid.json', 'mimeType':'application/json', 'buffer':b'{"goals":[],"execution":{"tasks":{}}}'})
+        self.wait_saved()
+        self.assertEqual(self.saved(), original)
+        self.page.reload()
+        self.page.evaluate("storageWarning('Fictional recovery test')")
+        self.page.once('dialog', lambda d: d.dismiss())
+        self.page.locator('#storageWarning input[type=file]').set_input_files(
+            {'name':'fictional-valid.json','mimeType':'application/json','buffer':json.dumps(fictional_profile()).encode()})
+        self.page.evaluate('transactionQueue')
+        self.assertEqual(self.saved(), original)
+
+    def test_failed_write_rolls_back_and_downloads_attempt(self):
+        original = self.seed(); self.agenda()
+        # Explicit storage fault injection; navigator.locks stays native.
+        self.page.evaluate("""() => {
+          const original = Storage.prototype.setItem;
+          Storage.prototype.setItem = function(key,value) {
+            if(key===KEY) throw new DOMException('Fictional quota failure','QuotaExceededError');
+            return original.call(this,key,value);
+          };
+        }""")
+        self.page.locator('#agendaName').fill('Fictional failed task')
+        self.page.get_by_role('button', name='Add task', exact=True).click(); self.wait_saved()
+        self.assertEqual(self.saved(), original)
+        self.assertEqual(self.page.evaluate('profile.execution.tasks.length'), 1)
+        self.assertNotIn('Task saved', self.page.locator('#toast').inner_text())
+        attempt = json.loads(self.download('Download unsaved changes').read_text())
+        self.assertEqual(attempt['execution']['tasks'][-1]['name'], 'Fictional failed task')
+        self.page.reload(); self.assertEqual(json.loads(self.saved()), json.loads(original))
+
+    def test_native_lock_released_when_holder_tab_closes(self):
+        self.seed()
+        holder = self.context.new_page(); holder.goto(self.url)
+        holder.evaluate("""() => {
+          window.lockHeld=false;
+          navigator.locks.request('life-pilot-storage:'+KEY,()=>{
+            window.lockHeld=true;return new Promise(()=>{});
+          });
+        }""")
+        holder.wait_for_function('window.lockHeld')
+        self.agenda(); self.page.locator('#agendaName').fill('Fictional after tab close')
+        self.page.get_by_role('button', name='Add task', exact=True).click()
+        self.page.wait_for_function('transactionRunning')
+        holder.close(); self.wait_saved()
+        self.assertEqual(len(json.loads(self.saved())['execution']['tasks']), 2)
+
+    def test_stale_restore_cannot_replace_other_tab_save(self):
+        self.seed()
+        b=self.context.new_page(); b.goto(self.url)
+        self.agenda(); self.page.locator('#agendaName').fill('Fictional winning task')
+        self.page.get_by_role('button', name='Add task', exact=True).click(); self.wait_saved()
+        winning = self.saved()
+        b.evaluate("storageWarning('Fictional stale recovery test')")
+        b.once('dialog',lambda d:d.accept())
+        b.locator('#storageWarning input[type=file]').set_input_files(
+            {'name':'fictional.json','mimeType':'application/json','buffer':json.dumps(fictional_profile()).encode()})
+        b.evaluate('transactionQueue')
+        self.assertEqual(self.saved(), winning)
+        self.assertIn('Another tab changed',b.locator('#storageMessage').inner_text())
+
+    def test_existing_recovery_copy_is_never_overwritten(self):
+        raw = json.dumps(fictional_profile())
+        self.page.evaluate("""([key,raw]) => {
+          localStorage.setItem(key,'FICTIONAL corrupt current');
+          localStorage.setItem(key+':last-good',raw);
+          localStorage.setItem(key+':recovery-original','FICTIONAL earlier recovery');
+        }""", [KEY,raw])
+        self.page.reload()
+        self.page.get_by_role('button',name='Start Fresh',exact=True).click(); self.wait_saved()
+        self.assertEqual(self.saved(),'FICTIONAL corrupt current')
+        self.page.once('dialog',lambda d:d.accept())
+        self.page.get_by_role('button',name='Restore previous backup',exact=True).first.click()
+        self.page.evaluate('transactionQueue')
+        self.assertIn('earlier recovery copy',self.page.locator('#storageMessage').inner_text())
+        self.assertEqual(self.saved(),'FICTIONAL corrupt current')
+        self.assertEqual(self.download('Download pre-recovery data').read_text(),'FICTIONAL earlier recovery')
+        self.assertEqual(self.download('Download stored data').read_text(),'FICTIONAL corrupt current')
+
+    def test_execution_result_cannot_bypass_agenda_hold(self):
+        self.seed(); self.agenda()
+        self.page.locator('[data-action=hold][data-id=task]').click(); self.wait_saved()
+        saved = self.saved()
+        self.page.get_by_role('button', name='Execution', exact=True).click()
+        answers=iter(['completed','7'])
+        self.page.on('dialog',lambda d:d.accept(next(answers)) if d.type=='prompt' else d.accept())
+        self.page.get_by_role('button',name='Record result',exact=True).click(); self.wait_saved()
+        self.assertEqual(self.saved(),saved)
+        self.agenda(); self.page.locator('[data-action=release][data-id=task]').click(); self.wait_saved()
+        self.page.evaluate("completeTask('task','completed',7)")
+        self.assertEqual(json.loads(self.saved())['execution']['tasks'][0]['actual_minutes'],7)
+
+    def test_old_schedule_review_cannot_reopen_agenda_completion(self):
+        self.seed()
+        self.page.evaluate("proposeReview('g0','Fictional schedule conflict','schedule')")
+        self.agenda()
+        self.page.once('dialog',lambda d:d.accept('7'))
+        self.page.locator('[data-action=complete][data-id=task]').click(); self.wait_saved()
+        completed = self.saved()
+        self.page.get_by_role('button',name='Motivation Lab',exact=True).click()
+        review_id=self.page.evaluate('records().reviews[0].id')
+        for field,value in [('start','2026-10-24'),('end','2026-10-30'),('due','2026-10-26T10:00')]:
+            self.page.locator(f'[id="{field}-{review_id}"]').fill(value)
+        self.page.once('dialog',lambda d:d.accept())
+        self.page.get_by_role('button',name='Approve experiment',exact=True).click(); self.wait_saved()
+        self.assertEqual(self.saved(),completed)
+        self.page.reload()
+        task=json.loads(self.saved())['execution']['tasks'][0]
+        self.assertEqual((task['status'],task['actual_minutes']),('completed',7))
+
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)

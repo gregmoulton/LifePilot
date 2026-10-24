@@ -27,6 +27,73 @@ function harness(map = new Map(), sharedLocks) {
   return { map, element, blobs, alerts, context, confirm(value) { confirmAnswer = value; }, fail(value = true) { fail = value; }, run(s) { return vm.runInContext(s, context); } };
 }
 function legacy() { return { schema_version: '0.1', goals: Array.from({ length: 8 }, (_, i) => ({ id: 'g' + i, name: 'Synthetic goal ' + i, status: 'active', custom: 'retain' })), decision_register: [], custom_top: { keep: true } }; }
+function linkedTaskProfile() {
+  const p = legacy();
+  p.execution = { tasks: [{ id: 'task', name: 'Fictional linked task', goal_id: 'g0', status: 'planned', due: '2020-01-01', planned_minutes: 10 }] };
+  return p;
+}
+test('Execution cannot complete a task placed on HOLD in Agenda', async () => {
+  const h = harness(new Map([[KEY, JSON.stringify(linkedTaskProfile())]]));
+  await h.run("agendaAction('hold','task')");
+  const saved = h.map.get(KEY);
+  await h.run("completeTask('task','completed',7)");
+  assert.equal(h.map.get(KEY), saved);
+  assert.equal(h.run('profile.execution.tasks[0].status'), 'planned');
+  assert.match(h.element('storageMessage').textContent, /HOLD/);
+  await h.run("agendaAction('release','task')");
+  await h.run("completeTask('task','completed',7)");
+  assert.equal(harness(h.map).run('profile.execution.tasks[0].actual_minutes'), 7);
+});
+test('a pending Motivation Lab schedule cannot reopen an Agenda completion', async () => {
+  const h = harness(new Map([[KEY, JSON.stringify(linkedTaskProfile())]]));
+  await h.run("proposeReview('g0','Fictional scheduling conflict','schedule')");
+  h.context.prompt = () => '7';
+  await h.run("agendaAction('complete','task')");
+  const saved = h.map.get(KEY);
+  await h.run("approveAdjustment(records().reviews[0].id,'2026-10-24','2026-10-30','2026-10-26T10:00')");
+  assert.equal(h.map.get(KEY), saved);
+  assert.equal(h.run('records().tasks[0].status'), 'completed');
+  assert.equal(h.run('records().tasks[0].actual_minutes'), 7);
+  assert.equal(h.run('records().reviews[0].status'), 'proposed');
+  assert.equal(h.run('records().experiments.length'), 0);
+});
+test('schedule review snapshots survive export/restart and reject changed task data', async () => {
+  const h = harness(new Map([[KEY, JSON.stringify(linkedTaskProfile())]]));
+  await h.run("proposeReview('g0','Fictional scheduling conflict','schedule')");
+  h.run('exportProfile()');
+  const exported = await h.blobs.at(-1).text();
+  const restart = harness(new Map([[KEY, exported]]));
+  // An approved Agenda reschedule changes the same authoritative task.
+  await restart.run("agendaAction('refresh')");
+  restart.context.prompt = () => '2020-02-01';
+  await restart.run("agendaAction('approve',profile.agenda.proposals[0].id)");
+  const saved = restart.map.get(KEY);
+  await restart.run("approveAdjustment(records().reviews[0].id,'2026-10-24','2026-10-30','2026-10-26T10:00')");
+  assert.equal(restart.map.get(KEY), saved);
+  assert.equal(restart.run('records().tasks[0].due'), '2020-02-01');
+  assert.match(restart.element('storageMessage').textContent, /changed/);
+});
+test('legacy schedule reviews without snapshots cannot reopen completed or held tasks', async () => {
+  for (const change of [{status:'completed',actual_minutes:9}, {agenda_hold:true}, {}]) {
+    const p = linkedTaskProfile(); Object.assign(p.execution.tasks[0], change);
+    p.execution.reviews = [{id:'old',goal_id:'g0',status:'proposed',reason:'schedule',task_ids:['task']}];
+    const raw = JSON.stringify(p), h = harness(new Map([[KEY,raw]]));
+    await h.run("approveAdjustment('old','2026-10-24','2026-10-30','2026-10-26T10:00')");
+    assert.equal(h.map.get(KEY), raw);
+  }
+});
+test('unchanged schedule snapshot approves after restart and retains previous results in history', async () => {
+  const p = linkedTaskProfile(); p.execution.tasks[0].status = 'missed'; p.execution.tasks[0].actual_minutes = 4;
+  const h = harness(new Map([[KEY, JSON.stringify(p)]]));
+  await h.run("proposeReview('g0','Fictional scheduling conflict','schedule')");
+  const restart = harness(h.map);
+  await restart.run("approveAdjustment(records().reviews[0].id,'2026-10-24','2026-10-30','2026-10-26T10:00')");
+  assert.equal(restart.run('records().reviews[0].status'), 'approved');
+  assert.equal(restart.run('records().tasks[0].due'), '2026-10-26T10:00');
+  assert.equal(restart.run('records().tasks[0].history[0].actual_minutes'), 4);
+  assert.equal(restart.run('profile.custom_top.keep'), true);
+  assert.equal(restart.run('records().experiments.length'), 1);
+});
 const event = '{preventDefault(){}}';
 test('eight-goal legacy import, execution, approval, improvement log and export survive restart', async () => {
   const h = harness(); h.context.fixture = legacy();
@@ -84,11 +151,13 @@ test('reset preserves a downloadable previous profile', async () => {
 test('failed approval save cannot leave the plan approved or change task dates', async () => {
   const p = legacy();
   p.execution = { programs: [], milestones: [], observations: [], experiments: [], reviews: [{ id: 'review', goal_id: 'g0', status: 'proposed', recommendation: 'Synthetic adjustment' }], tasks: [{ id: 'task', goal_id: 'g0', status: 'missed', due: '2026-10-20T10:00', planned_minutes: 10 }] };
+  Object.assign(p.execution.reviews[0], {reason:'schedule',task_ids:['task'],task_snapshots:JSON.parse(JSON.stringify(p.execution.tasks))});
   const map = new Map([[KEY, JSON.stringify(p)]]), h = harness(map); h.fail();
   await h.run("approveAdjustment('review','2026-10-23','2026-10-30','2026-10-24T10:00')");
   assert.equal(h.run('records().reviews[0].status'), 'proposed');
   assert.equal(h.run('records().tasks[0].due'), '2026-10-20T10:00');
   assert.equal(JSON.parse(map.get(KEY)).execution.reviews[0].status, 'proposed');
+  assert.match(h.element('storageMessage').textContent, /Save failed/);
 });
 test('invalid import preserves the existing saved profile', async () => {
   const raw = JSON.stringify(legacy()), map = new Map([[KEY, raw]]), h = harness(map);
@@ -115,7 +184,8 @@ test('failed recovery never shows a success notice', async () => {
   assert.notEqual(h.element('toast').textContent, 'Backup restored successfully'); assert.equal(h.run('profile'), null);
 });
 test('legacy caught errors cannot leak partial approval mutations without a save', async () => {
-  const p = legacy(); p.execution = { reviews: [{ id: 'review', goal_id: 'g0', status: 'proposed', reason: 'schedule' }], tasks: [{ id: 'task', goal_id: 'g0', status: 'missed' }] };
+  const p = legacy(); p.execution = { reviews: [{ id: 'review', goal_id: 'g0', status: 'proposed', reason: 'schedule' }], tasks: [{ id: 'task', goal_id: 'g0', status: 'missed', history: {} }] };
+  Object.assign(p.execution.reviews[0], {task_ids:['task'],task_snapshots:JSON.parse(JSON.stringify(p.execution.tasks))});
   const map = new Map([[KEY, JSON.stringify(p)]]), h = harness(map);
   h.element('start-review').value = '2026-10-23'; h.element('end-review').value = '2026-10-30'; h.element('due-review').value = '2026-10-24T10:00';
   await h.run("approveReview('review')");

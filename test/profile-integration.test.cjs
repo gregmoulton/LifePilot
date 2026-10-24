@@ -138,3 +138,25 @@ test('missing previous backup is explained without resetting the current profile
   await h.run('restoreLocalBackup()'); assert.equal(map.get(KEY), raw);
   assert.match(h.element('storageMessage').textContent, /No previous backup/);
 });
+test('Agenda commands use durable storage; completion and rejection survive restart',async()=>{
+ const p=legacy();p.execution={tasks:[{id:'task',name:'Fictional task',status:'planned',due:'2026-10-20'}]};
+ const h=harness(new Map([[KEY,JSON.stringify(p)]]));await h.run("agendaAction('refresh')");
+ assert.equal(h.run('profile.execution.tasks[0].due'),'2026-10-20');
+ const id=h.run('profile.agenda.proposals[0].id');await h.run(`agendaAction('reject',${JSON.stringify(id)})`);
+ const restarted=harness(h.map);await restarted.run("agendaAction('refresh')");assert.equal(restarted.run('profile.agenda.proposals.length'),1);
+ restarted.context.prompt=()=> '7';await restarted.run("agendaAction('complete','task')");
+ assert.equal(harness(h.map).run('profile.execution.tasks[0].status'),'completed');
+});
+test('failed Agenda proposal approval leaves no applied receipt or changed due date',async()=>{
+ const p=legacy();p.execution={tasks:[{id:'task',name:'Fictional task',status:'planned',due:'2026-10-20'}]};
+ const h=harness(new Map([[KEY,JSON.stringify(p)]]));await h.run("agendaAction('refresh')");
+ const id=h.run('profile.agenda.proposals[0].id');h.context.prompt=()=> '2026-10-30';h.fail();
+ await h.run(`agendaAction('approve',${JSON.stringify(id)})`);
+ assert.equal(h.run('profile.execution.tasks[0].due'),'2026-10-20');assert.equal(h.run('profile.agenda.proposals[0].status'),'proposed');
+ assert.notEqual(h.element('toast').textContent,'Change saved');assert.equal(h.element('storageWarning').hidden,false);
+});
+test('Agenda validation error does not trap the user in unsaved recovery',async()=>{
+ const p=legacy();p.execution={tasks:[{id:'task',name:'Fictional task',status:'planned',due:'2026-10-20'}]};const h=harness(new Map([[KEY,JSON.stringify(p)]]));
+ h.context.prompt=()=> 'invalid';await h.run("agendaAction('complete','task')");assert.match(h.element('storageMessage').textContent,/not applied/);
+ h.context.prompt=()=> '3';await h.run("agendaAction('complete','task')");assert.equal(h.run('profile.execution.tasks[0].status'),'completed');
+});

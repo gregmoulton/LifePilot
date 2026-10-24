@@ -1,7 +1,7 @@
 name: Life Pilot profile storage checks
 on:
   pull_request:
-    branches: [main, 'fix/**']
+    branches: [main, 'fix/**', 'feature/**']
     paths:
       - index.html
       - execution.js
@@ -24,3 +24,13 @@ jobs:
           node-version: '22'
       - run: TZ=America/Phoenix node test/radar-original.cjs
       - run: node --test test/*.test.cjs prime-workout/structure.test.mjs prime-workout/regression.test.mjs
+  browser-storage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.62.0
+      - run: python -m playwright install --with-deps chromium
+      - run: python test/browser-validation.py

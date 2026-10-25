@@ -1,9 +1,10 @@
 name: Life Pilot profile storage checks
 on:
   pull_request:
-    branches: [main, 'fix/**']
+    branches: [main, 'fix/**', 'feature/agenda-radar-integration-20261024']
     paths:
       - index.html
+      - command-center.js
       - execution.js
       - forward-radar.js
       - agenda-model.js

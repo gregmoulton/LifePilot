@@ -104,6 +104,11 @@ button.lpc-link{background:none;color:#167baf;padding:5px;font-size:12px}
   function mount(root){
     if(root.__lifePilotCommandCenterMounted)return;
     if(typeof root.baseRender!=='function')return;
+    // Legacy integration tests use a minimal document stub, not a browser DOM.
+    // Do not try to mount visual controls without a real head/body host.
+    if(!root.document.head || !root.document.body ||
+       typeof root.document.head.appendChild!=='function' ||
+       typeof root.document.body.append!=='function')return;
     root.__lifePilotCommandCenterMounted=true;
     const doc=root.document,style=doc.createElement('style');
     style.textContent=CSS;style.id='life-pilot-cockpit-style';doc.head.appendChild(style);

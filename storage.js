@@ -75,20 +75,24 @@
         channel.port2.postMessage(null);
       });
     }
+    function withStorageLock(operation) {
+      return locks.request('life-pilot-storage:' + key, async () => {
+        await storageCheckpoint();
+        try { return operation(); }
+        finally { await storageCheckpoint(); }
+      });
+    }
     async function commit(candidate) {
       if (blocked) throw failure(reason);
       if (!hasLocks()) throw failure(lockReason);
       const next = encode(candidate);
-      return locks.request('life-pilot-storage:' + key, async () => {
-        await storageCheckpoint();
+      return withStorageLock(() => {
         assertCurrent();
         if (expected !== null) {
           storage.setItem(key + ':last-good', expected);
           if (storage.getItem(key + ':last-good') !== expected) throw failure('Could not verify the previous backup. Nothing was applied.');
         }
-        const result = write(next);
-        await storageCheckpoint();
-        return result;
+        return write(next);
       });
     }
     // Called only after a separate, explicit recovery confirmation in the UI.
@@ -96,8 +100,7 @@
       if (!hasLocks()) throw failure(lockReason);
       if (candidate === null) throw failure('Choose a valid profile backup.');
       const next = encode(candidate);
-      return locks.request('life-pilot-storage:' + key, async () => {
-        await storageCheckpoint();
+      return withStorageLock(() => {
         assertCurrent();
         if (backupSource !== undefined && storage.getItem(key + ':last-good') !== backupSource) throw failure('The previous backup changed. Reload before restoring.');
         // Preserve the exact replaced bytes in a separate slot, never overwrite an
@@ -109,7 +112,6 @@
           if (storage.getItem(key + ':recovery-original') !== expected) throw failure('Could not preserve the original data. Nothing was restored.');
         }
         const result = write(next);
-        await storageCheckpoint();
         blocked = false; reason = '';
         return result;
       });

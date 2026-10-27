@@ -11,7 +11,7 @@ function projection(profile,now=new Date()){
  const byId=new Map(list.map(t=>[t.id,t]));
  for(const t of list){const s=state(t),days=t.due?engine.daysUntil(t.due,new Date(now)):0;const blocked=!!t.prerequisite_id&&state(byId.get(t.prerequisite_id)||{status:'missing'})!=='completed';const item={...copy(t),blocked,overdue:s==='open'&&days<0};
  if(s==='completed')result.completed.push(item);else if(s==='hold'||blocked)result.hold.push(item);else if(s==='review'||!Number.isFinite(days))result.review.push(item);else result[days<=0?'today':'upcoming'].push(item);}
- for(const key of ['today','upcoming'])result[key].sort((a,b)=>Number(!!b.agenda_priority)-Number(!!a.agenda_priority));
+ for(const key of ['today','upcoming'])result[key].sort((a,b)=>Number(!!b.agenda_priority)-Number(!!a.agenda_priority)||({high:3,normal:2,low:1}[b.agenda_importance]||2)-({high:3,normal:2,low:1}[a.agenda_importance]||2));
  return result;
 }
 function apply(profile,command,now=new Date()){
@@ -22,7 +22,9 @@ function apply(profile,command,now=new Date()){
  if(command.type==='add'){
   if(!command.task||typeof command.task.id!=='string'||!command.task.id||!command.task.name?.trim()||list.some(t=>t.id===command.task.id))throw Error('Choose a task name and unique ID');
   if(command.task.due&&!Number.isFinite(engine.daysUntil(command.task.due,new Date(now))))throw Error('Choose a valid date');
-  list.push({id:command.task.id,name:command.task.name.trim(),due:command.task.due||'',status:'planned',created_at:stamp});event('added',{task_id:command.task.id});
+  const importance=command.task.agenda_importance||'normal';
+  if(!['high','normal','low'].includes(importance))throw Error('Choose High, Normal or Low priority');
+  list.push({agenda_importance:importance,importance:{high:3,normal:1,low:0.5}[importance],id:command.task.id,name:command.task.name.trim(),due:command.task.due||'',status:'planned',created_at:stamp});event('added',{task_id:command.task.id});
  }else if(command.type==='refresh'){
   const normalized=list.map(t=>({...t,status:state(t)==='open'?'planned':state(t)==='completed'?'completed':state(t)==='hold'?'hold':'review'}));
   const report=engine.forwardRadar({tasks:normalized,rejections:a.rejections,now});
@@ -64,3 +66,4 @@ function apply(profile,command,now=new Date()){
 }
 return {projection,apply,state};
 });
+

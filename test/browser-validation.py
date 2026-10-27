@@ -142,7 +142,16 @@ class BrowserValidation(unittest.TestCase):
             (await navigator.locks.query()).pending.filter(l => l.name === 'life-pilot-storage:' + KEY).length === 2""")
         self.assertEqual(self.saved(), original)
         holder.evaluate('window.releaseTestLock()')
-        for page in [a, b]: self.wait_saved(page)
+        for page in [a, b]:
+            page.evaluate('transactionQueue')
+            self.wait_saved(page)
+        outcomes = [page.evaluate("""() => ({
+            warning: document.getElementById('storageMessage').textContent,
+            unsaved: unsavedProfile !== null,
+            taskNames: profile.execution.tasks.map(t=>t.name)
+        })""") for page in [a, b]]
+        self.assertEqual(sum(o['unsaved'] for o in outcomes), 1,
+                         'Exactly one stale writer must retain unsaved data: ' + json.dumps(outcomes))
         winner, loser = (a, b) if a.locator('#storageWarning').is_hidden() else (b, a)
         saved = json.loads(self.saved())
         self.assertEqual(len(saved['execution']['tasks']), 2)

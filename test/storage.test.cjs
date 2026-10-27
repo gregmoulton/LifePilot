@@ -112,3 +112,24 @@ test('uncertain main readback blocks further writes until reload', async () => {
   assert.equal(store.blocked, true); await assert.rejects(store.commit(profile('retry')));
   assert.equal(f.map.has(key), false);
 });
+
+
+for (const action of ['commit','restore']) test(action+' holds native lock until browser checkpoints finish, including failed writes',async()=>{
+ const vm=require('node:vm'),fs=require('node:fs');
+ for(const shouldFail of [false,true]){
+  const f=fixture(),raw=JSON.stringify(profile('original'));f.map.set(key,raw);
+  const ticks=[];let held=false,settled=false;
+  class Channel {constructor(){this.port1={close(){}};this.port2={close(){},postMessage:()=>ticks.push(()=>this.port1.onmessage())};}}
+  const context=vm.createContext({document:{},MessageChannel:Channel});
+  vm.runInContext(fs.readFileSync(require.resolve('../storage.js'),'utf8'),context);
+  const locks={async request(name,fn){held=true;try{return await fn();}finally{held=false;}}};
+  const store=context.LifePilotStorage.open({storage:f.storage,locks,key});
+  if(shouldFail)f.fail(key);
+  const result=store[action](profile('changed')).then(()=>{settled=true;return 'saved'},()=>{settled=true;return 'failed'});
+  assert.equal(held,true);assert.equal(f.map.get(key),raw);assert.equal(ticks.length,1);
+  ticks.shift()();await new Promise(setImmediate);
+  assert.equal(ticks.length,1);assert.equal(held,true);assert.equal(settled,false);
+  assert.equal(f.map.get(key),shouldFail?raw:JSON.stringify(profile('changed')));
+  ticks.shift()();assert.equal(await result,shouldFail?'failed':'saved');assert.equal(held,false);
+ }
+});

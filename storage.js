@@ -61,17 +61,34 @@
       expected = next; value = next === null ? null : JSON.parse(next);
       return copy(value);
     }
+    // Firefox publishes localStorage snapshots at browser task boundaries.
+    // A Promise/microtask boundary alone can release a Web Lock before another
+    // tab sees the write. Keep the lock across a posted task before and after
+    // the critical section; no arbitrary sleep or unlocked fallback.
+    function storageCheckpoint() {
+      if (typeof document === 'undefined' || typeof MessageChannel !== 'function') return Promise.resolve();
+      return new Promise(resolve => {
+        const channel = new MessageChannel();
+        channel.port1.onmessage = () => {
+          channel.port1.close(); channel.port2.close(); resolve();
+        };
+        channel.port2.postMessage(null);
+      });
+    }
     async function commit(candidate) {
       if (blocked) throw failure(reason);
       if (!hasLocks()) throw failure(lockReason);
       const next = encode(candidate);
-      return locks.request('life-pilot-storage:' + key, () => {
+      return locks.request('life-pilot-storage:' + key, async () => {
+        await storageCheckpoint();
         assertCurrent();
         if (expected !== null) {
           storage.setItem(key + ':last-good', expected);
           if (storage.getItem(key + ':last-good') !== expected) throw failure('Could not verify the previous backup. Nothing was applied.');
         }
-        return write(next);
+        const result = write(next);
+        await storageCheckpoint();
+        return result;
       });
     }
     // Called only after a separate, explicit recovery confirmation in the UI.
@@ -79,7 +96,8 @@
       if (!hasLocks()) throw failure(lockReason);
       if (candidate === null) throw failure('Choose a valid profile backup.');
       const next = encode(candidate);
-      return locks.request('life-pilot-storage:' + key, () => {
+      return locks.request('life-pilot-storage:' + key, async () => {
+        await storageCheckpoint();
         assertCurrent();
         if (backupSource !== undefined && storage.getItem(key + ':last-good') !== backupSource) throw failure('The previous backup changed. Reload before restoring.');
         // Preserve the exact replaced bytes in a separate slot, never overwrite an
@@ -91,6 +109,7 @@
           if (storage.getItem(key + ':recovery-original') !== expected) throw failure('Could not preserve the original data. Nothing was restored.');
         }
         const result = write(next);
+        await storageCheckpoint();
         blocked = false; reason = '';
         return result;
       });
@@ -108,3 +127,4 @@
   }
   return { open, validProfile };
 });
+

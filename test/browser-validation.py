@@ -1,8 +1,9 @@
-"""Fictional-data acceptance checks using native Chromium Web Locks and downloads.
+"""Fictional-data acceptance checks using native browser Web Locks and downloads.
 
 Run: python3 -m pip install playwright
      python3 -m playwright install chromium
      python3 test/browser-validation.py
+LIFEPILOT_BROWSER selects chromium (default), firefox or webkit.
 CHROMIUM_PATH can select an installed Chromium. No external app/service is used.
 """
 import functools
@@ -56,10 +57,17 @@ class BrowserValidation(unittest.TestCase):
         cls.thread.start()
         cls.url = f'http://localhost:{cls.server.server_port}/'
         cls.playwright = sync_playwright().start()
-        cls.browser = cls.playwright.chromium.launch(
-            executable_path=os.environ.get('CHROMIUM_PATH') or shutil.which('chromium'),
-            args=['--no-sandbox'])
-        print(f'Chromium {cls.browser.version}; secure localhost; native locks; '
+        cls.engine = os.environ.get('LIFEPILOT_BROWSER', 'chromium')
+        if cls.engine not in ('chromium', 'firefox', 'webkit'):
+            raise ValueError('LIFEPILOT_BROWSER must be chromium, firefox or webkit')
+        launch_options = {}
+        if cls.engine == 'chromium':
+            executable = os.environ.get('CHROMIUM_PATH')
+            if executable:
+                launch_options['executable_path'] = executable
+            launch_options['args'] = ['--no-sandbox']
+        cls.browser = getattr(cls.playwright, cls.engine).launch(**launch_options)
+        print(f'{cls.engine} {cls.browser.version}; secure localhost; native locks; '
               f'timezone={os.environ.get("LIFEPILOT_TEST_TIMEZONE", "America/Phoenix")}', flush=True)
 
     @classmethod
@@ -310,3 +318,4 @@ class BrowserValidation(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
+

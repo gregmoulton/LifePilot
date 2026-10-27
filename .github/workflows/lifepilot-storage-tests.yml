@@ -26,11 +26,18 @@ jobs:
       - run: node --test test/*.test.cjs prime-workout/structure.test.mjs prime-workout/regression.test.mjs
   browser-storage:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      LIFEPILOT_BROWSER: ${{ matrix.browser }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: python -m pip install playwright==1.62.0
-      - run: python -m playwright install --with-deps chromium
+      - run: python -m playwright install --with-deps ${{ matrix.browser }}
       - run: python test/browser-validation.py
+

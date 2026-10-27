@@ -143,7 +143,7 @@ class BrowserValidation(unittest.TestCase):
         self.assertEqual(self.saved(), original)
         holder.evaluate('window.releaseTestLock()')
         for page in [a, b]:
-            page.evaluate('transactionQueue')
+            page.evaluate("Promise.race([transactionQueue,new Promise((_,reject)=>setTimeout(()=>reject(new Error('Cross-tab transaction did not settle within 15 seconds')),15000))])")
             self.wait_saved(page)
         outcomes = [page.evaluate("""() => ({
             warning: document.getElementById('storageMessage').textContent,

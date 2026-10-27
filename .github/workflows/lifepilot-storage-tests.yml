@@ -12,6 +12,9 @@ on:
       - persistence.js
       - 'test/**'
       - .github/workflows/lifepilot-storage-tests.yml
+concurrency:
+  group: lifepilot-storage-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -25,6 +28,7 @@ jobs:
       - run: TZ=America/Phoenix node test/radar-original.cjs
       - run: node --test test/*.test.cjs prime-workout/structure.test.mjs prime-workout/regression.test.mjs
   browser-storage:
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

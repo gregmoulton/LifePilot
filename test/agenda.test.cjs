@@ -65,3 +65,21 @@ test('duplicate Later and missing proposal fail without mutating source',()=>{
  assert.throws(()=>agenda.apply(p,{type:'resume',proposal_id:'missing'},now),/awaiting/);
  assert.equal(JSON.stringify(p),before);
 });
+
+test('reviewed task batch preserves per-task dates/priorities and legacy data across restart',()=>{
+ const original=profile([task('existing',{custom:'retain'})]),before=JSON.stringify(original);
+ const tasks=[{id:'one',name:' Fictional errand ',due:'2026-10-24',agenda_importance:'high'},{id:'two',name:'Fictional pickup',due:'2026-10-25',agenda_importance:'normal'},{id:'three',name:'Fictional online task',due:'',agenda_importance:'low'}];
+ const p=agenda.apply(original,{type:'add-many',tasks,approved:true},now),restart=JSON.parse(JSON.stringify(p));
+ assert.equal(JSON.stringify(original),before);assert.equal(restart.execution.tasks.length,4);assert.equal(restart.execution.tasks[1].name,'Fictional errand');
+ assert.equal(restart.execution.tasks[2].due,'2026-10-25');assert.equal(restart.execution.tasks[3].due,'');assert.equal(restart.execution.tasks[3].agenda_importance,'low');
+ assert.deepEqual(restart.goals,original.goals);assert.deepEqual(restart.execution.tasks[0],original.execution.tasks[0]);assert.equal(restart.agenda.events.filter(e=>e.type==='added').length,3);
+});
+test('batch validation is all-or-nothing, requires review and rejects repeated IDs',()=>{
+ const p=profile([task('old')]),before=JSON.stringify(p),good={id:'new',name:'Fictional valid'};
+ for(const tasks of [[good,{id:'bad',name:''}],[good,{id:'new',name:'Duplicate'}],[good,{id:'old',name:'Existing collision'}],[good,{id:'bad',name:'Invalid date',due:'2026-02-30'}],[good,{id:'bad',name:42}]]){
+  assert.throws(()=>agenda.apply(p,{type:'add-many',tasks,approved:true},now));assert.equal(JSON.stringify(p),before);
+ }
+ assert.throws(()=>agenda.apply(p,{type:'add-many',tasks:[good]},now),/Review/);
+ assert.throws(()=>agenda.apply(p,{type:'add-many',tasks:[],approved:true},now),/20/);
+ assert.throws(()=>agenda.apply(p,{type:'add-many',tasks:Array(21).fill(good),approved:true},now),/20/);
+});

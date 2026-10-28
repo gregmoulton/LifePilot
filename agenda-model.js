@@ -19,8 +19,12 @@ function apply(profile,command,now=new Date()){
  const a=p.agenda;if(a.version!==1||!['events','proposals','rejections'].every(k=>Array.isArray(a[k])))throw Error('Unsupported Agenda metadata; no data changed');
  const list=p.execution.tasks;projection(p,now);const stamp=new Date(now).toISOString();const t=list.find(t=>t.id===command.task_id);
  const event=(type,extra={})=>a.events.push({type,task_id:command.task_id||null,at:stamp,...extra});
- if(command.type==='add'){
-  if(!command.task||typeof command.task.id!=='string'||!command.task.id||!command.task.name?.trim()||list.some(t=>t.id===command.task.id))throw Error('Choose a task name and unique ID');
+ if(command.type==='add-many'){
+  if(command.approved!==true)throw Error('Review the task list before adding');
+  if(!Array.isArray(command.tasks)||command.tasks.length<1||command.tasks.length>20)throw Error('Add 1 to 20 tasks at a time');
+  return command.tasks.reduce((next,task)=>apply(next,{type:'add',task},now),p);
+ }else if(command.type==='add'){
+  if(!command.task||typeof command.task.id!=='string'||!command.task.id||typeof command.task.name!=='string'||!command.task.name.trim()||command.task.name.trim().length>200||list.some(t=>t.id===command.task.id))throw Error('Choose a task name and unique ID');
   if(command.task.due&&!Number.isFinite(engine.daysUntil(command.task.due,new Date(now))))throw Error('Choose a valid date');
   const importance=command.task.agenda_importance||'normal';
   if(!['high','normal','low'].includes(importance))throw Error('Choose High, Normal or Low priority');

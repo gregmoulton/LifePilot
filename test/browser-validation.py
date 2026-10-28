@@ -383,6 +383,38 @@ class BrowserValidation(unittest.TestCase):
         self.assertEqual(json.loads(self.saved())['agenda']['proposals'][0]['status'],'proposed')
 
 
+    def test_batch_review_cancel_edit_and_atomic_save_survive_reload(self):
+        self.page.set_viewport_size({'width':360,'height':800})
+        self.seed(); self.agenda()
+        before = self.saved()
+        self.page.get_by_role('button',name='Today',exact=True).click()
+        self.page.get_by_role('radio',name='High',exact=True).check()
+        self.page.get_by_text('Add several tasks',exact=True).click()
+        self.page.locator('#agendaBatchText').fill('Fictional errand\nFictional pickup\nFictional online task')
+        self.page.get_by_role('button',name='Review tasks',exact=True).click()
+        self.assertEqual(self.saved(),before)
+        self.page.get_by_role('button',name='Cancel',exact=True).click()
+        self.assertEqual(self.saved(),before)
+        self.page.get_by_role('button',name='Review tasks',exact=True).click()
+        self.page.locator('#batchName0').fill('Fictional <img src=x onerror=alert(1)>')
+        self.page.locator('#batchDue1').fill('2030-01-01')
+        self.page.locator('#batchPriority1').select_option('normal')
+        self.page.locator('#batchDue2').fill('')
+        self.page.locator('#batchPriority2').select_option('low')
+        self.assertTrue(self.page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+        self.page.get_by_role('button',name='Add 3 tasks',exact=True).click()
+        self.page.wait_for_function('profile.execution.tasks.length===4 && !transactionRunning')
+        self.page.reload(); self.agenda()
+        saved=json.loads(self.saved())
+        self.assertEqual(len(saved['execution']['tasks']),4)
+        self.assertEqual(saved['execution']['tasks'][2]['due'],'2030-01-01')
+        self.assertEqual(saved['execution']['tasks'][3]['agenda_importance'],'low')
+        self.assertEqual(saved['execution']['tasks'][3]['due'],'')
+        self.assertEqual(len(saved['goals']),8)
+        self.assertEqual(self.page.locator('#agendaWorkspace img').count(),0)
+        self.assertTrue(self.page.get_by_text('Fictional <img src=x onerror=alert(1)>',exact=True).is_visible())
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 

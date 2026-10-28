@@ -6,12 +6,12 @@ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function tasks(profile){return profile.execution?.tasks||[];}
 function state(task){if(task.status==='completed'||task.status==='done')return 'completed';if(task.agenda_hold||['hold','HOLD','waiting','on_hold'].includes(task.status))return 'hold';if(['missed','partial'].includes(task.status))return 'review';if(!['planned','active','today',undefined].includes(task.status))return 'review';return 'open';}
 function projection(profile,now=new Date()){
- const result={today:[],upcoming:[],hold:[],completed:[],review:[]};const list=tasks(profile);const ids=new Set();
+ const result={today:[],unscheduled:[],upcoming:[],hold:[],completed:[],review:[]};const list=tasks(profile);const ids=new Set();
  for(const t of list){if(!t||!t.id||ids.has(t.id))throw Error('Invalid or duplicate task ID');ids.add(t.id);}
  const byId=new Map(list.map(t=>[t.id,t]));
  for(const t of list){const s=state(t),days=t.due?engine.daysUntil(t.due,new Date(now)):0;const blocked=!!t.prerequisite_id&&state(byId.get(t.prerequisite_id)||{status:'missing'})!=='completed';const item={...copy(t),blocked,overdue:s==='open'&&days<0};
- if(s==='completed')result.completed.push(item);else if(s==='hold'||blocked)result.hold.push(item);else if(s==='review'||!Number.isFinite(days))result.review.push(item);else result[days<=0?'today':'upcoming'].push(item);}
- for(const key of ['today','upcoming'])result[key].sort((a,b)=>Number(!!b.agenda_priority)-Number(!!a.agenda_priority)||({high:3,normal:2,low:1}[b.agenda_importance]||2)-({high:3,normal:2,low:1}[a.agenda_importance]||2));
+ if(s==='completed')result.completed.push(item);else if(s==='hold'||blocked)result.hold.push(item);else if(s==='review'||!Number.isFinite(days))result.review.push(item);else if(!t.due)result.unscheduled.push(item);else result[days<=0?'today':'upcoming'].push(item);}
+ for(const key of ['today','upcoming','unscheduled'])result[key].sort((a,b)=>Number(!!b.agenda_priority)-Number(!!a.agenda_priority)||({high:3,normal:2,low:1}[b.agenda_importance]||2)-({high:3,normal:2,low:1}[a.agenda_importance]||2));
  return result;
 }
 function apply(profile,command,now=new Date()){
@@ -57,7 +57,11 @@ function apply(profile,command,now=new Date()){
   }
  }else{
   if(!t)throw Error('Task not found');
-  if(command.type==='complete'){
+  if(command.type==='plan-today'){
+   if(state(t)!=='open'||t.due||projection(p,now).hold.some(x=>x.id===t.id))throw Error('Only an available undated task can be planned for Today');
+   const date=new Date(now),due=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
+   const previous=t.due??null;t.due=due;event('planned_today',{previous_due:previous,due});
+  }else if(command.type==='complete'){
    if(state(t)==='completed')return p;
    if(state(t)!=='open'||projection(p,now).hold.some(x=>x.id===t.id))throw Error('Release HOLD and complete prerequisites before recording completion');
    if(!Number.isFinite(command.minutes)||command.minutes<0)throw Error('Enter actual minutes');

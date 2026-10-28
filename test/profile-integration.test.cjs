@@ -279,3 +279,14 @@ test('profile change after batch preview requires another review without overwri
  await h.run("agendaAction('refresh')");const before=h.map.get(KEY);await h.run('agendaSaveBatch({preventDefault(){}})');
  assert.equal(h.map.get(KEY),before);assert.match(h.element('storageMessage').textContent,/Agenda changed/);
 });
+
+test('Plan today commits only selected undated task and failed save restores all dates',async()=>{
+ const p=legacy();p.execution={tasks:[{id:'undated',name:'Fictional undated',status:'planned',due:''},{id:'old',name:'Fictional carryover',status:'planned',due:'2020-01-01'}]};
+ for(const fails of [false,true]){
+  const h=harness(new Map([[KEY,JSON.stringify(p)]])),before=h.map.get(KEY);if(fails)h.fail();
+  await h.run("agendaAction('plan-today','undated')");const restarted=harness(h.map);
+  assert.equal(restarted.run('profile.execution.tasks[1].due'),'2020-01-01');assert.equal(restarted.run('profile.goals.length'),8);
+  if(fails){assert.equal(h.map.get(KEY),before);assert.equal(h.run('profile.execution.tasks[0].due'),'');assert.equal(h.run('unsavedProfile.agenda.events[0].type'),'planned_today');}
+  else{assert.match(restarted.run('profile.execution.tasks[0].due'),/^\d{4}-\d{2}-\d{2}$/);assert.equal(restarted.run('profile.agenda.events.length'),1);}
+ }
+});

@@ -242,3 +242,17 @@ test('Today uses local calendar date and changes only the unsaved form; explicit
  assert.equal(restarted.run('profile.execution.tasks[0].due'),'2026-10-27');
  assert.equal(restarted.run('profile.goals.length'),8);
 });
+
+test('Later saves durably, and failed defer/resume restores the last saved recommendation',async()=>{
+ const p=legacy();p.execution={tasks:[{id:'task',name:'Fictional task',status:'planned',due:'2026-10-20'}]};
+ for(const action of ['defer','resume']){
+  const h=harness(new Map([[KEY,JSON.stringify(p)]]));await h.run("agendaAction('refresh')");
+  const id=h.run('profile.agenda.proposals[0].id');
+  if(action==='resume')await h.run(`agendaAction('defer',${JSON.stringify(id)})`);
+  const before=h.map.get(KEY),status=h.run('profile.agenda.proposals[0].status');h.fail();
+  await h.run(`agendaAction('${action}',${JSON.stringify(id)})`);
+  assert.equal(h.map.get(KEY),before);assert.equal(h.run('profile.agenda.proposals[0].status'),status);
+  assert.equal(h.element('storageWarning').hidden,false);assert.notEqual(h.element('toast').textContent,'Change saved');
+  assert.equal(harness(h.map).run('profile.agenda.proposals[0].status'),status);
+ }
+});

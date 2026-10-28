@@ -256,3 +256,26 @@ test('Later saves durably, and failed defer/resume restores the last saved recom
   assert.equal(harness(h.map).run('profile.agenda.proposals[0].status'),status);
  }
 });
+
+test('batch preview/cancel never saves, and one reviewed action saves all rows exactly once',async()=>{
+ const h=harness(new Map([[KEY,JSON.stringify(legacy())]])),before=h.map.get(KEY);
+ h.element('agendaBatchText').value='Fictional one\n\nFictional two';h.element('agendaDue').value='2026-10-27';
+ h.run("document.querySelector=s=>s.includes('agendaImportance')?{value:'high'}:document.getElementById('nav')");h.run('agendaPreviewBatch()');assert.equal(h.map.get(KEY),before);
+ h.run('agendaCancelBatch()');assert.equal(h.map.get(KEY),before);
+ h.run('agendaPreviewBatch()');for(let i=0;i<2;i++){h.element('batchName'+i).value='Fictional '+i;h.element('batchDue'+i).value=i?'':'2026-10-27';h.element('batchPriority'+i).value=i?'low':'high'}
+ await h.run('agendaSaveBatch({preventDefault(){}})');const saved=h.map.get(KEY);
+ assert.equal(harness(h.map).run('profile.execution.tasks.length'),2);assert.equal(harness(h.map).run('profile.goals.length'),8);
+ await h.run('agendaSaveBatch({preventDefault(){}})');assert.equal(h.map.get(KEY),saved);
+});
+test('failed batch save rolls back every row and keeps entire attempted batch available for recovery',async()=>{
+ const h=harness(new Map([[KEY,JSON.stringify(legacy())]])),before=h.map.get(KEY);
+ h.element('agendaBatchText').value='Fictional one\nFictional two';h.run("document.querySelector=s=>s.includes('agendaImportance')?{value:'normal'}:document.getElementById('nav')");h.run('agendaPreviewBatch()');
+ for(let i=0;i<2;i++){h.element('batchName'+i).value='Fictional '+i;h.element('batchDue'+i).value='';h.element('batchPriority'+i).value='normal'}
+ h.fail();await h.run('agendaSaveBatch({preventDefault(){}})');assert.equal(h.map.get(KEY),before);
+ assert.equal(h.run('profile.execution?.tasks?.length||0'),0);assert.equal(h.run('unsavedProfile.execution.tasks.length'),2);assert.equal(h.element('storageWarning').hidden,false);
+});
+test('profile change after batch preview requires another review without overwriting newer data',async()=>{
+ const h=harness(new Map([[KEY,JSON.stringify(legacy())]]));h.element('agendaBatchText').value='Fictional one';h.run('agendaPreviewBatch()');
+ await h.run("agendaAction('refresh')");const before=h.map.get(KEY);await h.run('agendaSaveBatch({preventDefault(){}})');
+ assert.equal(h.map.get(KEY),before);assert.match(h.element('storageMessage').textContent,/Agenda changed/);
+});

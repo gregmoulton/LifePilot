@@ -365,8 +365,10 @@ class BrowserValidation(unittest.TestCase):
         before = json.loads(self.saved())['execution']
         self.page.get_by_role('button',name='Refresh proposals',exact=True).click()
         self.page.get_by_role('button',name='Later',exact=True).click()
+        self.page.wait_for_function("!transactionRunning && profile.agenda.proposals[0].status==='deferred'")
         self.page.reload(); self.agenda()
         self.page.get_by_role('button',name='Refresh proposals',exact=True).click()
+        self.page.wait_for_function("!transactionRunning && profile.agenda.proposals[0].status==='deferred'")
         self.assertEqual(self.page.get_by_role('button',name='Later',exact=True).count(),0)
         self.assertTrue(self.page.get_by_role('heading',name='Recommendations for later',exact=True).is_visible())
         saved = json.loads(self.saved())
@@ -374,6 +376,7 @@ class BrowserValidation(unittest.TestCase):
         self.assertEqual(saved['agenda']['proposals'][0]['status'],'deferred')
         self.assertEqual(saved['agenda']['rejections'],[])
         self.page.get_by_role('button',name='Review again',exact=True).click()
+        self.page.wait_for_function("!transactionRunning && profile.agenda.proposals[0].status==='proposed'")
         self.page.reload(); self.agenda()
         self.assertEqual(self.page.get_by_role('button',name='Later',exact=True).count(),1)
         self.assertEqual(json.loads(self.saved())['execution'],before)

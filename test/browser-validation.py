@@ -360,6 +360,26 @@ class BrowserValidation(unittest.TestCase):
         self.assertEqual(self.page.locator('#agendaDue').input_value(),'')
 
 
+    def test_recommendation_later_reload_refresh_and_review_again(self):
+        self.seed(); self.agenda()
+        before = json.loads(self.saved())['execution']
+        self.page.get_by_role('button',name='Refresh proposals',exact=True).click()
+        self.page.get_by_role('button',name='Later',exact=True).click()
+        self.page.reload(); self.agenda()
+        self.page.get_by_role('button',name='Refresh proposals',exact=True).click()
+        self.assertEqual(self.page.get_by_role('button',name='Later',exact=True).count(),0)
+        self.assertTrue(self.page.get_by_role('heading',name='Recommendations for later',exact=True).is_visible())
+        saved = json.loads(self.saved())
+        self.assertEqual(saved['execution'],before)
+        self.assertEqual(saved['agenda']['proposals'][0]['status'],'deferred')
+        self.assertEqual(saved['agenda']['rejections'],[])
+        self.page.get_by_role('button',name='Review again',exact=True).click()
+        self.page.reload(); self.agenda()
+        self.assertEqual(self.page.get_by_role('button',name='Later',exact=True).count(),1)
+        self.assertEqual(json.loads(self.saved())['execution'],before)
+        self.assertEqual(json.loads(self.saved())['agenda']['proposals'][0]['status'],'proposed')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 

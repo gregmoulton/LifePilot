@@ -28,16 +28,18 @@ function apply(profile,command,now=new Date()){
  }else if(command.type==='refresh'){
   const normalized=list.map(t=>({...t,status:state(t)==='open'?'planned':state(t)==='completed'?'completed':state(t)==='hold'?'hold':'review'}));
   const report=engine.forwardRadar({tasks:normalized,rejections:a.rejections,now});
-  for(const old of a.proposals){const current=list.find(t=>t.id===old.task_id);if(old.status==='proposed'&&(!current||!same(old.before,current)))old.status='stale';}
+  for(const old of a.proposals){const current=list.find(t=>t.id===old.task_id);if(['proposed','deferred'].includes(old.status)&&(!current||!same(old.before,current)))old.status='stale';}
   for(const proposal of report.recommendations){const target=list.find(t=>t.id===proposal.task_id);if(proposal.type==='prioritize'&&target.agenda_priority)continue;
    if(a.proposals.some(x=>x.task_id===target.id&&x.type===proposal.type&&same(x.before,target)&&x.status!=='stale'))continue;
    a.proposals.push({id:'proposal-'+(a.proposals.length+1),...copy(proposal),before:copy(target),status:'proposed',created_at:stamp});}
   // carried_tasks are explanatory copies, never written back by Refresh.
   event('refreshed');
- }else if(command.type==='reject'||command.type==='approve'){
-  const proposal=a.proposals.find(x=>x.id===command.proposal_id);if(!proposal||proposal.status!=='proposed')throw Error('Proposal is not awaiting approval');
+ }else if(['reject','approve','defer','resume'].includes(command.type)){
+  const proposal=a.proposals.find(x=>x.id===command.proposal_id);if(!proposal||proposal.status!==(command.type==='resume'?'deferred':'proposed'))throw Error('Proposal is not awaiting this action');
   const target=list.find(t=>t.id===proposal.task_id);if(!target||!same(target,proposal.before))throw Error('Task changed. Refresh and review a new proposal');
-  if(command.type==='reject'){proposal.status='rejected';a.rejections.push({task_id:target.id,action_type:proposal.type,rejected_at:stamp});event('proposal_rejected',{proposal_id:proposal.id});}
+  if(command.type==='defer'){proposal.status='deferred';proposal.deferred_at=stamp;event('proposal_deferred',{proposal_id:proposal.id});}
+  else if(command.type==='resume'){proposal.status='proposed';proposal.resumed_at=stamp;event('proposal_resumed',{proposal_id:proposal.id});}
+  else if(command.type==='reject'){proposal.status='rejected';a.rejections.push({task_id:target.id,action_type:proposal.type,rejected_at:stamp});event('proposal_rejected',{proposal_id:proposal.id});}
   else{
    if(command.approved!==true)throw Error('Owner approval required');
    if(proposal.type==='reschedule'){

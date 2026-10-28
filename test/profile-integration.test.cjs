@@ -249,7 +249,7 @@ test('Later saves durably, and failed defer/resume restores the last saved recom
   const h=harness(new Map([[KEY,JSON.stringify(p)]]));await h.run("agendaAction('refresh')");
   const id=h.run('profile.agenda.proposals[0].id');
   if(action==='resume')await h.run(`agendaAction('defer',${JSON.stringify(id)})`);
-  const before=h.map.get(KEY),status=h.run('profile.agenda.proposals[0].status');h.fail();
+  const before=h.map.get(KEY),status=h.run('profile.agenda.proposals[0].status');h.element('toast').textContent='';h.fail();
   await h.run(`agendaAction('${action}',${JSON.stringify(id)})`);
   assert.equal(h.map.get(KEY),before);assert.equal(h.run('profile.agenda.proposals[0].status'),status);
   assert.equal(h.element('storageWarning').hidden,false);assert.notEqual(h.element('toast').textContent,'Change saved');

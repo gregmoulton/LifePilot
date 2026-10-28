@@ -28,3 +28,40 @@ test('owner importance survives restart, orders active tasks and leaves feasibil
  assert(p.execution.tasks.every(t=>t.due==='2026-10-24'&&t.status==='planned'&&!t.agenda_hold));
  assert.throws(()=>agenda.apply(p,{type:'add',task:{id:'bad',name:'Fictional invalid',agenda_importance:'urgent'}},now),/priority/);
 });
+
+test('Later survives restart and Refresh without changing tasks or rejecting the recommendation',()=>{
+ const original=profile([task('a',{due:'2026-10-22',history:[{keep:true}]})]);
+ let p=agenda.apply(original,{type:'refresh'},now);const id=p.agenda.proposals[0].id;
+ p=agenda.apply(p,{type:'defer',proposal_id:id},now);
+ p=agenda.apply(JSON.parse(JSON.stringify(p)),{type:'refresh'},new Date('2026-10-25T12:00Z'));
+ assert.equal(p.agenda.proposals.length,1);assert.equal(p.agenda.proposals[0].status,'deferred');
+ assert.equal(p.agenda.rejections.length,0);assert.deepEqual(p.execution,original.execution);
+ assert.equal(agenda.projection(p,now).today[0].overdue,true);
+ assert.equal(p.agenda.events.filter(x=>x.type==='proposal_deferred').length,1);
+});
+test('Review again restores the same proposal without applying it; explicit approval still required',()=>{
+ let p=agenda.apply(profile([task('a')]),{type:'refresh'},now);const id=p.agenda.proposals[0].id;
+ p=agenda.apply(p,{type:'defer',proposal_id:id},now);
+ assert.throws(()=>agenda.apply(p,{type:'approve',proposal_id:id,approved:true},now),/awaiting/);
+ p=agenda.apply(p,{type:'resume',proposal_id:id},now);
+ assert.equal(p.agenda.proposals[0].status,'proposed');assert.equal(p.execution.tasks[0].agenda_priority,undefined);
+ assert.throws(()=>agenda.apply(p,{type:'approve',proposal_id:id},now),/approval/);
+ p=agenda.apply(p,{type:'approve',proposal_id:id,approved:true},now);assert.equal(p.execution.tasks[0].agenda_priority,true);
+});
+test('changed or completed task invalidates deferred advice; old advice cannot resume',()=>{
+ for(const edit of [t=>t.name='Revised',t=>t.status='completed']){
+  let p=agenda.apply(profile([task('a')]),{type:'refresh'},now);const id=p.agenda.proposals[0].id;
+  p=agenda.apply(p,{type:'defer',proposal_id:id},now);edit(p.execution.tasks[0]);
+  const before=JSON.stringify(p);
+  assert.throws(()=>agenda.apply(p,{type:'resume',proposal_id:id},now),/Task changed/);assert.equal(JSON.stringify(p),before);
+  p=agenda.apply(p,{type:'refresh'},now);assert.equal(p.agenda.proposals[0].status,'stale');
+  assert.throws(()=>agenda.apply(p,{type:'resume',proposal_id:id},now),/awaiting/);
+ }
+});
+test('duplicate Later and missing proposal fail without mutating source',()=>{
+ let p=agenda.apply(profile([task('a')]),{type:'refresh'},now);const id=p.agenda.proposals[0].id;
+ p=agenda.apply(p,{type:'defer',proposal_id:id},now);const before=JSON.stringify(p);
+ assert.throws(()=>agenda.apply(p,{type:'defer',proposal_id:id},now),/awaiting/);
+ assert.throws(()=>agenda.apply(p,{type:'resume',proposal_id:'missing'},now),/awaiting/);
+ assert.equal(JSON.stringify(p),before);
+});

@@ -415,6 +415,30 @@ class BrowserValidation(unittest.TestCase):
         self.assertTrue(self.page.get_by_text('Fictional <img src=x onerror=alert(1)>',exact=True).is_visible())
 
 
+    def test_undated_task_plan_today_preserves_carryover_and_survives_reload(self):
+        self.seed(); self.agenda()
+        self.page.locator('#agendaName').fill('Fictional undated task')
+        self.page.locator('#agendaName').press('Enter')
+        self.page.wait_for_function('profile.execution.tasks.length===2 && !transactionRunning')
+        self.assertTrue(self.page.get_by_role('heading',name='Unscheduled (1)',exact=True).is_visible())
+        self.assertTrue(self.page.get_by_role('heading',name='Today (1)',exact=True).is_visible())
+        self.page.reload(); self.agenda()
+        self.assertEqual(json.loads(self.saved())['execution']['tasks'][1]['due'],'')
+        self.page.get_by_role('button',name='Plan today',exact=True).click()
+        self.page.wait_for_function("profile.execution.tasks[1].due!=='' && !transactionRunning")
+        today=self.page.evaluate("[new Date().getFullYear(),String(new Date().getMonth()+1).padStart(2,'0'),String(new Date().getDate()).padStart(2,'0')].join('-')")
+        self.page.reload(); self.agenda()
+        self.assertTrue(self.page.get_by_role('heading',name='Today (2)',exact=True).is_visible())
+        self.assertTrue(self.page.get_by_role('heading',name='Unscheduled (0)',exact=True).is_visible())
+        self.page.get_by_role('button',name='Refresh proposals',exact=True).click()
+        self.page.wait_for_function("profile.agenda.events.some(e=>e.type==='refreshed') && !transactionRunning")
+        saved=json.loads(self.saved())
+        self.assertEqual(saved['execution']['tasks'][0]['due'],'2020-01-01')
+        self.assertEqual(saved['execution']['tasks'][1]['due'],today)
+        self.assertEqual(len([e for e in saved['agenda']['events'] if e['type']=='planned_today']),1)
+        self.assertEqual(len(saved['goals']),8)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 

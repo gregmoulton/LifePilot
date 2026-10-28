@@ -83,3 +83,27 @@ test('batch validation is all-or-nothing, requires review and rejects repeated I
  assert.throws(()=>agenda.apply(p,{type:'add-many',tasks:[],approved:true},now),/20/);
  assert.throws(()=>agenda.apply(p,{type:'add-many',tasks:Array(21).fill(good),approved:true},now),/20/);
 });
+
+test('Today and Unscheduled are disjoint projections with original carryover dates preserved',()=>{
+ const p=profile([task('old',{due:'2020-01-01'}),task('today'),task('undated',{due:''}),task('missing-date',{due:undefined}),task('held',{due:'',agenda_hold:true}),task('blocked',{due:'',prerequisite_id:'missing'}),task('done',{due:'',status:'completed'})]);
+ const before=JSON.stringify(p),v=agenda.projection(p,now);assert.deepEqual(v.today.map(t=>t.id),['old','today']);assert.deepEqual(v.unscheduled.map(t=>t.id),['undated','missing-date']);
+ assert.equal(v.today[0].due,'2020-01-01');assert.equal(v.today[0].overdue,true);assert.equal(v.hold.length,2);assert.equal(v.completed.length,1);
+ assert.equal(JSON.stringify(p),before);
+});
+test('Plan today uses local date, keeps original fields and survives Refresh/restart/day rollover',()=>{
+ const old=process.env.TZ;process.env.TZ='America/Phoenix';try{
+ const p=profile([task('undated',{due:'',notes:'retain',goal_id:'goal'}),task('old',{due:'2020-01-01'})]),before=JSON.stringify(p);
+ let r=agenda.apply(p,{type:'plan-today',task_id:'undated'},new Date('2026-10-28T02:00:00Z'));
+ assert.equal(r.execution.tasks[0].due,'2026-10-27');assert.equal(r.execution.tasks[0].notes,'retain');assert.equal(r.execution.tasks[0].goal_id,'goal');
+ assert.equal(r.agenda.events[0].type,'planned_today');assert.equal(r.agenda.events[0].previous_due,'');assert.equal(JSON.stringify(p),before);
+ r=agenda.apply(JSON.parse(JSON.stringify(r)),{type:'refresh'},new Date('2026-10-29T02:00:00Z'));
+ assert.equal(r.execution.tasks[0].due,'2026-10-27');assert.equal(r.execution.tasks[1].due,'2020-01-01');assert.equal(agenda.projection(r,new Date('2026-10-29T02:00:00Z')).today[0].overdue,true);
+ }finally{if(old===undefined)delete process.env.TZ;else process.env.TZ=old;}
+});
+test('Plan today cannot overwrite dates, complete tasks, release HOLD or bypass prerequisites',()=>{
+ for(const t of [task('a'),task('a',{due:'',status:'completed'}),task('a',{due:'',agenda_hold:true}),task('a',{due:'',prerequisite_id:'missing'})]){
+  const p=profile([t]),before=JSON.stringify(p);assert.throws(()=>agenda.apply(p,{type:'plan-today',task_id:'a'},now),/undated/);assert.equal(JSON.stringify(p),before);
+ }
+ const p=agenda.apply(profile([task('a',{due:''})]),{type:'plan-today',task_id:'a'},now),before=JSON.stringify(p);
+ assert.throws(()=>agenda.apply(p,{type:'plan-today',task_id:'a'},now));assert.equal(JSON.stringify(p),before);
+});

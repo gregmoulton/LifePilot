@@ -18,3 +18,13 @@ test('HOLD and prerequisites cannot be bypassed by completion',()=>{const p=prof
 test('Refresh retires stale proposals without applying them',()=>{let p=agenda.apply(profile([task('a')]),{type:'refresh'},now);p.execution.tasks[0].name='Fictional revised name';p=agenda.apply(p,{type:'refresh'},now);assert.equal(p.agenda.proposals[0].status,'stale');assert.equal(p.agenda.proposals[1].status,'proposed');assert.equal(p.execution.tasks[0].status,'planned');});
 
 test('approved priority changes visible ordering and records an owner decision',()=>{let p=profile([task('a'),task('b')]);p=agenda.apply(p,{type:'refresh'},now);const id=p.agenda.proposals.find(x=>x.task_id==='b').id;p=agenda.apply(p,{type:'approve',proposal_id:id,approved:true},now);assert.equal(agenda.projection(p,now).today[0].id,'b');assert.equal(p.decision_register[0].status,'approved');});
+
+
+test('owner importance survives restart, orders active tasks and leaves feasibility/date separate',()=>{
+ let p=profile([]);
+ for(const [id,level] of [['low','low'],['normal','normal'],['high','high']])p=agenda.apply(p,{type:'add',task:{id,name:'Fictional '+id,due:'2026-10-24',agenda_importance:level}},now);
+ p=JSON.parse(JSON.stringify(p));assert.deepEqual(agenda.projection(p,now).today.map(t=>t.id),['high','normal','low']);
+ assert.equal(p.execution.tasks.find(t=>t.id==='high').importance,3);
+ assert(p.execution.tasks.every(t=>t.due==='2026-10-24'&&t.status==='planned'&&!t.agenda_hold));
+ assert.throws(()=>agenda.apply(p,{type:'add',task:{id:'bad',name:'Fictional invalid',agenda_importance:'urgent'}},now),/priority/);
+});

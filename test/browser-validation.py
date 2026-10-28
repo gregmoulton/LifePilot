@@ -325,6 +325,41 @@ class BrowserValidation(unittest.TestCase):
         self.assertEqual((task['status'],task['actual_minutes']),('completed',7))
 
 
+    def test_today_priority_and_enter_save_without_changing_legacy_profile(self):
+        expected=fictional_profile(); expected['execution']['tasks']=[]
+        self.seed(expected); self.agenda()
+        self.assertTrue(self.page.get_by_role('radio',name='Normal',exact=True).is_checked())
+        before=self.saved()
+        self.page.locator('#agendaName').fill('Fictional form only')
+        self.page.locator('#agendaDue').fill('2028-01-01')
+        self.page.get_by_role('button',name='Today',exact=True).click()
+        today=self.page.evaluate("[new Date().getFullYear(),String(new Date().getMonth()+1).padStart(2,'0'),String(new Date().getDate()).padStart(2,'0')].join('-')")
+        self.assertEqual(self.page.locator('#agendaDue').input_value(),today)
+        self.assertEqual(self.saved(),before)  # Today does not submit the form.
+        for count,(name,level) in enumerate([('Fictional low','Low'),('Fictional high','High'),('Fictional normal','Normal')],1):
+            self.page.locator('#agendaName').fill(name)
+            self.page.get_by_role('button',name='Today',exact=True).click()
+            self.page.get_by_role('radio',name=level,exact=True).check()
+            self.page.locator('#agendaName').press('Enter')
+            self.page.wait_for_function('(count)=>profile.execution.tasks.length===count && !transactionRunning',arg=count)
+        saved=json.loads(self.saved())
+        self.assertEqual(saved['goals'],expected['goals'])
+        self.assertEqual(saved['unknown_top'],expected['unknown_top'])
+        self.assertTrue(all(t['due']==today for t in saved['execution']['tasks']))
+        self.page.reload()
+        self.assertEqual(json.loads(self.saved()),saved)
+        self.assertEqual(self.page.locator('#agendaWorkspace article b').all_text_contents(),['Fictional high','Fictional normal','Fictional low'])
+        self.assertEqual([t['agenda_importance'] for t in saved['execution']['tasks']],['low','high','normal'])
+
+    def test_quick_capture_controls_fit_narrow_viewport(self):
+        self.page.set_viewport_size({'width':360,'height':800})
+        self.seed(); self.agenda()
+        self.assertTrue(self.page.get_by_role('button',name='Today',exact=True).is_visible())
+        self.assertEqual(self.page.get_by_role('radio').count(),3)
+        self.assertTrue(self.page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+        self.assertEqual(self.page.locator('#agendaDue').input_value(),'')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 

@@ -230,3 +230,15 @@ test('Agenda validation error does not trap the user in unsaved recovery',async(
  h.context.prompt=()=> 'invalid';await h.run("agendaAction('complete','task')");assert.match(h.element('storageMessage').textContent,/not applied/);
  h.context.prompt=()=> '3';await h.run("agendaAction('complete','task')");assert.equal(h.run('profile.execution.tasks[0].status'),'completed');
 });
+
+
+test('Today uses local calendar date and changes only the unsaved form; explicit priority persists',async()=>{
+ const h=harness(new Map([[KEY,JSON.stringify(legacy())]])),before=h.map.get(KEY),old=process.env.TZ;
+ try{process.env.TZ='America/Phoenix';h.run("agendaSetToday(new Date('2026-10-28T02:30:00Z'))");assert.equal(h.element('agendaDue').value,'2026-10-27');}finally{if(old===undefined)delete process.env.TZ;else process.env.TZ=old;}
+ assert.equal(h.map.get(KEY),before);h.element('agendaName').value='Fictional important errand';
+ h.run("document.querySelector=selector=>selector.includes('agendaImportance')?{value:'high'}:null");
+ await h.run('agendaAdd({preventDefault(){}})');const restarted=harness(h.map);
+ assert.equal(restarted.run('profile.execution.tasks[0].agenda_importance'),'high');
+ assert.equal(restarted.run('profile.execution.tasks[0].due'),'2026-10-27');
+ assert.equal(restarted.run('profile.goals.length'),8);
+});

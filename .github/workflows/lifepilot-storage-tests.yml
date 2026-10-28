@@ -1,7 +1,7 @@
 name: Life Pilot profile storage checks
 on:
   pull_request:
-    branches: [main, 'fix/**', 'feature/**']
+    branches: [main, 'fix/**', 'feature/**', 'test/**']
     paths:
       - index.html
       - execution.js

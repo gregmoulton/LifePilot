@@ -1,11 +1,17 @@
-# Shared agenda candidate — October 29, 2026
+# Daily command center candidate — October 29, 2026
 
-16 Node tests: `node --test development/shared-agenda/test/*.test.mjs` with Node 24.
+Builds on draft PR55. Uses the same owner-private Sites project and profile key. No changes to main, Render, The Pure or existing real records.
 
-Uses existing owner-private Sites identity and D1. Exact user ID owns real and isolated sandbox rows. CAS revisions prevent stale writes, previous shared payload retained. Local-first saving, explicit enrollment, no silent upload. Automatic remote refresh preserves unfinished capture drafts and uses the local transaction queue.
+- Remembered opt-in sync: reconnect after reload, retain offline local edits, reconcile a lost save response by comparing the exact shared profile.
+- Whole-profile conflicts: show both agendas, recheck cloud revision and local snapshot, retain both recovery copies before applying the owner's selection. Download recovery copies remains available. No automatic merge.
+- Primary typed/spoken request field, editable review, one explicit approval. Add, complete, HOLD, release HOLD and reschedule supported. Unique task name or #ID required; no guessed match.
+- Completion time optional: unreported time is recorded as not provided, not fabricated as zero.
+- Reviewed batch requires an unchanged profile snapshot; invalid later action rolls back every earlier action. Existing HOLD/prerequisite guards retained.
+- Unapproved request text survives reload on the same browser; re-review required after restart. No automatic execution of restored text.
 
-Typed or browser speech capture supports task lists separated by semicolons/new lines, today/tomorrow/on YYYY-MM-DD, suffix high/normal/low priority. Editable review required; no paid AI calls. No separate Google OAuth stack or unrestricted AI interpretation.
+## Tests
+Node24: `node --test development/shared-agenda/test/*.test.mjs`.
+36 tests cover SQLite storage/auth/CAS, sync recovery/conflicts/restart/draft protection, command parsing, approval, atomicity and prerequisite regression.
 
-Hosted smoke: sandbox device A cloud upload, device B adoption and HOLD save, automatic refresh on A, reload persistence. Real owner cloud profile not populated by QA. Physical Android/Chromebook and speech recognition remain unverified.
-
-Limitations: reconnect once per page session, conflict export/reload/reconnect, 1 MB profile cap, no automatic merge. Existing local data and backups preserved. Full Site integration source retained in existing Sites source repository. No merge/public production release.
+## Limits
+Bounded language patterns, not unrestricted AI. Browser speech availability/permission varies; physical microphone testing pending. Offline edits work in an already loaded page; offline cold-start is not promised. Profile cap 1MB; at most20 retained conflict snapshots, and quota failure blocks replacement. Full integration source and starter retained in the existing Sites source repository. No paid AI calls, new credentials or automatic destructive migration.

@@ -5,11 +5,31 @@ const copy=x=>JSON.parse(JSON.stringify(x));
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function tasks(profile){return profile.execution?.tasks||[];}
 function state(task){if(task.status==='completed'||task.status==='done')return 'completed';if(task.agenda_hold||['hold','HOLD','waiting','on_hold'].includes(task.status))return 'hold';if(['missed','partial'].includes(task.status))return 'review';if(!['planned','active','today',undefined].includes(task.status))return 'review';return 'open';}
+function taskContext(profile,task){
+ const issues=[],result={goal:null,program:null,milestone:null,issues};
+ const collections={goal:profile.goals||[],program:profile.execution?.programs||[],milestone:profile.execution?.milestones||[]};
+ const labels={goal:'Goal',program:'Program',milestone:'Milestone'};
+ const linked=Object.keys(collections).some(kind=>task[kind+'_id']!==undefined&&task[kind+'_id']!==null&&task[kind+'_id']!=='');
+ if(!linked)return null;
+ for(const kind of Object.keys(collections)){
+  const id=task[kind+'_id'];if(id===undefined||id===null||id==='')continue;
+  const matches=collections[kind].filter(x=>x&&x.id===id);
+  if(matches.length!==1){issues.push(labels[kind]+(matches.length?' link is ambiguous':' link not found'));continue;}
+  result[kind]={id:matches[0].id,name:matches[0].name||'Unnamed '+kind};
+ }
+ if((task.program_id||task.milestone_id)&&!task.goal_id)issues.push('Task has no goal link');
+ if(task.milestone_id&&!task.program_id)issues.push('Task has no program link');
+ const program=collections.program.find(x=>x?.id===result.program?.id),milestone=collections.milestone.find(x=>x?.id===result.milestone?.id);
+ if(program&&task.goal_id&&program.goal_id!==task.goal_id)issues.push('Program does not match the linked goal');
+ if(milestone&&task.goal_id&&milestone.goal_id!==task.goal_id)issues.push('Milestone does not match the linked goal');
+ if(milestone&&task.program_id&&milestone.program_id!==task.program_id)issues.push('Milestone does not match the linked program');
+ return result;
+}
 function projection(profile,now=new Date()){
  const result={today:[],unscheduled:[],upcoming:[],hold:[],completed:[],review:[]};const list=tasks(profile);const ids=new Set();
  for(const t of list){if(!t||!t.id||ids.has(t.id))throw Error('Invalid or duplicate task ID');ids.add(t.id);}
  const byId=new Map(list.map(t=>[t.id,t]));
- for(const t of list){const s=state(t),days=t.due?engine.daysUntil(t.due,new Date(now)):0;const blocked=!!t.prerequisite_id&&state(byId.get(t.prerequisite_id)||{status:'missing'})!=='completed';const item={...copy(t),blocked,overdue:s==='open'&&days<0};
+ for(const t of list){const s=state(t),days=t.due?engine.daysUntil(t.due,new Date(now)):0;const blocked=!!t.prerequisite_id&&state(byId.get(t.prerequisite_id)||{status:'missing'})!=='completed';const item={...copy(t),blocked,overdue:s==='open'&&days<0,agenda_context:taskContext(profile,t)};
  if(s==='completed')result.completed.push(item);else if(s==='hold'||blocked)result.hold.push(item);else if(s==='review'||!Number.isFinite(days))result.review.push(item);else if(!t.due)result.unscheduled.push(item);else result[days<=0?'today':'upcoming'].push(item);}
  for(const key of ['today','upcoming','unscheduled'])result[key].sort((a,b)=>Number(!!b.agenda_priority)-Number(!!a.agenda_priority)||({high:3,normal:2,low:1}[b.agenda_importance]||2)-({high:3,normal:2,low:1}[a.agenda_importance]||2));
  return result;
@@ -74,6 +94,6 @@ function apply(profile,command,now=new Date()){
  }
  return p;
 }
-return {projection,apply,state};
+return {projection,apply,state,taskContext};
 });
 

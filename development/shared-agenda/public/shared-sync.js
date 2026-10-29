@@ -7,10 +7,14 @@ sharedNotice.innerHTML='<b>Shared agenda</b><p id="sharedStatus" role="status">L
 (document.querySelector('main')||document.body).prepend(sharedNotice);
 function sharedStatus(message){$('sharedStatus').textContent=message;}
 async function sharedRead(){const r=await fetch(sharedEndpoint,{cache:'no-store'});if(!r.ok)throw Error(r.status===401?'Sign in to this private site with your owner account.':'Shared storage unavailable. Local data stays on this device.');const data=await r.json();if(data.profile!==null&&!LifePilotStorage.validProfile(data.profile))throw Error('Shared profile needs review. Local data unchanged.');return data;}
+function sharedHasDraft(){return (typeof agendaBatchDraft!=='undefined'&&!!agendaBatchDraft)||['agendaName','captureRequest','agendaBatchText'].some(id=>!!$(id)?.value?.trim());}
 async function sharedAdopt(data,expected=JSON.stringify(profile)){
- if(transactionRunning||unsavedProfile!==null)throw Error('Finish or recover local changes before connecting.');
- await transactionQueue;if(sharedPending||transactionRunning||JSON.stringify(profile)!==expected)throw Error('Local changes appeared. Export or sync them before loading another copy.');sharedApplying=true;
- try{await profileStore.commit(data.profile);profile=profileStore.value;sharedRevision=data.revision;sharedPending=null;sharedConflict=false;render();sharedStatus('Synced · revision '+sharedRevision);$('sharedRetry').hidden=true;}finally{sharedApplying=false;}
+ const run=async()=>{
+  if(transactionRunning||unsavedProfile!==null||sharedPending||sharedHasDraft()||JSON.stringify(profile)!==expected)throw Error('Finish or recover local changes before loading another copy.');
+  transactionRunning=true;sharedApplying=true;
+  try{await profileStore.commit(data.profile);profile=profileStore.value;sharedRevision=data.revision;sharedPending=null;sharedConflict=false;sharedStatus('Synced · revision '+sharedRevision);$('sharedRetry').hidden=true;}finally{sharedApplying=false;transactionRunning=false;render();}
+ };
+ const operation=transactionQueue.then(run);transactionQueue=operation.catch(()=>{});return operation;
 }
 async function sharedConnect(){
  try{
@@ -40,7 +44,7 @@ const sharedOriginalRestore=profileStore.restore;
 profileStore.restore=async function(...args){const result=await sharedOriginalRestore(...args);if(sharedRevision!==null){sharedPending=JSON.parse(JSON.stringify(result));queueMicrotask(sharedFlush);}return result;};
 $('sharedConnect').onclick=sharedConnect;$('sharedRetry').onclick=sharedFlush;
 setInterval(async()=>{
- if(sharedRevision===null||sharedPending||sharedSending||sharedConflict||transactionRunning||unsavedProfile!==null)return;
+ if(sharedRevision===null||sharedPending||sharedSending||sharedConflict||transactionRunning||unsavedProfile!==null||sharedHasDraft())return;
  try{const expected=JSON.stringify(profile),revision=sharedRevision,data=await sharedRead();if(sharedPending||transactionRunning||sharedRevision!==revision||JSON.stringify(profile)!==expected)return;if(data.revision!==sharedRevision){if(data.profile===null)throw Error();await sharedAdopt(data,expected);}}catch{sharedStatus('Local copy available · unable to check shared changes.');}
 },20000);
 window.addEventListener('online',()=>{if(sharedPending)sharedFlush();});

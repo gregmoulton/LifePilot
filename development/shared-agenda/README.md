@@ -1,9 +1,11 @@
 # Shared agenda candidate — October 29, 2026
 
-Owner-private Sites D1 sync, revision conflict protection, local-first saves and opt-in enrollment. Full application source remains in the existing Sites source repository.
+16 Node tests: `node --test development/shared-agenda/test/*.test.mjs` with Node 24.
 
-Run with Node 24: `node --test development/shared-agenda/test/*.test.mjs` (14 tests).
+Uses existing owner-private Sites identity and D1. Exact user ID owns real and isolated sandbox rows. CAS revisions prevent stale writes, previous shared payload retained. Local-first saving, explicit enrollment, no silent upload. Automatic remote refresh preserves unfinished capture drafts and uses the local transaction queue.
 
-Bounded task capture supports lines/semicolons, today/tomorrow/on YYYY-MM-DD and suffix high/normal/low priority. Editable review is required. No paid AI calls or separate Google OAuth stack. Uses existing Sites authentication.
+Typed or browser speech capture supports task lists separated by semicolons/new lines, today/tomorrow/on YYYY-MM-DD, suffix high/normal/low priority. Editable review required; no paid AI calls. No separate Google OAuth stack or unrestricted AI interpretation.
 
-Unverified: hosted D1/identity, physical devices and microphone. Conflicts require export/reload/reconnect; no automatic merge. Reconnect each page session. 1 MB profile cap. Existing local data/unknown fields and prior shared copy retained. No production release or merge.
+Hosted smoke: sandbox device A cloud upload, device B adoption and HOLD save, automatic refresh on A, reload persistence. Real owner cloud profile not populated by QA. Physical Android/Chromebook and speech recognition remain unverified.
+
+Limitations: reconnect once per page session, conflict export/reload/reconnect, 1 MB profile cap, no automatic merge. Existing local data and backups preserved. Full Site integration source retained in existing Sites source repository. No merge/public production release.

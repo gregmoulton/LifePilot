@@ -1,11 +1,12 @@
 /* Shared agenda: explicit enrollment, revision checks, retained local backups. */
 'use strict';
 let sharedRevision=null,sharedPending=null,sharedConflict=false,sharedSending=false,sharedApplying=false;
+const sharedEndpoint=document.querySelector('meta[name=lifepilot-sandbox]')?.content==='1'?'/api/profile?sandbox=1':'/api/profile';
 const sharedNotice=document.createElement('section');sharedNotice.className='panel';sharedNotice.style='margin:12px auto;max-width:1068px;padding:14px';
 sharedNotice.innerHTML='<b>Shared agenda</b><p id="sharedStatus" role="status">Local copy · connect to share across devices.</p><div class="row"><button id="sharedConnect">Connect shared agenda</button><button id="sharedRetry" class="secondary" hidden>Retry sync</button></div>';
 (document.querySelector('main')||document.body).prepend(sharedNotice);
 function sharedStatus(message){$('sharedStatus').textContent=message;}
-async function sharedRead(){const r=await fetch('/api/profile',{cache:'no-store'});if(!r.ok)throw Error(r.status===401?'Sign in to this private site with your owner account.':'Shared storage unavailable. Local data stays on this device.');const data=await r.json();if(data.profile!==null&&!LifePilotStorage.validProfile(data.profile))throw Error('Shared profile needs review. Local data unchanged.');return data;}
+async function sharedRead(){const r=await fetch(sharedEndpoint,{cache:'no-store'});if(!r.ok)throw Error(r.status===401?'Sign in to this private site with your owner account.':'Shared storage unavailable. Local data stays on this device.');const data=await r.json();if(data.profile!==null&&!LifePilotStorage.validProfile(data.profile))throw Error('Shared profile needs review. Local data unchanged.');return data;}
 async function sharedAdopt(data,expected=JSON.stringify(profile)){
  if(transactionRunning||unsavedProfile!==null)throw Error('Finish or recover local changes before connecting.');
  await transactionQueue;if(sharedPending||transactionRunning||JSON.stringify(profile)!==expected)throw Error('Local changes appeared. Export or sync them before loading another copy.');sharedApplying=true;
@@ -24,7 +25,7 @@ async function sharedFlush(){
  if(sharedSending||sharedConflict||sharedPending===null||sharedRevision===null)return;
  sharedSending=true;const snapshot=sharedPending,revision=sharedRevision;sharedStatus('Saved locally · syncing…');
  try{
-  const r=await fetch('/api/profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,profile:snapshot})});
+  const r=await fetch(sharedEndpoint,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,profile:snapshot})});
   if(r.status===409){sharedConflict=true;sharedStatus('Saved locally · another device changed the agenda. Export this local copy, reload, then Connect to review the shared copy.');return;}
   if(!r.ok)throw Error();const receipt=await r.json();if(receipt.revision!==revision+1)throw Error();sharedRevision=receipt.revision;
   if(sharedPending===snapshot)sharedPending=null;

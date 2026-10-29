@@ -1,11 +1,11 @@
-# Shared agenda candidate — October 29, 2026
+# Daily command center — October 29, 2026
 
-16 Node tests: `node --test development/shared-agenda/test/*.test.mjs` with Node 24.
+67 tests: `node --test development/shared-agenda/test/*.test.mjs development/shared-agenda/test/*.test.cjs` (Node24). Includes 31 legacy transaction/import/recovery/approval tests against the retained shell, 36 storage/sync/command tests. Existing 84-test baseline separately passed against current application sources with the DOM harness extended to support normal DOM methods. 38 Radar assertions pass.
 
-Uses existing owner-private Sites identity and D1. Exact user ID owns real and isolated sandbox rows. CAS revisions prevent stale writes, previous shared payload retained. Local-first saving, explicit enrollment, no silent upload. Automatic remote refresh preserves unfinished capture drafts and uses the local transaction queue.
+Remembered opt-in shared sync reconnects on reload and retains offline local edits. Lost cloud receipts reconcile by exact profile comparison. Conflicting whole profiles are reviewed, revision-checked and both archived before the owner chooses a copy. Recovery downloads remain available. No auto merge.
 
-Typed or browser speech capture supports task lists separated by semicolons/new lines, today/tomorrow/on YYYY-MM-DD, suffix high/normal/low priority. Editable review required; no paid AI calls. No separate Google OAuth stack or unrestricted AI interpretation.
+Primary text/speech request supports adding, completing, HOLD, release and reschedule. Exact unique task names or #IDs required. Review then one approval; stale or partially invalid batches never save. Completion minutes are optional and unknown time stays unreported. Request drafts survive reload without executing.
 
-Hosted smoke: sandbox device A cloud upload, device B adoption and HOLD save, automatic refresh on A, reload persistence. Real owner cloud profile not populated by QA. Physical Android/Chromebook and speech recognition remain unverified.
+Hosted synthetic QA: A/B separate local keys and isolated D1 sandbox, mixed command review/save/reload, auto reconnect, reschedule versus HOLD conflict, choose shared copy, exported recovery file verified to retain both actual variants. Real cloud owner profile not populated by QA. Physical devices/microphone remain unverified. Bounded language, no paid AI. Offline cold start not promised; 1MB profile cap; 20 retained conflict records with fail-closed quota handling.
 
-Limitations: reconnect once per page session, conflict export/reload/reconnect, 1 MB profile cap, no automatic merge. Existing local data and backups preserved. Full Site integration source retained in existing Sites source repository. No merge/public production release.
+Full framework integration remains in existing Sites source repository, same project/audience. No main/Render/Pure changes, merge or public production release.

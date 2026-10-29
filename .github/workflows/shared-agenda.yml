@@ -8,4 +8,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node --test development/shared-agenda/test/*.test.mjs
+      - run: node --test development/shared-agenda/test/*.test.mjs development/shared-agenda/test/*.test.cjs

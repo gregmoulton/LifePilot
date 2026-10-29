@@ -34,13 +34,14 @@ function parseActions(text,profile,now=new Date()){
 root.LifePilotCapture={parseTaskRequest,parseActions};
 })(globalThis);
 
+const captureCount=(n,word)=>n+' '+word+(n===1?'':'s');
 let captureCommandDraft=null;
 if(typeof document!=='undefined'){
  const captureRender=render;
  render=function(){
   captureRender();const workspace=$('agendaWorkspace');if(!workspace)return;
   const panel=workspace.querySelector('.panel');
-  panel.insertAdjacentHTML('afterbegin','<section><h3>What needs doing?</h3><label for="captureRequest">Add tasks or tell Life Pilot what changed</label><textarea id="captureRequest" rows="3" maxlength="4000" oninput="captureRememberDraft()" placeholder="Get a debit card today, high priority; hold auction pickup"></textarea><p class="mini">Separate instructions with semicolons or new lines. Review before saving.</p><div class="row"><button type="button" onclick="captureSpeak()">Speak</button><button type="button" onclick="captureReview()">Review instructions</button></div><p id="captureStatus" role="status"></p><div id="captureCommandReview"></div></section>');
+  panel.insertAdjacentHTML('afterbegin','<section><h3>What needs doing?</h3><label for="captureRequest">Add tasks or tell Life Pilot what changed</label><textarea id="captureRequest" rows="3" maxlength="4000" oninput="captureRememberDraft()" placeholder="Get a debit card today, high priority; hold auction pickup"></textarea><p class="mini">Separate instructions with semicolons or new lines. Review before saving.</p><div class="row"><button type="button" onclick="captureSpeak()">Speak</button><button type="button" onclick="captureReview()">Review instructions</button><button type="button" class="secondary" onclick="captureClear()">Clear request</button></div><p id="captureStatus" role="status"></p><div id="captureCommandReview"></div></section>');
   try{$('captureRequest').value=localStorage.getItem(KEY+':capture-draft')||'';}catch{}
   const form=panel.querySelector('form');if(form){const details=document.createElement('details');details.innerHTML='<summary>Add a task manually</summary>';form.before(details);details.append(form);}
   captureRenderReview();
@@ -56,21 +57,22 @@ if(typeof document!=='undefined'){
  }
  function captureRenderReview(){
   const box=$('captureCommandReview');if(!box)return;if(!captureCommandDraft){box.innerHTML='';return;}
-  box.innerHTML='<h3>Review '+captureCommandDraft.commands.length+' instructions</h3>'+captureCommandDraft.commands.map((c,i)=>{
+  box.innerHTML='<h3>Review '+captureCount(captureCommandDraft.commands.length,'instruction')+'</h3>'+captureCommandDraft.commands.map((c,i)=>{
    const target=profile.execution?.tasks?.find(t=>t.id===c.task_id),label={add:'Add',complete:'Complete',hold:'Put on HOLD',release:'Release HOLD',reschedule:'Reschedule'}[c.type];
    const heading='<p><b>'+esc(label)+': '+esc(c.task?.name||target?.name||c.task_id)+'</b></p>';
    if(c.type==='add')return '<div class="line">'+heading+'<label for="commandName'+i+'">Task name</label><input id="commandName'+i+'" maxlength="200" value="'+esc(c.task.name)+'"><div class="row"><label>Date<input id="commandDue'+i+'" type="date" style="width:180px;max-width:100%" value="'+esc(c.task.due)+'"></label><label>Priority<select id="commandPriority'+i+'">'+['high','normal','low'].map(x=>'<option value="'+x+'" '+(x===c.task.agenda_importance?'selected':'')+'>'+x+'</option>').join('')+'</select></label></div></div>';
    if(c.type==='reschedule')return '<div class="line">'+heading+'<label>New date<input id="commandDue'+i+'" type="date" style="width:180px" value="'+esc(c.due)+'"></label></div>';
    if(c.type==='complete')return '<div class="line">'+heading+'<label>Actual minutes (optional)<input id="commandMinutes'+i+'" type="number" min="0" step="any" style="width:140px" value="'+(c.minutes===null?'':c.minutes)+'"></label><p class="mini">Blank means time was not recorded.</p></div>';
    return '<div class="line">'+heading+'</div>';
-  }).join('')+'<div class="row"><button type="button" onclick="captureConfirm(event)">Approve '+captureCommandDraft.commands.length+' changes</button><button type="button" class="secondary" onclick="captureCancel()">Cancel review</button></div>';
+  }).join('')+'<div class="row"><button type="button" onclick="captureConfirm(event)">Approve '+captureCount(captureCommandDraft.commands.length,'change')+'</button><button type="button" class="secondary" onclick="captureCancel()">Cancel review</button></div>';
  }
  function captureSaveReview(event){
   event?.preventDefault();if(!captureCommandDraft)throw Error('Review instructions first.');
   const commands=captureCommandDraft.commands.map((c,i)=>c.type==='add'?{...c,task:{...c.task,name:$('commandName'+i).value,due:$('commandDue'+i).value,agenda_importance:$('commandPriority'+i).value}}:c.type==='reschedule'?{...c,due:$('commandDue'+i).value}:c.type==='complete'?{...c,minutes:$('commandMinutes'+i).value.trim()===''?null:Number($('commandMinutes'+i).value)}:c);
-  profile=LifePilotAgenda.apply(profile,{type:'reviewed-commands',before:captureCommandDraft.before,commands,approved:true});save();notify(commands.length+' changes saved');return true;
+  profile=LifePilotAgenda.apply(profile,{type:'reviewed-commands',before:captureCommandDraft.before,commands,approved:true});save();notify(captureCount(commands.length,'change')+' saved');return true;
  }
  async function captureConfirm(event){if(await globalThis.captureSaveReview(event)===true){captureCommandDraft=null;try{localStorage.removeItem(KEY+':capture-draft');}catch{}render();}}
+ function captureClear(){captureCommandDraft=null;$('captureRequest').value='';try{localStorage.removeItem(KEY+':capture-draft');}catch{}captureRenderReview();$('captureStatus').textContent='Request cleared. No task changes were made.';}
  function captureCancel(){captureCommandDraft=null;captureRenderReview();$('captureStatus').textContent='Review cancelled. Nothing was saved.';}
  function captureSpeak(){
   const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition){$('captureStatus').textContent='Voice recognition is unavailable. Type or use your keyboard microphone.';return;}
@@ -79,6 +81,6 @@ if(typeof document!=='undefined'){
   speech.onerror=()=>{$('captureStatus').textContent='Could not hear the request. Try again or type it.';};
   try{speech.start();$('captureStatus').textContent='Listening…';}catch{$('captureStatus').textContent='Microphone unavailable. Type your request instead.';}
  }
- Object.assign(globalThis,{captureReview,captureRememberDraft,captureSpeak,captureSaveReview,captureConfirm,captureCancel});
+ Object.assign(globalThis,{captureReview,captureRememberDraft,captureSpeak,captureSaveReview,captureConfirm,captureCancel,captureClear});
  render();
 }

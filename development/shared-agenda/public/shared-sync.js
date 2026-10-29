@@ -12,7 +12,7 @@ function sharedRemember(value,revision){
  const text=JSON.stringify({version:1,revision,baseline:sharedBaseline});
  try{localStorage.setItem(sharedJournalKey,text);if(localStorage.getItem(sharedJournalKey)!==text)throw Error();return true;}catch{sharedStatus('Saved for this session. Automatic reconnection could not be recorded; your local profile is retained.');return false;}
 }
-function sharedSynced(value,revision){const remembered=sharedRemember(value,revision);if(remembered)sharedStatus('Synced · revision '+revision);$('sharedRetry').hidden=true;}
+function sharedSynced(value,revision){$('sharedConnect').textContent='Check sync';const remembered=sharedRemember(value,revision);if(remembered)sharedStatus('Synced · revision '+revision);$('sharedRetry').hidden=true;}
 function sharedConflictView(data){
  sharedConflict=true;sharedRemote={...data,local:JSON.stringify(profile)};
  const box=$('sharedConflictReview');box.hidden=false;
@@ -40,7 +40,8 @@ async function sharedResolve(choice){
  }catch(e){sharedStatus(e.message||'Could not resolve copies. Both agendas remain available.');}
 }
 async function sharedCheck(){
- if(sharedRevision===null||sharedSending||transactionRunning||unsavedProfile!==null||sharedHasDraft())return;
+ if(sharedRevision===null||sharedSending||transactionRunning||unsavedProfile!==null)return;
+ if(sharedHasDraft()){sharedStatus('Draft preserved · finish or clear your request to refresh shared changes.');return;}
  try{
   const expected=JSON.stringify(profile),revision=sharedRevision,data=await sharedRead();
   if(transactionRunning||sharedRevision!==revision||JSON.stringify(profile)!==expected)return;

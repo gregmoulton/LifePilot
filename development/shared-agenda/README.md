@@ -1,17 +1,11 @@
-# Daily command center candidate — October 29, 2026
+# Daily command center — October 29, 2026
 
-Builds on draft PR55. Uses the same owner-private Sites project and profile key. No changes to main, Render, The Pure or existing real records.
+67 tests: `node --test development/shared-agenda/test/*.test.mjs development/shared-agenda/test/*.test.cjs` (Node24). Includes 31 legacy transaction/import/recovery/approval tests against the retained shell, 36 storage/sync/command tests. Existing 84-test baseline separately passed against current application sources with the DOM harness extended to support normal DOM methods. 38 Radar assertions pass.
 
-- Remembered opt-in sync: reconnect after reload, retain offline local edits, reconcile a lost save response by comparing the exact shared profile.
-- Whole-profile conflicts: show both agendas, recheck cloud revision and local snapshot, retain both recovery copies before applying the owner's selection. Download recovery copies remains available. No automatic merge.
-- Primary typed/spoken request field, editable review, one explicit approval. Add, complete, HOLD, release HOLD and reschedule supported. Unique task name or #ID required; no guessed match.
-- Completion time optional: unreported time is recorded as not provided, not fabricated as zero.
-- Reviewed batch requires an unchanged profile snapshot; invalid later action rolls back every earlier action. Existing HOLD/prerequisite guards retained.
-- Unapproved request text survives reload on the same browser; re-review required after restart. No automatic execution of restored text.
+Remembered opt-in shared sync reconnects on reload and retains offline local edits. Lost cloud receipts reconcile by exact profile comparison. Conflicting whole profiles are reviewed, revision-checked and both archived before the owner chooses a copy. Recovery downloads remain available. No auto merge.
 
-## Tests
-Node24: `node --test development/shared-agenda/test/*.test.mjs`.
-36 tests cover SQLite storage/auth/CAS, sync recovery/conflicts/restart/draft protection, command parsing, approval, atomicity and prerequisite regression.
+Primary text/speech request supports adding, completing, HOLD, release and reschedule. Exact unique task names or #IDs required. Review then one approval; stale or partially invalid batches never save. Completion minutes are optional and unknown time stays unreported. Request drafts survive reload without executing.
 
-## Limits
-Bounded language patterns, not unrestricted AI. Browser speech availability/permission varies; physical microphone testing pending. Offline edits work in an already loaded page; offline cold-start is not promised. Profile cap 1MB; at most20 retained conflict snapshots, and quota failure blocks replacement. Full integration source and starter retained in the existing Sites source repository. No paid AI calls, new credentials or automatic destructive migration.
+Hosted synthetic QA: A/B separate local keys and isolated D1 sandbox, mixed command review/save/reload, auto reconnect, reschedule versus HOLD conflict, choose shared copy, exported recovery file verified to retain both actual variants. Real cloud owner profile not populated by QA. Physical devices/microphone remain unverified. Bounded language, no paid AI. Offline cold start not promised; 1MB profile cap; 20 retained conflict records with fail-closed quota handling.
+
+Full framework integration remains in existing Sites source repository, same project/audience. No main/Render/Pure changes, merge or public production release.

@@ -107,3 +107,24 @@ test('Plan today cannot overwrite dates, complete tasks, release HOLD or bypass 
  const p=agenda.apply(profile([task('a',{due:''})]),{type:'plan-today',task_id:'a'},now),before=JSON.stringify(p);
  assert.throws(()=>agenda.apply(p,{type:'plan-today',task_id:'a'},now));assert.equal(JSON.stringify(p),before);
 });
+
+test('Agenda resolves existing goal/program/milestone names without persisting display context',()=>{
+ const p=profile([task('a',{goal_id:'goal',program_id:'p',milestone_id:'m',custom:'keep'})]);p.execution.programs=[{id:'p',goal_id:'goal',name:'Fictional program'}];p.execution.milestones=[{id:'m',goal_id:'goal',program_id:'p',name:'Fictional milestone'}];
+ const before=JSON.stringify(p),c=agenda.projection(p,now).today[0].agenda_context;
+ assert.equal(c.goal.name,'Fictional goal');assert.equal(c.program.name,'Fictional program');assert.equal(c.milestone.name,'Fictional milestone');assert.deepEqual(c.issues,[]);
+ assert.equal(JSON.stringify(p),before);const saved=agenda.apply(p,{type:'complete',task_id:'a',minutes:3},now);
+ assert.equal(saved.execution.tasks[0].goal_id,'goal');assert.equal(saved.execution.tasks[0].milestone_id,'m');assert.equal(saved.execution.tasks[0].agenda_context,undefined);
+ assert.equal(agenda.projection(JSON.parse(JSON.stringify(saved)),now).completed[0].agenda_context.milestone.name,'Fictional milestone');
+});
+test('orphan and ambiguous context links are flagged without choosing or mutating a record',()=>{
+ const p=profile([task('a',{goal_id:'missing',milestone_id:'m'})]);p.execution.milestones=[{id:'m',name:'First'},{id:'m',name:'Second'}];const before=JSON.stringify(p),c=agenda.taskContext(p,p.execution.tasks[0]);
+ assert.equal(c.goal,null);assert.equal(c.milestone,null);assert(c.issues.includes('Goal link not found'));assert(c.issues.includes('Milestone link is ambiguous'));assert(c.issues.includes('Task has no program link'));assert.equal(JSON.stringify(p),before);
+});
+test('inconsistent goal and milestone parents remain visible for review without rewriting task links',()=>{
+ const p=profile([task('a',{goal_id:'goal',program_id:'p',milestone_id:'m'})]);p.execution.programs=[{id:'p',goal_id:'other',name:'Wrong program'}];p.execution.milestones=[{id:'m',goal_id:'other',program_id:'another',name:'Wrong milestone'}];
+ const before=JSON.stringify(p),c=agenda.taskContext(p,p.execution.tasks[0]);assert.equal(c.issues.length,3);assert.equal(JSON.stringify(p),before);
+});
+test('standalone tasks get no invented context and missing task parents stay explicit',()=>{
+ const p=profile([task('standalone')]);assert.equal(agenda.taskContext(p,p.execution.tasks[0]),null);
+ p.execution.programs=[{id:'p',goal_id:'goal',name:'Program'}];const c=agenda.taskContext(p,task('partial',{program_id:'p'}));assert.equal(c.goal,null);assert(c.issues.includes('Task has no goal link'));
+});

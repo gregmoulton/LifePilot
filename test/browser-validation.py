@@ -439,6 +439,29 @@ class BrowserValidation(unittest.TestCase):
         self.assertEqual(len(saved['goals']),8)
 
 
+    def test_agenda_link_context_is_readonly_and_orphans_remain_visible(self):
+        self.page.set_viewport_size({'width':360,'height':800})
+        before=self.seed(); self.agenda()
+        self.assertTrue(self.page.get_by_text('Fictional goal 0 → Fictional program → Fictional milestone',exact=True).is_visible())
+        self.assertEqual(self.saved(),before)
+        self.page.reload(); self.agenda()
+        self.assertEqual(self.saved(),before)
+        fixture=fictional_profile()
+        fixture['execution']['tasks'][0]['milestone_id']='missing'
+        before=self.seed(fixture); self.agenda()
+        self.assertTrue(self.page.get_by_text('Link needs review',exact=True).is_visible())
+        self.assertIn('Milestone link not found',self.page.locator('#agendaWorkspace').inner_text())
+        self.assertEqual(self.saved(),before)
+        self.assertTrue(self.page.evaluate('document.documentElement.scrollWidth<=innerWidth'))
+        self.page.get_by_role('button',name='HOLD',exact=True).click()
+        self.page.wait_for_function('profile.execution.tasks[0].agenda_hold===true && !transactionRunning')
+        self.page.reload(); self.agenda()
+        saved=json.loads(self.saved())
+        self.assertEqual(saved['execution']['tasks'][0]['milestone_id'],'missing')
+        self.assertNotIn('agenda_context',saved['execution']['tasks'][0])
+        self.assertEqual(len(saved['goals']),8)
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
 

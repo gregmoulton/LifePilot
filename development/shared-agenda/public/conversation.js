@@ -70,7 +70,7 @@ if(typeof document!=='undefined'){
  function captureRenderReview(){
   const box=$('captureCommandReview');if(!box)return;if(!captureCommandDraft){box.innerHTML='';return;}
   box.innerHTML='<h3>Review '+captureCount(captureCommandDraft.commands.length,'instruction')+'</h3>'+captureCommandDraft.commands.map((c,i)=>{
-   const target=profile.execution?.tasks?.find(t=>t.id===c.task_id),label={add:'Add',complete:'Complete',hold:'Put on HOLD',release:'Release HOLD',reschedule:'Reschedule','set-priority':'Change priority','set-context':'Link task'}[c.type];
+   const target=profile.execution?.tasks?.find(t=>t.id===c.task_id),label={add:'Add',complete:'Complete',hold:'Put on HOLD',release:'Release HOLD',reschedule:'Reschedule','set-priority':'Change priority','set-context':'Change task links'}[c.type];
    const heading='<p><b>'+esc(label)+': '+esc(c.task?.name||target?.name||c.task_id)+'</b></p>';
    const contextPicker=c.type==='add'?'<details><summary>Goal or milestone (optional)</summary><label for="commandContext'+i+'">Connect this task</label><select id="commandContext'+i+'">'+captureContextOptions(c.task)+'</select></details>':'';
    if(c.type==='set-context')return '<div class="line">'+heading+'<p>'+esc(captureContextLabel(c.context))+'</p></div>';

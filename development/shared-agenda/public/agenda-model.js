@@ -43,6 +43,12 @@ function projection(profile,now=new Date()){
  for(const key of ['today','upcoming','unscheduled'])result[key].sort((a,b)=>Number(!!b.agenda_priority)-Number(!!a.agenda_priority)||({high:3,normal:2,low:1}[b.agenda_importance]||2)-({high:3,normal:2,low:1}[a.agenda_importance]||2));
  return result;
 }
+function goalTaskSummary(profile,goalId,now=new Date()){
+ if((profile.goals||[]).filter(g=>g?.id===goalId).length!==1)throw Error('Goal link is missing or ambiguous');
+ const result={total:0,today:0,upcoming:0,unscheduled:0,hold:0,review:0,completed:0},view=projection(profile,now);
+ for(const section of ['today','upcoming','unscheduled','hold','review','completed'])for(const task of view[section])if(task.goal_id===goalId){result.total++;result[task.agenda_context?.issues.length?'review':section]++;}
+ return result;
+}
 function apply(profile,command,now=new Date()){
  const p=copy(profile);p.execution=p.execution||{};p.execution.tasks=p.execution.tasks||[];p.agenda=p.agenda||{version:1,events:[],proposals:[],rejections:[]};
  const a=p.agenda;if(a.version!==1||!['events','proposals','rejections'].every(k=>Array.isArray(a[k])))throw Error('Unsupported Agenda metadata; no data changed');
@@ -123,6 +129,6 @@ function apply(profile,command,now=new Date()){
  }
  return p;
 }
-return {projection,apply,state,taskContext,resolveContext};
+return {projection,apply,state,taskContext,resolveContext,goalTaskSummary};
 });
 

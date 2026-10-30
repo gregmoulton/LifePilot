@@ -43,7 +43,7 @@ function apply(profile,command,now=new Date()){
   if(command.approved!==true||command.before!==JSON.stringify(profile))throw Error('Agenda changed. Review the instructions again.');
   if(!Array.isArray(command.commands)||!command.commands.length||command.commands.length>20)throw Error('Review 1 to 20 instructions');
   return command.commands.reduce((next,item)=>{
-   if(!['add','complete','hold','release','reschedule'].includes(item.type))throw Error('Unsupported reviewed instruction');
+   if(!['add','complete','hold','release','reschedule','set-priority'].includes(item.type))throw Error('Unsupported reviewed instruction');
    return apply(next,{...item,approved:true},now);
   },p);
  }else if(command.type==='add-many'){
@@ -88,6 +88,10 @@ function apply(profile,command,now=new Date()){
    if(state(t)!=='open'||t.due||projection(p,now).hold.some(x=>x.id===t.id))throw Error('Only an available undated task can be planned for Today');
    const date=new Date(now),due=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
    const previous=t.due??null;t.due=due;event('planned_today',{previous_due:previous,due});
+  }else if(command.type==='set-priority'){
+   if(command.approved!==true)throw Error('Owner approval required');
+   if(state(t)==='completed'||!['high','normal','low'].includes(command.agenda_importance))throw Error('Choose a valid priority for an unfinished task');
+   const previous=t.agenda_importance||'normal';t.agenda_importance=command.agenda_importance;t.importance={high:3,normal:1,low:0.5}[command.agenda_importance];event('priority_changed',{previous_importance:previous,agenda_importance:command.agenda_importance,source:'reviewed_command'});
   }else if(command.type==='reschedule'){
    if(command.approved!==true)throw Error('Owner approval required');
    if(state(t)==='completed'||!command.due||!Number.isFinite(engine.daysUntil(command.due,new Date(now))))throw Error('Choose a valid date for an unfinished task');

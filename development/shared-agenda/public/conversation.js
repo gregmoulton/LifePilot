@@ -6,10 +6,14 @@ function parseTaskRequest(text,now=new Date()){
  return lines.map(line=>{
   if(/^(delete|remove|hold|reschedule)\b|^(complete|finish|move|change|update)\s+(?:my\s+|the\s+)?task\b/i.test(line))throw Error('This capture adds tasks only. Use task controls for changes.');
   let name=line.replace(/^(?:please\s+)?(?:add\s+(?:a\s+task\s+(?:to\s+)?)?|i\s+(?:need|want|have)\s+to\s+)/i,'').trim(),agenda_importance='normal',due='';
-  const priority=name.match(/(?:[, ]+)(high|normal|low)\s+priority\s*[.!]?$/i);
-  if(priority){agenda_importance=priority[1].toLowerCase();name=name.slice(0,priority.index).trim();}
-  const when=name.match(/(?:[, ]+)(today|tomorrow|on\s+\d{4}-\d{2}-\d{2})\s*[.!]?$/i);
-  if(when){const term=when[1].toLowerCase();if(term.startsWith('on ')){due=term.slice(3);const d=new Date(due+'T12:00:00Z');if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==due)throw Error('Check the requested date.');}else{const d=new Date(now);if(term==='tomorrow')d.setDate(d.getDate()+1);due=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}name=name.slice(0,when.index).trim();}
+  let hasPriority=false,hasDate=false;
+  for(let pass=0;pass<3;pass++){
+   const priority=name.match(/(?:[, ]+)(high|normal|low)\s+priority\s*[.!]?$/i);
+   if(priority){if(hasPriority)throw Error('Use one priority per task.');hasPriority=true;agenda_importance=priority[1].toLowerCase();name=name.slice(0,priority.index).trim();continue;}
+   const when=name.match(/(?:[, ]+)(today|tomorrow|on\s+\d{4}-\d{2}-\d{2})\s*[.!]?$/i);
+   if(!when)break;if(hasDate)throw Error('Use one date per task.');hasDate=true;
+   const term=when[1].toLowerCase();if(term.startsWith('on ')){due=term.slice(3);const d=new Date(due+'T12:00:00Z');if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==due)throw Error('Check the requested date.');}else{const d=new Date(now);if(term==='tomorrow')d.setDate(d.getDate()+1);due=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');}name=name.slice(0,when.index).trim();
+  }
   if(!name||name.length>200)throw Error('Each task needs a name up to 200 characters.');
   if(/\b(next week|next month|next (monday|tuesday|wednesday|thursday|friday|saturday|sunday)|every day|daily|weekly)\b/i.test(name))throw Error('Use today, tomorrow, or on YYYY-MM-DD. Recurring tasks are not supported here yet.');
   return {name,due,agenda_importance};
@@ -23,11 +27,13 @@ function parseActions(text,profile,now=new Date()){
  return lines.map(line=>{
   let m;
   if((m=line.match(/^(?:(?:I\s+)?(?:completed|finished)|complete|finish)\s+(.+?)(?:\s+in\s+(\d+(?:\.\d+)?)\s+minutes?)?$/i)))return {type:'complete',task_id:find(m[1]).id,minutes:m[2]===undefined?null:Number(m[2])};
+  if((m=line.match(/^plan\s+(.+?)\s+(today|tomorrow|on\s+\d{4}-\d{2}-\d{2})$/i)))return {type:'reschedule',task_id:find(m[1]).id,due:parseTaskRequest('placeholder '+m[2],now)[0].due};
+  if((m=line.match(/^(?:set|make)\s+(.+?)\s+(?:to\s+)?(high|normal|low)\s+priority$/i)))return {type:'set-priority',task_id:find(m[1]).id,agenda_importance:m[2].toLowerCase()};
   if((m=line.match(/^mark\s+(.+?)\s+(?:as\s+)?(?:done|complete)$/i)))return {type:'complete',task_id:find(m[1]).id,minutes:null};
   if((m=line.match(/^put\s+(.+?)\s+on\s+hold$/i)))return {type:'hold',task_id:find(m[1]).id};
   if((m=line.match(/^(hold|resume|release)\s+(.+)$/i)))return {type:m[1].toLowerCase()==='hold'?'hold':'release',task_id:find(m[2]).id};
   if((m=line.match(/^(?:reschedule|move)\s+(.+?)\s+(?:to|for)\s+(today|tomorrow|\d{4}-\d{2}-\d{2})$/i))){const due=parseTaskRequest('placeholder '+(/^\d/.test(m[2])?'on ':'')+m[2],now)[0].due;return {type:'reschedule',task_id:find(m[1]).id,due};}
-  if(/^(?:delete|remove|reschedule|move|change|update)\b/i.test(line)&&!/^change of address\b/i.test(line))throw Error('Use complete NAME, hold NAME, resume NAME, or reschedule NAME to tomorrow.');
+  if(/^(?:delete|remove|reschedule|move|change|update|set|make|plan)\b/i.test(line)&&!/^change of address\b/i.test(line))throw Error('Use complete NAME, hold NAME, resume NAME, or reschedule NAME to tomorrow.');
   return {type:'add',task:parseTaskRequest(line,now)[0]};
  });
 }
@@ -41,7 +47,7 @@ if(typeof document!=='undefined'){
  render=function(){
   captureRender();const workspace=$('agendaWorkspace');if(!workspace)return;
   const panel=workspace.querySelector('.panel');
-  panel.insertAdjacentHTML('afterbegin','<section><h3>What needs doing?</h3><label for="captureRequest">Add tasks or tell Life Pilot what changed</label><textarea id="captureRequest" rows="3" maxlength="4000" oninput="captureRememberDraft()" placeholder="Get a debit card today, high priority; hold auction pickup"></textarea><p class="mini">Separate instructions with semicolons or new lines. Review before saving.</p><div class="row"><button type="button" onclick="captureSpeak()">Speak</button><button type="button" onclick="captureReview()">Review instructions</button><button type="button" class="secondary" onclick="captureClear()">Clear request</button></div><p id="captureStatus" role="status"></p><div id="captureCommandReview"></div></section>');
+  panel.insertAdjacentHTML('afterbegin','<section><h3>What needs doing?</h3><label for="captureRequest">Add tasks or tell Life Pilot what changed</label><textarea id="captureRequest" rows="3" maxlength="4000" oninput="captureRememberDraft()" placeholder="Get a debit card today, high priority; hold auction pickup"></textarea><p class="mini">Use “plan TASK today” or “set TASK high priority”. Separate instructions with semicolons or new lines. Review before saving.</p><div class="row"><button type="button" onclick="captureSpeak()">Speak</button><button type="button" onclick="captureReview()">Review instructions</button><button type="button" class="secondary" onclick="captureClear()">Clear request</button></div><p id="captureStatus" role="status"></p><div id="captureCommandReview"></div></section>');
   try{$('captureRequest').value=localStorage.getItem(KEY+':capture-draft')||'';}catch{}
   const form=panel.querySelector('form');if(form){const details=document.createElement('details');details.innerHTML='<summary>Add a task manually</summary>';form.before(details);details.append(form);}
   captureRenderReview();
@@ -58,9 +64,10 @@ if(typeof document!=='undefined'){
  function captureRenderReview(){
   const box=$('captureCommandReview');if(!box)return;if(!captureCommandDraft){box.innerHTML='';return;}
   box.innerHTML='<h3>Review '+captureCount(captureCommandDraft.commands.length,'instruction')+'</h3>'+captureCommandDraft.commands.map((c,i)=>{
-   const target=profile.execution?.tasks?.find(t=>t.id===c.task_id),label={add:'Add',complete:'Complete',hold:'Put on HOLD',release:'Release HOLD',reschedule:'Reschedule'}[c.type];
+   const target=profile.execution?.tasks?.find(t=>t.id===c.task_id),label={add:'Add',complete:'Complete',hold:'Put on HOLD',release:'Release HOLD',reschedule:'Reschedule','set-priority':'Change priority'}[c.type];
    const heading='<p><b>'+esc(label)+': '+esc(c.task?.name||target?.name||c.task_id)+'</b></p>';
    if(c.type==='add')return '<div class="line">'+heading+'<label for="commandName'+i+'">Task name</label><input id="commandName'+i+'" maxlength="200" value="'+esc(c.task.name)+'"><div class="row"><label>Date<input id="commandDue'+i+'" type="date" style="width:180px;max-width:100%" value="'+esc(c.task.due)+'"></label><label>Priority<select id="commandPriority'+i+'">'+['high','normal','low'].map(x=>'<option value="'+x+'" '+(x===c.task.agenda_importance?'selected':'')+'>'+x+'</option>').join('')+'</select></label></div></div>';
+   if(c.type==='set-priority')return '<div class="line">'+heading+'<p>Priority: '+esc(c.agenda_importance)+'</p></div>';
    if(c.type==='reschedule')return '<div class="line">'+heading+'<label>New date<input id="commandDue'+i+'" type="date" style="width:180px" value="'+esc(c.due)+'"></label></div>';
    if(c.type==='complete')return '<div class="line">'+heading+'<label>Actual minutes (optional)<input id="commandMinutes'+i+'" type="number" min="0" step="any" style="width:140px" value="'+(c.minutes===null?'':c.minutes)+'"></label><p class="mini">Blank means time was not recorded.</p></div>';
    return '<div class="line">'+heading+'</div>';

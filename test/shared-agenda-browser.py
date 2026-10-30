@@ -82,6 +82,8 @@ class CurrentTipBrowserSmoke(unittest.TestCase):
         return json.loads(raw)["execution"]["tasks"][0]
 
     def add(self):
+        # Manual entry is intentionally collapsed beneath natural-language capture.
+        self.page.get_by_text("Add a task manually", exact=True).click()
         self.page.locator("#agendaName").fill("Fictional acceptance task")
         self.page.locator("#agendaDue").fill("2026-11-04")
         self.page.get_by_role("button", name="Add task", exact=True).click()
@@ -129,7 +131,7 @@ class CurrentTipBrowserSmoke(unittest.TestCase):
         )
         held = json.loads(other.evaluate("(key) => localStorage.getItem(key)", KEY))
         self.page.get_by_role("button", name="Save changes", exact=True).click()
-        self.page.wait_for_function("!transactionRunning")
+        self.page.evaluate("transactionQueue")
         self.assertEqual(
             json.loads(self.page.evaluate("(key) => localStorage.getItem(key)", KEY)),
             held,

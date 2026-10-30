@@ -1,5 +1,10 @@
 name: Shared agenda safety
 on: [pull_request, workflow_dispatch]
+permissions:
+  contents: read
+concurrency:
+  group: shared-agenda-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   shared-agenda:
     runs-on: ubuntu-latest
@@ -9,3 +14,25 @@ jobs:
         with:
           node-version: '24'
       - run: node --test development/shared-agenda/test/*.test.mjs development/shared-agenda/test/*.test.cjs
+
+  current-tip-browser:
+    name: Current Agenda / ${{ matrix.browser }}
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      LIFEPILOT_BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.62.0
+      - name: Install WebKit system dependencies
+        if: matrix.browser == 'webkit'
+        run: python -m playwright install-deps webkit
+      - run: python -m playwright install ${{ matrix.browser }}
+      - run: python test/shared-agenda-browser.py

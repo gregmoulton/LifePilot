@@ -81,7 +81,7 @@ function transactional(handler) {
     return operation;
   };
 }
-for (const name of ['captureSaveReview', 'agendaAdd', 'agendaSaveBatch', 'agendaAction', 'fresh', 'setStatus', 'submitGoal', 'addDecision', 'saveLabel', 'importFile', 'switchProfile', 'createStructure', 'createTask', 'completeTask', 'taskResult', 'recordObservation', 'proposeReview', 'explainMisses', 'approveAdjustment', 'approveReview', 'rejectReview', 'finishExperiment', 'recordImprovement', 'submitImprovement']) {
+for (const name of ['agendaSaveEdit','captureSaveReview', 'agendaAdd', 'agendaSaveBatch', 'agendaAction', 'fresh', 'setStatus', 'submitGoal', 'addDecision', 'saveLabel', 'importFile', 'switchProfile', 'createStructure', 'createTask', 'completeTask', 'taskResult', 'recordObservation', 'proposeReview', 'explainMisses', 'approveAdjustment', 'approveReview', 'rejectReview', 'finishExperiment', 'recordImprovement', 'submitImprovement']) {
   if (typeof globalThis[name] === 'function') globalThis[name] = transactional(globalThis[name]);
 }
 render();

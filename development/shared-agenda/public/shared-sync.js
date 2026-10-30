@@ -63,7 +63,7 @@ async function sharedResume(){
  }catch{sharedStatus('Reconnection record needs review. Local data is unchanged; Connect can establish a new reviewed connection.');}
 }
 async function sharedRead(){const r=await fetch(sharedEndpoint,{cache:'no-store'});if(!r.ok)throw Error(r.status===401?'Sign in to this private site with your owner account.':'Shared storage unavailable. Local data stays on this device.');const data=await r.json();if(data.profile!==null&&!LifePilotStorage.validProfile(data.profile))throw Error('Shared profile needs review. Local data unchanged.');return data;}
-function sharedHasDraft(){return (typeof captureCommandDraft!=='undefined'&&!!captureCommandDraft)||(typeof agendaBatchDraft!=='undefined'&&!!agendaBatchDraft)||['agendaName','captureRequest','agendaBatchText'].some(id=>!!$(id)?.value?.trim());}
+function sharedHasDraft(){return (typeof agendaEditDraft!=='undefined'&&!!agendaEditDraft)||(typeof captureCommandDraft!=='undefined'&&!!captureCommandDraft)||(typeof agendaBatchDraft!=='undefined'&&!!agendaBatchDraft)||['agendaName','captureRequest','agendaBatchText'].some(id=>!!$(id)?.value?.trim());}
 async function sharedAdopt(data,expected=JSON.stringify(profile),resolved=false){
  const run=async()=>{
   if(transactionRunning||unsavedProfile!==null||(!resolved&&sharedPending)||sharedHasDraft()||JSON.stringify(profile)!==expected)throw Error('Finish or recover local changes before loading another copy.');

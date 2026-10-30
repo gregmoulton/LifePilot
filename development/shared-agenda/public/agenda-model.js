@@ -104,6 +104,16 @@ function apply(profile,command,now=new Date()){
    if(state(t)!=='open'||t.due||projection(p,now).hold.some(x=>x.id===t.id))throw Error('Only an available undated task can be planned for Today');
    const date=new Date(now),due=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
    const previous=t.due??null;t.due=due;event('planned_today',{previous_due:previous,due});
+  }else if(command.type==='edit-task'){
+   if(command.approved!==true||command.before!==JSON.stringify(profile))throw Error('Agenda changed. Reopen the task editor before saving.');
+   if(state(t)==='completed')throw Error('Completed tasks cannot be edited here');
+   const patch=command.patch;if(!patch||typeof patch!=='object'||Array.isArray(patch)||!Object.keys(patch).length||Object.keys(patch).some(k=>!['name','due','agenda_importance','context'].includes(k)))throw Error('Choose valid task changes');
+   const before=copy(t);
+   if(Object.hasOwn(patch,'name')){if(typeof patch.name!=='string'||!patch.name.trim()||patch.name.trim().length>200)throw Error('Enter a task name up to 200 characters');t.name=patch.name.trim();}
+   if(Object.hasOwn(patch,'due')){if(typeof patch.due!=='string'||(patch.due!==''&&(!/^\d{4}-\d{2}-\d{2}$/.test(patch.due)||!Number.isFinite(Date.parse(patch.due+'T12:00:00Z'))||new Date(patch.due+'T12:00:00Z').toISOString().slice(0,10)!==patch.due)))throw Error('Choose a valid date or leave it unscheduled');t.due=patch.due;}
+   if(Object.hasOwn(patch,'agenda_importance')){if(!['high','normal','low'].includes(patch.agenda_importance))throw Error('Choose High, Normal or Low priority');t.agenda_importance=patch.agenda_importance;t.importance={high:3,normal:1,low:0.5}[patch.agenda_importance];}
+   if(Object.hasOwn(patch,'context')){const context=resolveContext(p,patch.context);for(const key of ['goal_id','program_id','milestone_id'])delete t[key];Object.assign(t,context);}
+   if(same(before,t))return copy(profile);event('task_edited',{before,after:copy(t),source:'agenda_editor'});
   }else if(command.type==='set-context'){
    if(command.approved!==true)throw Error('Owner approval required');
    if(state(t)==='completed')throw Error('Completed task links stay unchanged');

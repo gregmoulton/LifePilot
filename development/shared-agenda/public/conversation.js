@@ -96,6 +96,6 @@ if(typeof document!=='undefined'){
   speech.onerror=()=>{$('captureStatus').textContent='Could not hear the request. Try again or type it.';};
   try{speech.start();$('captureStatus').textContent='Listening…';}catch{$('captureStatus').textContent='Microphone unavailable. Type your request instead.';}
  }
- Object.assign(globalThis,{captureReview,captureRememberDraft,captureSpeak,captureSaveReview,captureConfirm,captureCancel,captureClear});
+ Object.assign(globalThis,{captureReview,captureRememberDraft,captureSpeak,captureSaveReview,captureConfirm,captureCancel,captureClear,captureContextOptions,captureContextLabel});
  render();
 }

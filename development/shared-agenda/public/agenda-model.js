@@ -25,6 +25,15 @@ function taskContext(profile,task){
  if(milestone&&task.program_id&&milestone.program_id!==task.program_id)issues.push('Milestone does not match the linked program');
  return result;
 }
+function resolveContext(profile,refs={}){
+ if(!refs||typeof refs!=='object'||Array.isArray(refs))throw Error('Choose a valid task context');
+ const result={},collections={goal:profile.goals||[],program:profile.execution?.programs||[],milestone:profile.execution?.milestones||[]};
+ const unique=(kind,id)=>{const matches=collections[kind].filter(x=>x?.id===id);if(matches.length!==1)throw Error(kind+' link is missing or ambiguous');return matches[0];};
+ for(const kind of ['goal','program','milestone'])if(refs[kind+'_id']!==undefined&&refs[kind+'_id']!==null&&refs[kind+'_id']!=='')result[kind+'_id']=refs[kind+'_id'];
+ if(result.milestone_id){const m=unique('milestone',result.milestone_id);if(!m.goal_id||!m.program_id)throw Error('Milestone needs valid goal and program links');for(const kind of ['goal','program']){if(result[kind+'_id']&&result[kind+'_id']!==m[kind+'_id'])throw Error('Milestone context does not match');result[kind+'_id']=m[kind+'_id'];}}
+ if(result.program_id){const program=unique('program',result.program_id);if(!program.goal_id)throw Error('Program needs a valid goal link');if(result.goal_id&&result.goal_id!==program.goal_id)throw Error('Program context does not match');result.goal_id=program.goal_id;}
+ if(result.goal_id)unique('goal',result.goal_id);return result;
+}
 function projection(profile,now=new Date()){
  const result={today:[],unscheduled:[],upcoming:[],hold:[],completed:[],review:[]};const list=tasks(profile);const ids=new Set();
  for(const t of list){if(!t||!t.id||ids.has(t.id))throw Error('Invalid or duplicate task ID');ids.add(t.id);}
@@ -32,6 +41,12 @@ function projection(profile,now=new Date()){
  for(const t of list){const s=state(t),days=t.due?engine.daysUntil(t.due,new Date(now)):0;const blocked=!!t.prerequisite_id&&state(byId.get(t.prerequisite_id)||{status:'missing'})!=='completed';const item={...copy(t),blocked,overdue:s==='open'&&days<0,agenda_context:taskContext(profile,t)};
  if(s==='completed')result.completed.push(item);else if(s==='hold'||blocked)result.hold.push(item);else if(s==='review'||!Number.isFinite(days))result.review.push(item);else if(!t.due)result.unscheduled.push(item);else result[days<=0?'today':'upcoming'].push(item);}
  for(const key of ['today','upcoming','unscheduled'])result[key].sort((a,b)=>Number(!!b.agenda_priority)-Number(!!a.agenda_priority)||({high:3,normal:2,low:1}[b.agenda_importance]||2)-({high:3,normal:2,low:1}[a.agenda_importance]||2));
+ return result;
+}
+function goalTaskSummary(profile,goalId,now=new Date()){
+ if((profile.goals||[]).filter(g=>g?.id===goalId).length!==1)throw Error('Goal link is missing or ambiguous');
+ const result={total:0,today:0,upcoming:0,unscheduled:0,hold:0,review:0,completed:0},view=projection(profile,now);
+ for(const section of ['today','upcoming','unscheduled','hold','review','completed'])for(const task of view[section])if(task.goal_id===goalId){result.total++;result[task.agenda_context?.issues.length?'review':section]++;}
  return result;
 }
 function apply(profile,command,now=new Date()){
@@ -43,7 +58,7 @@ function apply(profile,command,now=new Date()){
   if(command.approved!==true||command.before!==JSON.stringify(profile))throw Error('Agenda changed. Review the instructions again.');
   if(!Array.isArray(command.commands)||!command.commands.length||command.commands.length>20)throw Error('Review 1 to 20 instructions');
   return command.commands.reduce((next,item)=>{
-   if(!['add','complete','hold','release','reschedule','set-priority'].includes(item.type))throw Error('Unsupported reviewed instruction');
+   if(!['add','complete','hold','release','reschedule','set-priority','set-context'].includes(item.type))throw Error('Unsupported reviewed instruction');
    return apply(next,{...item,approved:true},now);
   },p);
  }else if(command.type==='add-many'){
@@ -55,7 +70,8 @@ function apply(profile,command,now=new Date()){
   if(command.task.due&&!Number.isFinite(engine.daysUntil(command.task.due,new Date(now))))throw Error('Choose a valid date');
   const importance=command.task.agenda_importance||'normal';
   if(!['high','normal','low'].includes(importance))throw Error('Choose High, Normal or Low priority');
-  list.push({agenda_importance:importance,importance:{high:3,normal:1,low:0.5}[importance],id:command.task.id,name:command.task.name.trim(),due:command.task.due||'',status:'planned',created_at:stamp});event('added',{task_id:command.task.id});
+  const context=resolveContext(p,command.task);
+  list.push({...context,agenda_importance:importance,importance:{high:3,normal:1,low:0.5}[importance],id:command.task.id,name:command.task.name.trim(),due:command.task.due||'',status:'planned',created_at:stamp});event('added',{task_id:command.task.id});
  }else if(command.type==='refresh'){
   const normalized=list.map(t=>({...t,status:state(t)==='open'?'planned':state(t)==='completed'?'completed':state(t)==='hold'?'hold':'review'}));
   const report=engine.forwardRadar({tasks:normalized,rejections:a.rejections,now});
@@ -88,6 +104,10 @@ function apply(profile,command,now=new Date()){
    if(state(t)!=='open'||t.due||projection(p,now).hold.some(x=>x.id===t.id))throw Error('Only an available undated task can be planned for Today');
    const date=new Date(now),due=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');
    const previous=t.due??null;t.due=due;event('planned_today',{previous_due:previous,due});
+  }else if(command.type==='set-context'){
+   if(command.approved!==true)throw Error('Owner approval required');
+   if(state(t)==='completed')throw Error('Completed task links stay unchanged');
+   const context=resolveContext(p,command.context),before={};for(const key of ['goal_id','program_id','milestone_id']){if(t[key]!==undefined)before[key]=t[key];delete t[key];}Object.assign(t,context);event('context_changed',{before,context,source:'reviewed_command'});
   }else if(command.type==='set-priority'){
    if(command.approved!==true)throw Error('Owner approval required');
    if(state(t)==='completed'||!['high','normal','low'].includes(command.agenda_importance))throw Error('Choose a valid priority for an unfinished task');
@@ -109,6 +129,6 @@ function apply(profile,command,now=new Date()){
  }
  return p;
 }
-return {projection,apply,state,taskContext};
+return {projection,apply,state,taskContext,resolveContext,goalTaskSummary};
 });
 

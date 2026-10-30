@@ -5,6 +5,7 @@ tab='agenda';
 let agendaBatchDraft=null;
 render=function(){
  priorAgendaRender();if(!profile)return;
+ if(tab==='goals')document.querySelectorAll('.panel.goal').forEach((card,i)=>{const goal=profile.goals[i];if(!goal)return;try{const counts=LifePilotAgenda.goalTaskSummary(profile,goal.id);card.insertAdjacentHTML('beforeend','<div class="goal-task-summary" style="border-top:1px solid #d5e0e5;margin-top:16px;padding-top:12px"><b>Linked tasks</b><p class="mini">'+counts.completed+' completed · '+counts.today+' Today · '+counts.hold+' HOLD · '+counts.upcoming+' upcoming · '+counts.unscheduled+' unscheduled'+(counts.review?' · '+counts.review+' need review':'')+'</p><p class="mini muted">Task counts show execution, not whether the goal has been achieved.</p></div>');}catch{card.insertAdjacentHTML('beforeend','<p class="mini">Task links need review before progress can be counted.</p>');}});
  const nav=document.querySelector('nav');nav?.insertAdjacentHTML('afterbegin',`<button onclick="showTab('agenda')" class="${tab==='agenda'?'active':''}">Today's Agenda</button>`);
  if(tab!=='agenda')return;
  let view;try{view=LifePilotAgenda.projection(profile);}catch(_){$('app').insertAdjacentHTML('beforeend','<p class="note">Agenda data needs review. Export a backup before editing.</p>');return;}

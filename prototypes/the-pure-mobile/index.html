@@ -19,8 +19,36 @@ const EX={push:{name:'Push-ups',variant:'Standard',floor:7,unlock:15},pull:{name
 const KEY='the_pure_mobile_proto_v1';
 const clone=x=>JSON.parse(JSON.stringify(x));
 const initial=()=>({v:1,phase:'welcome',order:['push','pull','legs'],round:1,counts:[{},{},{}],roundOrders:[null,null,null],roundEnds:[null,null,null],restEnds:[null,null,null],startedAt:null,endedAt:null,restStartedAt:null,pausedFrom:null,pausedAt:null,pausedMs:0,history:[]});
-let s=initial();try{const loaded=JSON.parse(localStorage.getItem(KEY)||'null');if(loaded&&loaded.v===1&&Array.isArray(loaded.order)&&loaded.order.length===3&&new Set(loaded.order).size===3&&loaded.order.every(id=>EX[id]))s={...initial(),...loaded};}catch(e){}
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(s))}catch(e){}};
+// Keep the last independently verified snapshot. Never report a save if storage rejected it.
+let s=initial(),lastPersistedRaw=null,storageBlocked=false;
+try{
+  const raw=localStorage.getItem(KEY);
+  if(raw!==null){
+    const loaded=JSON.parse(raw);
+    if(!loaded||loaded.v!==1||!Array.isArray(loaded.order)||loaded.order.length!==3||
+       new Set(loaded.order).size!==3||!loaded.order.every(id=>EX[id])||
+       !Array.isArray(loaded.counts)||!Array.isArray(loaded.history))throw Error('Invalid saved workout');
+    s={...initial(),...loaded};lastPersistedRaw=raw;
+  }
+}catch(e){storageBlocked=true;}
+const save=()=>{
+  try{
+    if(storageBlocked)throw Error('Existing workout data could not be read safely');
+    const raw=JSON.stringify(s);
+    localStorage.setItem(KEY,raw);
+    if(localStorage.getItem(KEY)!==raw)throw Error('Stored workout did not verify on read-back');
+    lastPersistedRaw=raw;
+    return true;
+  }catch(e){
+    // Never leave a false completed/archived workout in memory after a failed write.
+    if(lastPersistedRaw!==null){
+      try{s={...initial(),...JSON.parse(lastPersistedRaw)}}catch(_e){storageBlocked=true}
+    }else{s=initial()}
+    alert('WORKOUT NOT SAVED. Your last verified workout state is retained. Storage error: '+(e&&e.message||'unknown')+'. Do not close this page until you have checked your saved data.');
+    render();
+    return false;
+  }
+};
 const app=document.getElementById('app');
 const pad=n=>String(n).padStart(2,'0');
 const elapsed=(from,to=Date.now())=>{if(!from)return '00:00';let sec=Math.max(0,Math.floor((to-from)/1000));return `${pad(Math.floor(sec/60))}:${pad(sec%60)}`};

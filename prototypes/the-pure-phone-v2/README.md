@@ -35,3 +35,18 @@ Do not publish this whole directory. Publishing it would let `rollback/index.htm
 GitHub Pages (`https://gregmoulton.github.io/LifePilot/`) and Render (`https://lifepilot-wbcf.onrender.com/`) are different origins. Deploying there does not change the phone app and does not share its saved workouts.
 
 This environment has no Netlify login. The site API returns 401, and the live site was not modified.
+
+## GitHub branch
+
+Local LifePilot commit `398c17d924cf88574d33d995394993a762d476ca` is on `cursor/pure-v2-verified-save-f819`, based on `main` `4710a5ec`. GitHub refused the push from this environment (`could not read Username for 'https://github.com'`). It was not merged.
+
+On a machine that can push to `gregmoulton/LifePilot`:
+
+```
+git clone https://github.com/gregmoulton/LifePilot.git
+cd LifePilot
+git fetch /path/to/cursor-pure-v2-verified-save-f819.bundle HEAD:cursor/pure-v2-verified-save-f819
+git push -u origin cursor/pure-v2-verified-save-f819
+```
+
+The bundle file is `cursor-pure-v2-verified-save-f819.bundle` in this directory. Fetching it recreates that same commit. Pushing the branch does not update the Netlify phone site.

@@ -92,6 +92,35 @@ class CurrentTipBrowserSmoke(unittest.TestCase):
         )
         self.assertEqual(self.task()["due"], "2026-11-04")
 
+    def test_today_quick_entry_defaults_to_local_date_and_survives_reload(self):
+        self.page.get_by_text("Add a task manually", exact=True).click()
+        today = self.page.evaluate("agendaTodayDate()")
+        self.assertEqual(self.page.locator("#agendaDue").input_value(), today)
+        self.page.locator("#agendaName").fill("Fictional Today quick entry")
+        self.page.get_by_role("button", name="Add task", exact=True).click()
+        self.page.wait_for_function(
+            "profile?.execution?.tasks?.length === 1 && !transactionRunning"
+        )
+        self.assertEqual(self.task()["due"], today)
+        self.page.reload()
+        self.assertEqual(self.task()["due"], today)
+
+    def test_unscheduled_choice_and_new_goal_shortcut(self):
+        self.page.get_by_role("button", name="+ New Goal", exact=True).click()
+        self.page.locator("#goalName").wait_for()
+        self.page.get_by_role("button", name="Today's Agenda", exact=True).click()
+        self.page.get_by_text("Add a task manually", exact=True).click()
+        self.page.get_by_role("button", name="Unscheduled", exact=True).click()
+        self.assertEqual(self.page.locator("#agendaDue").input_value(), "")
+        self.page.locator("#agendaName").fill("Fictional unscheduled task")
+        self.page.get_by_role("button", name="Add task", exact=True).click()
+        self.page.wait_for_function(
+            "profile?.execution?.tasks?.length === 1 && !transactionRunning"
+        )
+        self.assertIn(self.task().get("due"), (None, ""))
+        self.page.reload()
+        self.assertIn(self.task().get("due"), (None, ""))
+
     def test_edit_draft_survives_reload_and_save_preserves_hold_and_date(self):
         self.add()
         self.page.locator('button[data-action="hold"]').click()

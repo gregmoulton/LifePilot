@@ -21,9 +21,12 @@ const PureDevices=(()=>{
    r.onend=()=>{
     if(this.r!==r||!this.running)return;this.running=false;
     this.rapidEnds=this.clock()-this.startedAt<1000?this.rapidEnds+1:0;
-    if(this.wanted&&(this.rapidEnds<=3||this.clock()-this.enabledAt<10000)&&typeof this.schedule==='function'){
+    if(this.wanted&&(this.rapidEnds<=12||this.clock()-this.enabledAt<10000)&&typeof this.schedule==='function'){
      this.onState('Voice enabled — reconnecting microphone…');
-     this.restartTimer=this.schedule(()=>{this.restartTimer=null;if(this.wanted&&!this.running&&this.r===r)try{this.start()}catch(e){this.onError(e.message)}},500);
+     // Normal short Chrome recognition sessions must not disable a hands-free workout.
+     // Back off repeated immediate exits, but keep a finite circuit breaker for a broken service.
+     const delay=this.rapidEnds<=3?500:Math.min(2500,500+(this.rapidEnds-3)*200);
+     this.restartTimer=this.schedule(()=>{this.restartTimer=null;if(this.wanted&&!this.running&&this.r===r)try{this.start()}catch(e){this.onError(e.message)}},delay);
     }else{this.wanted=false;this.onState('Microphone off. Tap Enable voice to resume.');}
    };
    try{r.start()}catch(e){this.running=false;this.wanted=false;throw e}

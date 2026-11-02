@@ -171,5 +171,50 @@ class CurrentTipBrowserSmoke(unittest.TestCase):
         self.assertTrue(held["execution"]["tasks"][0]["agenda_hold"])
 
 
+    def test_export_and_restore_keep_prior_saved_task(self):
+        """A synthetic held task can be exported, changed, then safely restored."""
+        self.add()
+        self.page.locator('button[data-action="hold"]').click()
+        self.page.wait_for_function(
+            "profile.execution.tasks[0].agenda_hold === true && !transactionRunning"
+        )
+        before = self.page.evaluate("(key) => localStorage.getItem(key)", KEY)
+        with self.page.expect_download() as download_info:
+            self.page.get_by_role("button", name="Export Backup", exact=True).click()
+        exported = json.loads(Path(download_info.value.path()).read_text())
+        self.assertEqual(exported, json.loads(before),
+                         "Export must contain the entire saved fictional profile")
+
+        self.page.locator('button[data-action="edit"]').click()
+        self.page.locator("#editTaskName").fill("Fictional changed task")
+        self.page.get_by_role("button", name="Save changes", exact=True).click()
+        self.page.wait_for_function(
+            "profile.execution.tasks[0].name === 'Fictional changed task' "
+            "&& !transactionRunning"
+        )
+        changed = self.page.evaluate("(key) => localStorage.getItem(key)", KEY)
+        self.assertNotEqual(changed, before)
+        self.assertEqual(
+            self.page.evaluate("(key) => localStorage.getItem(key + ':last-good')", KEY),
+            before,
+            "Last-good must preserve the exact previous stored bytes"
+        )
+
+        self.page.on("dialog", lambda dialog: dialog.accept())
+        self.page.evaluate("restoreLocalBackup()")
+        self.assertEqual(self.page.evaluate("(key) => localStorage.getItem(key)", KEY), before)
+        self.assertEqual(
+            self.page.evaluate(
+                "(key) => localStorage.getItem(key + ':recovery-original')", KEY
+            ),
+            changed,
+            "Restore must retain the displaced version for recovery"
+        )
+        self.page.reload()
+        self.assertEqual(self.task()["name"], "Fictional acceptance task")
+        self.assertEqual(self.task()["due"], "2026-11-04")
+        self.assertTrue(self.task()["agenda_hold"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

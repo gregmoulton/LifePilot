@@ -1,10 +1,14 @@
-import {runSyntheticConnectorProbe} from '../../tools/runner-openrouter-connector.mjs';
-
-// A single free-model request, with fixed fictional inputs. No code execution.
-const result = await runSyntheticConnectorProbe({
-  approved: process.env.LIFEPILOT_APPROVED_LIVE_FREE_TEST === 'yes',
-  apiKey: process.env.OPENROUTER_API_KEY,
-  timeoutMs: 28000,
-});
-console.log(JSON.stringify(result)); // No secrets, prompts or generated code are printed.
-if (result.status !== 'response-received' || !result.exactMatch) process.exitCode = 1;
+// Metadata only. Never request a completion or print key identifiers.
+try {
+ const key=process.env.OPENROUTER_API_KEY;
+ if(!key)throw Error();
+ const r=await fetch('https://openrouter.ai/api/v1/key',{headers:{Authorization:'Bearer '+key},redirect:'error',signal:AbortSignal.timeout(10000)});
+ if(!r.ok){console.log(JSON.stringify({httpStatus:r.status}));process.exitCode=1;}
+ else {
+ const {data:d}=await r.json();
+ const limit=typeof d?.limit==='number'?d.limit:null;
+ const reset=d?.limit_reset===null?'none':d?.limit_reset===undefined?'unknown':'resetting';
+ const pass=limit!==null&&limit>=0&&limit<=1&&reset==='none';
+ console.log(JSON.stringify({limit,reset,pass}));if(!pass)process.exitCode=1;
+ }
+}catch{console.log('Metadata check unavailable');process.exitCode=1;}

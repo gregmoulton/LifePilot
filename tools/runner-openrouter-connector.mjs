@@ -27,12 +27,12 @@ export async function runSyntheticConnectorProbe({
     // Only fixed, fictional source is sent; no caller-provided prompts, repositories, or profile data.
     const response = await fetchImpl(PROBE_ENDPOINT, {
       method: 'POST',
-      headers: {Authorization: \`Bearer \${apiKey}\`, 'Content-Type': 'application/json'},
+      headers: {Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json'},
       body: JSON.stringify({
         model: PROBE_MODEL,
         messages: [
           {role: 'system', content: 'Return only one line of JavaScript, no Markdown. Never execute anything.'},
-          {role: 'user', content: \`Change Todo to Today in this fictional snippet: \${SYNTHETIC_CODE}\`},
+          {role: 'user', content: `Change Todo to Today in this fictional snippet: ${SYNTHETIC_CODE}`},
         ],
         max_completion_tokens: 96,
         temperature: 0,

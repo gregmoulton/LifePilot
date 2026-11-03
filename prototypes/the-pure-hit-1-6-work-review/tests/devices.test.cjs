@@ -21,3 +21,26 @@ test('voice survives a cluster of short normal Chrome endings after the first te
  current.onresult({resultIndex:0,results:[Object.assign([{transcript:'8 reps'}],{isFinal:true})]});
  a.deepEqual(heard,['8 reps']);voice.stop();
 });
+
+
+test('HRM connection times out instead of remaining Connecting forever; retry works',async()=>{
+ let wake,callbacks=[],connectCalls=0;
+ const characteristic={addEventListener(){},removeEventListener(){},async startNotifications(){}};
+ const device={addEventListener(){},removeEventListener(){},gatt:{connected:false,disconnect(){this.connected=false},connect(){connectCalls++;if(connectCalls===1)return new Promise(()=>{});this.connected=true;return Promise.resolve({getPrimaryService:async()=>({getCharacteristic:async()=>characteristic})})}}};
+ const mon=new D.Monitor({bluetooth:{requestDevice:async()=>device},onReading(){},onState:s=>callbacks.push(s),schedule:fn=>{wake=fn;return 100},cancel(){},timeoutMs:15});
+ const first=mon.connect();await Promise.resolve();await Promise.resolve();
+ a.equal(typeof wake,'function','timer must be armed after picker');
+ wake();await a.rejects(first,/Bluetooth connection timed out/);
+ a.equal(mon.device,null);
+ await mon.connect();a.equal(connectCalls,2);
+ a.match(callbacks.at(-1),/Waiting for first live BPM/);
+});
+test('cancelled connection cannot install stale Bluetooth characteristic',async()=>{
+ let fulfill;
+ const device={addEventListener(){},removeEventListener(){},gatt:{connected:false,disconnect(){},connect(){return new Promise(resolve=>fulfill=resolve)}}};
+ const mon=new D.Monitor({bluetooth:{async requestDevice(){return device}},onState(){},onReading(){}});
+ const first=mon.connect();await Promise.resolve();await Promise.resolve();mon.disconnect();
+ fulfill({getPrimaryService:async()=>({})});
+ await a.rejects(first,/interrupted|superseded/);
+ a.equal(mon.device,null);
+});

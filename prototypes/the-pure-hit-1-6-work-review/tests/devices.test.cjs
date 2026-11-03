@@ -44,3 +44,23 @@ test('cancelled connection cannot install stale Bluetooth characteristic',async(
  await a.rejects(first,/interrupted|superseded/);
  a.equal(mon.device,null);
 });
+
+
+test('paired HRM with no BPM times out visibly and releases GATT for retry',async()=>{
+ let selected=0,clock=1000,tasks=[],states=[];
+ const characteristic={addEventListener(){},removeEventListener(){},async startNotifications(){}};
+ const device={addEventListener(){},removeEventListener(){},gatt:{connected:false,disconnect(){this.connected=false},async connect(){this.connected=true;return {getPrimaryService:async()=>({getCharacteristic:async()=>characteristic})}}}};
+ const m=new D.Monitor({bluetooth:{requestDevice:async()=>{selected++;return device}},onReading(){},onState:s=>states.push(s),clock:()=>clock,schedule:fn=>{tasks.push(fn);return tasks.length},cancel(){},timeoutMs:1000});
+ await m.connect();
+ a.equal(selected,1);
+ a.match(states.at(-1),/Waiting for first live BPM/);
+ clock+=1001;
+ tasks.at(-1)();
+ a.equal(m.fresh(),null);
+ a.equal(m.device,null,'GATT disconnected so retry can restart cleanly');
+ a.equal(device.gatt.connected,false);
+ a.match(states.at(-1),/No live BPM received/);
+ await m.connect();
+ a.equal(selected,2,'user can retry after no-reading timeout');
+ m.disconnect();
+});

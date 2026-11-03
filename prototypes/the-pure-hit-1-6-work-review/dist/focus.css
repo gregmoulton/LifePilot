@@ -81,3 +81,12 @@
  .workout-panel[data-stage="exercise"] #controls>.btn{padding:6px 8px;min-height:44px}
  .workout-panel[data-stage="exercise"] #record{min-height:44px}
 }
+
+/* Pre-workout HRM readiness: the actual reading, not pairing, unlocks normal start. */
+.hrm-preflight{display:flex;flex-direction:column;align-items:flex-start;gap:.4rem;padding:.85rem 0}
+.hrm-preflight p,#preflightHrm{margin:.4rem 0;font-size:.95rem;font-weight:600}
+.hrm-start-dialog{position:fixed;inset:auto;max-width:min(92vw,440px);max-height:85vh;overflow:auto;border:1px solid #52708b;border-radius:16px;padding:1.25rem;background:#102034;color:#f5f8ff;box-shadow:0 20px 65px #0009}
+.hrm-start-dialog::backdrop{background:#000b}
+.hrm-start-dialog .device-actions{display:flex;flex-wrap:wrap;gap:.65rem;justify-content:stretch}
+.hrm-start-dialog .device-actions button{flex:1 1 100%;min-height:44px}
+@media(max-width:480px){.hrm-preflight .btn{width:100%}.hrm-start-dialog{width:92vw}}

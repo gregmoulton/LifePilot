@@ -223,3 +223,40 @@ test('cooldown does not announce saved when the archive write was silently dropp
  r.input('hr','106');r.writeFault('drop');r.click('loghr');
  assert.match(r.node('notice').textContent,/NOT verified/);assert(!r.spoken.includes('Cooldown complete. Workout saved.'));
 });
+
+
+test('real dialog requires affirmative no-HRM selection; cancel does not start',()=>{
+ const r=runtime({devices:true});
+ const dialog=r.node('hrmStartDialog');
+ dialog.showModal=()=>{dialog.open=true};
+ dialog.close=()=>{dialog.open=false};
+ r.click('start');
+ assert.equal(dialog.open,true);
+ assert.equal(r.read('db.active'),null);
+ r.click('hrmCancel');
+ assert.equal(dialog.open,false);
+ assert.equal(r.read('db.active'),null);
+ r.click('start');
+ r.click('hrmContinue');
+ assert.equal(dialog.open,false);
+ assert.equal(r.read('!!db.active'),true);
+ assert.equal(r.read("db.active.events.some(e=>e.event==='started-without-hr-confirmed')"),true);
+});
+
+test('overview HRM readiness waits for actual reading and bypasses warning once live',async()=>{
+ let onPacket;
+ const characteristic={addEventListener(n,f){if(n==='characteristicvaluechanged')onPacket=f},removeEventListener(){},async startNotifications(){}};
+ const device={addEventListener(){},removeEventListener(){},gatt:{connected:true,disconnect(){this.connected=false},async connect(){return {async getPrimaryService(){return {async getCharacteristic(){return characteristic}}}}}}};
+ const r=runtime({devices:true,bluetooth:{async requestDevice(){return device}}});
+ const dialog=r.node('hrmStartDialog');
+ dialog.showModal=()=>{dialog.open=true};dialog.close=()=>{dialog.open=false};
+ await r.node('connectHr').onclick();
+ assert.match(r.node('overviewBpm').textContent,/monitor not ready/);
+ r.click('start');assert.equal(dialog.open,true);r.click('hrmCancel');
+ onPacket({target:{value:new DataView(Uint8Array.from([0,114]).buffer)}});
+ assert.match(r.node('overviewBpm').textContent,/114 BPM/);
+ assert.match(r.node('preflightHrm').textContent,/HRM ready/);
+ r.click('start');
+ assert.equal(dialog.open,false);
+ assert.equal(r.read("db.active.events.some(e=>e.event==='started-with-live-hr')"),true);
+});

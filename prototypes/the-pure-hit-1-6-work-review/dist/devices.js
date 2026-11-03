@@ -37,10 +37,50 @@ const PureDevices=(()=>{
   stop(){this.wanted=false;if(this.restartTimer!==null&&typeof this.cancel==='function')this.cancel(this.restartTimer);this.restartTimer=null;this.running=false;this.listening=false;const r=this.r;this.r=null;if(r)try{r.abort()}catch{}this.onState('Microphone off.')}
  }
  class Monitor {
-  constructor({bluetooth,onReading,onState,clock=()=>Date.now()}){Object.assign(this,{bluetooth,onReading,onState,clock});this.device=null;this.characteristic=null;this.latest=null;this.listener=e=>{try{const bpm=heartRate(e.target.value);this.latest={bpm,timestamp:this.clock()};this.onReading(this.latest)}catch(e){this.latest=null;this.onState(e.message)}};this.disconnected=()=>{this.latest=null;this.onState('Monitor disconnected. Reconnect or use manual HR.')}}
-  async connect(){if(!this.bluetooth)throw Error('Bluetooth is unavailable here. Use Chrome on Android or manual HR.');this.disconnect();const device=await this.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});this.device=device;device.addEventListener('gattserverdisconnected',this.disconnected);try{const server=await device.gatt.connect(),service=await server.getPrimaryService('heart_rate');this.characteristic=await service.getCharacteristic('heart_rate_measurement');this.characteristic.addEventListener('characteristicvaluechanged',this.listener);await this.characteristic.startNotifications();this.onState('Connected. Waiting for a heart-rate reading.')}catch(e){this.disconnect();throw e}}
+  constructor({bluetooth,onReading,onState,clock=()=>Date.now(),schedule=globalThis.setTimeout,cancel=globalThis.clearTimeout,timeoutMs=12000}) {
+   Object.assign(this,{bluetooth,onReading,onState,clock,schedule,cancel,timeoutMs});
+   this.device=null;this.characteristic=null;this.latest=null;this.attempt=0;
+   this.listener=e=>{if(!this.device)return;try{const bpm=heartRate(e.target.value);this.latest={bpm,timestamp:this.clock()};this.onReading(this.latest)}catch(error){this.latest=null;this.onState(error.message)}};
+   this.disconnected=()=>{this.disconnect();this.onState('Monitor disconnected. Reconnect or use manual HR.')};
+  }
+  async stage(promise,label,attempt){
+   let timer=null;
+   try {
+    const result=await Promise.race([promise,new Promise((_,reject)=>{timer=this.schedule(()=>reject(Error(label+' timed out. Please retry.')),this.timeoutMs)})]);
+    if(attempt!==this.attempt)throw Error('Connection interrupted or superseded. Please retry.');
+    return result;
+   }finally{if(timer!==null)this.cancel(timer)}
+  }
+  async connect(){
+   if(!this.bluetooth)throw Error('Bluetooth is unavailable here. Use Chrome on Android or manual HR.');
+   this.disconnect();
+   const attempt=this.attempt;
+   this.onState('Choose your heart-rate monitor in the Bluetooth dialog.');
+   const device=await this.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});
+   if(attempt!==this.attempt)throw Error('Connection cancelled. Please retry.');
+   this.device=device;device.addEventListener('gattserverdisconnected',this.disconnected);
+   try{
+    this.onState('Bluetooth selected. Connecting to monitor…');
+    const server=await this.stage(device.gatt.connect(),'Bluetooth connection',attempt);
+    this.onState('Finding heart-rate service…');
+    const service=await this.stage(server.getPrimaryService('heart_rate'),'Heart-rate service',attempt);
+    this.onState('Finding heart-rate readings…');
+    const characteristic=await this.stage(service.getCharacteristic('heart_rate_measurement'),'Heart-rate characteristic',attempt);
+    this.characteristic=characteristic;
+    characteristic.addEventListener('characteristicvaluechanged',this.listener);
+    this.onState('Subscribing to live BPM…');
+    await this.stage(characteristic.startNotifications(),'Live heart-rate subscription',attempt);
+    this.onState('Connected. Waiting for first live BPM reading…');
+   }catch(error){if(attempt===this.attempt)this.disconnect();throw error}
+  }
   fresh(){return this.latest&&this.clock()-this.latest.timestamp<=15000&&this.clock()>=this.latest.timestamp?this.latest:null}
-  disconnect(){this.latest=null;if(this.characteristic)this.characteristic.removeEventListener('characteristicvaluechanged',this.listener);this.characteristic=null;if(this.device){this.device.removeEventListener('gattserverdisconnected',this.disconnected);if(this.device.gatt.connected)this.device.gatt.disconnect()}this.device=null}
+  disconnect(){
+   this.attempt++;this.latest=null;
+   if(this.characteristic)this.characteristic.removeEventListener('characteristicvaluechanged',this.listener);
+   this.characteristic=null;
+   if(this.device){this.device.removeEventListener('gattserverdisconnected',this.disconnected);if(this.device.gatt?.connected)this.device.gatt.disconnect()}
+   this.device=null;
+  }
  }
  return {command,heartRate,Voice,Monitor};
 })();

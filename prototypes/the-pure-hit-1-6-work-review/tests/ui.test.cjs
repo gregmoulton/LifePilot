@@ -274,3 +274,38 @@ test('warning Connect HRM directly launches Bluetooth selection and accepts live
  r.click('start');
  assert.equal(r.read('db.active.events.some(e=>e.event==="started-with-live-hr"&&e.bpm===113)'),true);
 });
+
+
+test('heart icon shows fresh Bluetooth samples, age resets even at unchanged BPM, and stale values vanish',async()=>{
+ let packet;
+ const characteristic={addEventListener(n,f){packet=f},removeEventListener(){},async startNotifications(){}};
+ const device={name:'MOOFIT',addEventListener(){},removeEventListener(){},gatt:{connected:false,disconnect(){this.connected=false},async connect(){this.connected=true;return {getPrimaryService:async()=>({getCharacteristic:async()=>characteristic})}}}};
+ const r=runtime({devices:true,bluetooth:{requestDevice:async()=>device},autoHrGate:false});
+ assert.equal(r.node('hrLiveValue').textContent,'—');
+ await r.node('connectHr').onclick();
+ assert.equal(r.node('hrLiveValue').textContent,'—','pairing must not imply a live heart rate');
+ const reading=n=>packet({target:{value:new DataView(Uint8Array.from([0,n]).buffer)}});
+ reading(92);
+ assert.equal(r.node('hrLiveValue').textContent,'92');
+ assert.equal(r.node('hrSignalAge').textContent,'New reading received just now');
+ r.time(6000);r.tick();
+ assert.equal(r.node('hrLiveValue').textContent,'92');
+ assert.match(r.node('hrSignalAge').textContent,/6s ago/);
+ reading(92);
+ assert.equal(r.node('hrSignalAge').textContent,'New reading received just now','unchanged BPM still resets update age on new packet');
+ r.time(16000);r.tick();
+ assert.equal(r.node('hrLiveValue').textContent,'—','stale BPM cannot look live');
+ assert.equal(r.node('liveBpm').textContent,'— BPM');
+ assert.match(r.node('hrSignalAge').textContent,/SIGNAL STALE.*16s/);
+ r.click('start');
+ assert.equal(r.read('db.active'),null,'stale reading must not pass start gate');
+});
+test('manual or archived HR readings do not impersonate a live Bluetooth pulse',()=>{
+ const r=runtime({devices:true,autoHrGate:false});
+ assert.equal(r.node('hrLiveValue').textContent,'—');
+ r.click('start');r.click('hrGateProceed');
+ r.input('hr','104');r.click('loghr');
+ assert.equal(r.node('hrLiveValue').textContent,'—');
+ r.tick();assert.equal(r.node('liveBpm').textContent,'— BPM');
+ assert.match(r.node('hrSignalAge').textContent,/Waiting for live/);
+});

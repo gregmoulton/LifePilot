@@ -1,0 +1,27 @@
+name: OpenRouter connector mock proof — isolated
+# No live API calls. The workflow deliberately receives no model secrets.
+on:
+  push:
+    branches:
+      - experiment/openrouter-connector-poc-20261103
+    paths:
+      - .github/workflows/openrouter-connector-poc.yml
+      - tools/runner-openrouter-connector.mjs
+      - tools/runner-openrouter-connector.test.mjs
+      - experiments/openrouter/**
+permissions:
+  contents: read
+jobs:
+  synthetic-connector-tests:
+    if: github.ref == 'refs/heads/experiment/openrouter-connector-poc-20261103'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.22.1'
+      - name: Mock-only OpenRouter connector safety tests
+        run: node --test tools/runner-openrouter-connector.test.mjs

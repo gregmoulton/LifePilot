@@ -1,0 +1,30 @@
+name: OpenRouter — one-time free-model API probe (isolated)
+# The path-trigger file is NOT committed. Owner must provision a limited key and
+# explicitly approve creating that file after reviewing account-side caps.
+on:
+  push:
+    branches:
+      - experiment/openrouter-connector-poc-20261103
+    paths:
+      - experiments/openrouter/RUN_LIVE_ONCE
+permissions:
+  contents: read
+jobs:
+  one-synthetic-call:
+    if: github.repository == 'gregmoulton/LifePilot' && github.ref == 'refs/heads/experiment/openrouter-connector-poc-20261103'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.22.1'
+      - name: Require explicit test-activation marker
+        run: test "$(cat experiments/openrouter/RUN_LIVE_ONCE)" = 'APPROVED_SINGLE_FREE_REQUEST'
+      - name: One synthetic free-model probe — no retry, no generated-code execution
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          LIFEPILOT_APPROVED_LIVE_FREE_TEST: 'yes'
+        run: node experiments/openrouter/live-smoke.mjs

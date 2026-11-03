@@ -39,8 +39,8 @@ const PureDevices=(()=>{
  class Monitor {
   constructor({bluetooth,onReading,onState,clock=()=>Date.now(),schedule=globalThis.setTimeout,cancel=globalThis.clearTimeout,timeoutMs=12000}) {
    Object.assign(this,{bluetooth,onReading,onState,clock,schedule,cancel,timeoutMs});
-   this.device=null;this.characteristic=null;this.latest=null;this.attempt=0;
-   this.listener=e=>{if(!this.device)return;try{const bpm=heartRate(e.target.value);this.latest={bpm,timestamp:this.clock()};this.onReading(this.latest)}catch(error){this.latest=null;this.onState(error.message)}};
+   this.device=null;this.characteristic=null;this.latest=null;this.attempt=0;this.readingTimer=null;
+   this.listener=e=>{if(!this.device)return;try{const bpm=heartRate(e.target.value);this.latest={bpm,timestamp:this.clock()};if(this.readingTimer!==null){this.cancel(this.readingTimer);this.readingTimer=null}this.onReading(this.latest)}catch(error){this.latest=null;this.onState(error.message)}};
    this.disconnected=()=>{this.disconnect();this.onState('Monitor disconnected. Reconnect or use manual HR.')};
   }
   async stage(promise,label,attempt){
@@ -70,12 +70,21 @@ const PureDevices=(()=>{
     characteristic.addEventListener('characteristicvaluechanged',this.listener);
     this.onState('Subscribing to live BPM…');
     await this.stage(characteristic.startNotifications(),'Live heart-rate subscription',attempt);
-    if(!this.fresh())this.onState('Connected. Waiting for first live BPM reading…');
+    if(!this.fresh()){
+     this.onState('Connected. Waiting for first live BPM reading…');
+     this.readingTimer=this.schedule(()=>{
+      this.readingTimer=null;
+      if(attempt!==this.attempt||this.fresh())return;
+      this.disconnect();
+      this.onState('No live BPM received within '+Math.round(this.timeoutMs/1000)+' seconds. Check that MOOFIT is worn and transmitting, then retry.');
+     },this.timeoutMs);
+    }
    }catch(error){if(attempt===this.attempt)this.disconnect();throw error}
   }
   fresh(){return this.latest&&this.clock()-this.latest.timestamp<=15000&&this.clock()>=this.latest.timestamp?this.latest:null}
   disconnect(){
    this.attempt++;this.latest=null;
+   if(this.readingTimer!==null){this.cancel(this.readingTimer);this.readingTimer=null}
    if(this.characteristic)this.characteristic.removeEventListener('characteristicvaluechanged',this.listener);
    this.characteristic=null;
    if(this.device){this.device.removeEventListener('gattserverdisconnected',this.disconnected);if(this.device.gatt?.connected)this.device.gatt.disconnect()}

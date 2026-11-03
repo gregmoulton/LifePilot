@@ -165,6 +165,7 @@ if(typeof document!=='undefined'){
    const reading=monitorReading();
    if(!reading){
     $('hrStartGate').classList.remove('hidden');
+    $('hrGateDesc').textContent='The monitor is not connected or not sending a current BPM. Connect your MOOFIT and wait for a live reading. Continuing without it is an exception.';
     $('hrPreflight').textContent='Start blocked: no live BPM. Connect your monitor or explicitly continue without it.';
     return;
    }
@@ -172,7 +173,7 @@ if(typeof document!=='undefined'){
   };
   $('hrGateProceed').onclick=()=>startWithHrDecision(monitorReading(),true);
   $('hrGateCancel').onclick=()=>{closeHrGate();$('hrPreflight').textContent='Workout not started. Connect HRM for a normal start.'};
-  $('hrGateConnect').onclick=()=>{closeHrGate();$('connectHr').click()};
+  // Rebound with the actual Bluetooth click handler below so the chooser opens in the user's tap.
  $('newWorkout').onclick=()=>$('start').click();
  function announceCountdown(){const a=db.active;if(dirty||blocked||!a||a.paused||!a.countdownUntil)return;const n=Math.max(1,Math.ceil((a.countdownUntil-now())/1000)),key=a.id+':'+a.records.length+':'+n;if(key===lastSpokenCountdown)return;lastSpokenCountdown=key;announce(String(n))}
 
@@ -258,14 +259,44 @@ if(typeof document!=='undefined'){
    if(p.type==='end')end();else if(p.type==='save')finishAndSave(false);else if(p.type==='discard')change(()=>{db.active=null});else if(p.type==='recover')$('recover').click();else $(id).click();sayStatus('Command processed. Check the workout status above.');
   };
   const setMonitorCompact=live=>{$('monitorDetails').classList.toggle('hr-live',live);if(!live)$('monitorDetails').open=true;else if(!$('monitorDetails').classList.contains?.('hr-live-seen')){$('monitorDetails').open=false;$('monitorDetails').classList.add('hr-live-seen')}};
-  const monitor=new PureDevices.Monitor({bluetooth:globalThis.navigator?.bluetooth,onState:s=>{setMonitorCompact(false);$('monitorDetails').classList.remove('hr-live-seen');$('monitorStatus').textContent=s;$('liveBpm').textContent='— BPM';$('hrPreflight').textContent='Not ready · '+s},onReading:r=>{
-   setMonitorCompact(true);$('liveBpm').textContent=r.bpm+' BPM';$('monitorStatus').textContent='Live reading · '+new Date(r.timestamp).toLocaleTimeString();$('hrPreflight').textContent='READY · Live heart rate '+r.bpm+' BPM. Start Workout is ready.';closeHrGate();monitorSignalSeen=true;if(monitorLossAnnounced){monitorLossAnnounced=false;if(db.active&&!dirty&&!blocked){change(()=>db.active.events.push({event:'hr-signal-restored',timestamp:new Date(r.timestamp).toISOString()}));announce('Heart-rate signal restored.')}}
+  const monitor=new PureDevices.Monitor({bluetooth:globalThis.navigator?.bluetooth,onState:s=>{setMonitorCompact(false);$('monitorDetails').classList.remove('hr-live-seen');$('monitorStatus').textContent=s;$('liveBpm').textContent='— BPM';$('hrPreflight').textContent='Not ready · '+s;if(!$('hrStartGate').classList.contains('hidden'))$('hrGateDesc').textContent=s+' Waiting for a live BPM before starting.'},onReading:r=>{
+   setMonitorCompact(true);$('liveBpm').textContent=r.bpm+' BPM';$('monitorStatus').textContent='Live reading · '+new Date(r.timestamp).toLocaleTimeString();$('hrPreflight').textContent='READY · Live heart rate '+r.bpm+' BPM. Start Workout is ready.';closeHrGate();$('hrGateDesc').textContent='The monitor is not connected or not sending a current BPM. Connect your MOOFIT before starting.';monitorSignalSeen=true;if(monitorLossAnnounced){monitorLossAnnounced=false;if(db.active&&!dirty&&!blocked){change(()=>db.active.events.push({event:'hr-signal-restored',timestamp:new Date(r.timestamp).toISOString()}));announce('Heart-rate signal restored.')}}
    if(db.active&&!dirty&&!blocked&&r.timestamp-lastMonitorLog>=1000){
     lastMonitorLog=r.timestamp;let archived=false;change(()=>{Pure.sampleHr(db.active,String(r.bpm),r.timestamp);archived=finishRecoveryIfReady()});if(archived&&!dirty&&!blocked)announce('Cooldown complete. Workout saved.')
    }
   }});
   monitorReading=()=>monitor.device?.gatt?.connected?monitor.fresh():null;
-  $('connectHr').onclick=async()=>{if(connecting)return;connecting=true;$('connectHr').disabled=true;$('connectHr').textContent='Connecting…';$('disconnectHr').disabled=true;try{$('monitorStatus').textContent='Choose your heart-rate monitor in the Bluetooth dialog.';await monitor.connect()}catch(e){$('monitorStatus').textContent='Could not connect: '+e.message+'. Manual HR remains available.';$('hrPreflight').textContent='HRM NOT READY · '+e.message}finally{connecting=false;$('connectHr').disabled=false;$('connectHr').textContent=monitor.device?.gatt?.connected?'Reconnect HR monitor':'Connect HR monitor';$('disconnectHr').disabled=false}};
+  const connectMonitor=async()=>{
+    if(connecting)return;
+    connecting=true;
+    $('monitorDetails').open=true;
+    $('connectHr').disabled=true;
+    $('hrGateConnect').disabled=true;
+    $('connectHr').textContent='Connecting…';
+    $('hrGateConnect').textContent='Connecting…';
+    $('disconnectHr').disabled=true;
+    try{
+     $('monitorStatus').textContent='Choose your MOOFIT in the Bluetooth dialog.';
+     $('hrGateDesc').textContent='Choose your MOOFIT in the Bluetooth dialog, then wait for a live BPM.';
+     await monitor.connect();
+    }catch(e){
+     const message='Could not connect: '+e.message+'. Retry or explicitly continue without HRM.';
+     $('monitorStatus').textContent=message;
+     $('hrPreflight').textContent='HRM NOT READY · '+e.message;
+     $('hrGateDesc').textContent=message;
+    }finally{
+     connecting=false;
+     $('connectHr').disabled=false;
+     $('hrGateConnect').disabled=false;
+     $('connectHr').textContent=monitor.device?.gatt?.connected?'Reconnect HR monitor':'Connect HR monitor';
+     $('hrGateConnect').textContent='Connect HRM';
+     $('disconnectHr').disabled=false;
+    }
+   };
+   $('connectHr').onclick=connectMonitor;
+   // Both buttons invoke this handler *directly* on a trusted user tap.
+   // Do not close the warning until an actual Bluetooth BPM packet arrives.
+   $('hrGateConnect').onclick=connectMonitor;
   $('disconnectHr').onclick=()=>{monitor.disconnect();setMonitorCompact(false);$('monitorDetails').classList.remove('hr-live-seen');$('monitorStatus').textContent='Monitor disconnected. Manual HR remains available.';$('liveBpm').textContent='— BPM';$('hrPreflight').textContent='HRM not connected. Reconnect before starting.'};
   setInterval(()=>{if(db.active&&monitorSignalSeen&&!monitor.fresh()&&!monitorLossAnnounced&&!dirty&&!blocked){monitorLossAnnounced=true;setMonitorCompact(false);$('monitorDetails').classList.remove('hr-live-seen');change(()=>db.active.events.push({event:'hr-signal-unavailable',timestamp:new Date(now()).toISOString(),reason:'no-fresh-monitor-reading'}));$('monitorStatus').textContent='HR signal lost — reconnect monitor. Workout recording continues.';announce('Heart-rate signal lost. Reconnect your monitor. Workout recording continues.')}if(!db.active&&!connecting){const current=monitor.fresh();$('hrPreflight').textContent=current?'READY · Live heart rate '+current.bpm+' BPM. Start Workout is ready.':monitor.device?.gatt?.connected?'Monitor selected, but no current BPM. Wait for a reading or reconnect.':'Connect HRM and wait for a live BPM reading before starting.';}const last=monitor.fresh()||db.active?.hr.at(-1),fresh=last&&now()-(typeof last.timestamp==='number'?last.timestamp:Date.parse(last.timestamp))<=15000&&now()>=(typeof last.timestamp==='number'?last.timestamp:Date.parse(last.timestamp));$('liveBpm').textContent=fresh?last.bpm+' BPM':'— BPM';$('liveBpm').setAttribute?.('aria-label',fresh?(last.source==='manual'?'Manual':'Current')+' heart rate '+last.bpm+' BPM':'No current heart-rate reading')},1000);
   const stopVoice=(forget=true)=>{if(forget)handsFree=false;voice.stop();proposal=null;$('voiceProposal').classList.add('hidden')};

@@ -256,3 +256,21 @@ test('cooldown does not announce saved when the archive write was silently dropp
  r.input('hr','106');r.writeFault('drop');r.click('loghr');
  assert.match(r.node('notice').textContent,/NOT verified/);assert(!r.spoken.includes('Cooldown complete. Workout saved.'));
 });
+
+
+test('warning Connect HRM directly launches Bluetooth selection and accepts live BPM before Start',async()=>{
+ let packet,picked=0;
+ const characteristic={addEventListener(n,f){packet=f},removeEventListener(){},async startNotifications(){}};
+ const device={addEventListener(){},removeEventListener(){},gatt:{connected:false,disconnect(){this.connected=false},async connect(){this.connected=true;return {getPrimaryService:async()=>({getCharacteristic:async()=>characteristic})}}}};
+ const r=runtime({devices:true,autoHrGate:false,bluetooth:{requestDevice:async()=>{picked++;return device}}});
+ r.click('start');
+ assert.equal(r.read('db.active'),null);
+ await r.node('hrGateConnect').onclick();
+ assert.equal(picked,1,'tap should launch actual device picker, not just dismiss the warning');
+ assert.match(r.node('monitorStatus').textContent,/Waiting for first live BPM/);
+ assert.equal(r.read('db.active'),null,'pairing alone never starts workout');
+ packet({target:{value:new DataView(Uint8Array.from([0,113]).buffer)}});
+ assert.match(r.node('hrPreflight').textContent,/READY.*113 BPM/);
+ r.click('start');
+ assert.equal(r.read('db.active.events.some(e=>e.event==="started-with-live-hr"&&e.bpm===113)'),true);
+});

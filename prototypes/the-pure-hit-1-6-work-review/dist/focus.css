@@ -57,3 +57,17 @@
 .workout-panel[data-stage="countdown"] #focusTitle{display:block;font-size:clamp(22px,6vw,34px);line-height:1.15;text-align:center;margin:6px 0 0;color:#e8f4ff;}
 .workout-panel[data-stage="countdown"] #focusCount{display:block;font-size:clamp(88px,28vw,148px);font-weight:900;line-height:1;text-align:center;margin:4px auto 12px;color:var(--focus-blue);font-variant-numeric:tabular-nums;}
 @media(max-height:700px){.workout-panel[data-stage="countdown"] #focusCount{font-size:clamp(76px,24vw,120px);margin-bottom:4px;}.workout-panel[data-stage="countdown"] #focusTitle{font-size:clamp(20px,5vw,28px);}}
+
+/* Android workout controls: keep live HR controls collapsed, without hiding recovery. */
+#monitorDetails summary{cursor:pointer;font-size:.78rem;padding:6px 0}
+#monitorDetails.hr-live:not([open]) summary{color:#80e2bb}
+#monitorDetails.hr-live:not([open]) summary::after{content:" · live"}
+@media(max-width:600px){
+ .workout-panel:not([data-stage="countdown"]){padding:10px!important}
+ .workout-panel .voice-panel{padding:6px 8px!important;margin:4px 0!important}
+ .workout-panel .voice-panel .section-head{display:none}
+ .workout-panel .workout-monitor{padding:4px 8px!important;margin:3px 0!important}
+ .workout-panel .device-actions,.workout-panel .voice-toolbar{gap:6px}
+ .workout-panel button.btn,.workout-panel .voice-toolbar #talk{min-height:44px;padding:6px 10px;font-size:.82rem}
+ .workout-panel #voiceHint,.workout-panel #monitorStatus{margin:3px 0;font-size:.75rem}
+}

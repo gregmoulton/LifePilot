@@ -9,17 +9,19 @@ const PureDevices=(()=>{
  }
  function heartRate(value){if(!(value instanceof DataView)||value.byteLength<2)throw Error('Incomplete heart-rate packet');const flags=value.getUint8(0),wide=!!(flags&1);if(wide&&value.byteLength<3)throw Error('Incomplete 16-bit heart-rate packet');const bpm=wide?value.getUint16(1,true):value.getUint8(1);if(bpm<30||bpm>240)throw Error('Heart rate outside supported range');if((flags&4)&&!(flags&2))throw Error('Monitor reports no skin contact');return bpm}
  class Voice {
-  constructor({recognition,onText,onState,onError,clock=()=>Date.now(),schedule=globalThis.setTimeout,cancel=globalThis.clearTimeout}){Object.assign(this,{recognition,onText,onState,onError,clock,schedule,cancel});this.running=false;this.seen=new Set();this.wanted=false;this.rapidEnds=0;this.restartTimer=null}
-  start(){
+  constructor({recognition,onText,onState,onError,clock=()=>Date.now(),schedule=globalThis.setTimeout,cancel=globalThis.clearTimeout}){Object.assign(this,{recognition,onText,onState,onError,clock,schedule,cancel});this.running=false;this.listening=false;this.needsGesture=false;this.seen=new Set();this.wanted=false;this.rapidEnds=0;this.restartTimer=null}
+  start({gesture=false}={}){
+   if(gesture){this.needsGesture=false;if(this.restartTimer!==null&&typeof this.cancel==='function')this.cancel(this.restartTimer);this.restartTimer=null;}
+   if(this.needsGesture||this.restartTimer!==null)return;
    if(!this.wanted){this.enabledAt=this.clock();this.rapidEnds=0}this.wanted=true;if(this.running)return;
-   if(!this.recognition){this.wanted=false;throw Error('Speech recognition is unavailable in this browser. Manual controls still work.')}
-   const r=new this.recognition();this.r=r;this.running=true;this.startedAt=this.clock();this.seen.clear();
+   if(!this.recognition){this.wanted=false;this.needsGesture=true;throw Error('Speech recognition is unavailable in this browser. Manual controls still work.')}
+   const r=new this.recognition();this.r=r;this.running=true;this.listening=false;this.startedAt=this.clock();this.seen.clear();
    r.lang='en-US';r.continuous=true;r.interimResults=false;r.maxAlternatives=1;
-   r.onstart=()=>{if(this.r===r&&this.running)this.onState('Listening — say “twelve reps” or a workout command.')};
+   r.onstart=()=>{if(this.r===r&&this.running){this.listening=true;this.onState('Listening — say “twelve reps” or a workout command.')}};
    r.onresult=e=>{if(!this.running||this.r!==r)return;for(let i=e.resultIndex;i<e.results.length;i++){if(!e.results[i].isFinal||this.seen.has(i))continue;this.seen.add(i);this.rapidEnds=0;this.onText(e.results[i][0].transcript);if(this.r!==r||!this.running)break}};
-   r.onerror=e=>{if(this.r!==r||!this.running)return;if(['not-allowed','service-not-allowed','audio-capture'].includes(e.error))this.wanted=false;if(e.error==='no-speech'){this.onState('Voice enabled — waiting for your rep command.');return}this.onError('Microphone: '+e.error+'. Manual controls remain available.')};
+   r.onerror=e=>{if(this.r!==r||!this.running)return;this.listening=false;if(['not-allowed','service-not-allowed','audio-capture'].includes(e.error)){this.wanted=false;this.needsGesture=true;}if(e.error==='no-speech'){this.onState('Voice enabled — waiting for your rep command.');return}this.onError('Microphone: '+e.error+'. Manual controls remain available.')};
    r.onend=()=>{
-    if(this.r!==r||!this.running)return;this.running=false;
+    if(this.r!==r||!this.running)return;this.running=false;this.listening=false;
     this.rapidEnds=this.clock()-this.startedAt<1000?this.rapidEnds+1:0;
     if(this.wanted&&(this.rapidEnds<=12||this.clock()-this.enabledAt<10000)&&typeof this.schedule==='function'){
      this.onState('Voice enabled — reconnecting microphone…');
@@ -27,11 +29,12 @@ const PureDevices=(()=>{
      // Back off repeated immediate exits, but keep a finite circuit breaker for a broken service.
      const delay=this.rapidEnds<=3?500:Math.min(2500,500+(this.rapidEnds-3)*200);
      this.restartTimer=this.schedule(()=>{this.restartTimer=null;if(this.wanted&&!this.running&&this.r===r)try{this.start()}catch(e){this.onError(e.message)}},delay);
-    }else{this.wanted=false;this.onState('Microphone off. Tap Enable voice to resume.');}
+    }else{if(this.wanted)this.needsGesture=true;this.wanted=false;this.onState('Voice disconnected. Tap Enable voice to retry.');}
    };
-   try{r.start()}catch(e){this.running=false;this.wanted=false;throw e}
+   this.onState('Connecting voice…');
+   try{r.start()}catch(e){this.running=false;this.listening=false;this.wanted=false;this.needsGesture=true;throw e}
   }
-  stop(){this.wanted=false;if(this.restartTimer!==null&&typeof this.cancel==='function')this.cancel(this.restartTimer);this.restartTimer=null;this.running=false;this.r?.abort();this.onState('Microphone off.')}
+  stop(){this.wanted=false;if(this.restartTimer!==null&&typeof this.cancel==='function')this.cancel(this.restartTimer);this.restartTimer=null;this.running=false;this.listening=false;const r=this.r;this.r=null;if(r)try{r.abort()}catch{}this.onState('Microphone off.')}
  }
  class Monitor {
   constructor({bluetooth,onReading,onState,clock=()=>Date.now()}){Object.assign(this,{bluetooth,onReading,onState,clock});this.device=null;this.characteristic=null;this.latest=null;this.listener=e=>{try{const bpm=heartRate(e.target.value);this.latest={bpm,timestamp:this.clock()};this.onReading(this.latest)}catch(e){this.latest=null;this.onState(e.message)}};this.disconnected=()=>{this.latest=null;this.onState('Monitor disconnected. Reconnect or use manual HR.')}}

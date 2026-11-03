@@ -1,18 +1,18 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),{webcrypto}=require('node:crypto');
 const code=fs.readFileSync('dist/app.js','utf8'),original=fs.readFileSync('tests/fixtures/original.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
 function runtime({data=new Map(),source=code,fail=false,devices=false,journal=false,bluetooth,autoCountdown=true}={}){
- const nodes=new Map(),spoken=[],downloads=[],events={},docEvents={};let t=Date.parse('2026-10-21T20:00:00Z'),failed=fail,confirmation=true,writeFault='normal';const intervals=[];
+ const nodes=new Map(),spoken=[],downloads=[],events={},docEvents={};let t=Date.parse('2026-10-21T20:00:00Z'),failed=fail,confirmation=true,writeFault='normal';const intervals=[],timeouts=new Map();let nextTimeout=0;
  const html=fs.readFileSync(source===code?'dist/index.html':'tests/fixtures/original.html','utf8');
  const node=id=>{if(!id.startsWith('download')&&!html.includes('id="'+id+'"'))throw Error('Missing real DOM element: '+id);if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,classList:{toggle(){},add(){},remove(){}},addEventListener(n,f){this[n]=f},remove(){},click(){if(this.download)downloads.push(this.href);else if(!this.disabled)this.onclick?.()}});return nodes.get(id)};
  const document={hidden:false,getElementById:node,createElement:()=>node('download'+downloads.length),body:{append(){}},addEventListener:(n,f)=>docEvents[n]=f};
  const store={getItem:k=>data.get(k)??null,setItem:(k,v)=>{if(failed)throw Error('simulated quota');if(writeFault==='drop')return;if(writeFault==='corrupt'){data.set(k,'simulated unexpected storage bytes');return}data.set(k,v)},removeItem:k=>data.delete(k)};
  let blobs=new Map(),id=0,recognition;const recognitionResults=new WeakMap();
  class Recognition{constructor(){recognition=this}start(){this.onstart?.()}abort(){this.onend?.()}}
- const context=vm.createContext({speechSynthesis:{cancel(){},speak(p){spoken.push(p.text)}},SpeechSynthesisUtterance:class{constructor(text){this.text=text}},DataView,Date:class extends Date{constructor(...a){super(...(a.length?a:[t]))}static now(){return t}},document,navigator:{bluetooth},SpeechRecognition:Recognition,localStorage:store,crypto:{getRandomValues:webcrypto.getRandomValues.bind(webcrypto)},Blob,URL:{createObjectURL:b=>{const key='blob:'+id++;blobs.set(key,b);return key},revokeObjectURL(){}},setInterval(f){intervals.push(f)},setTimeout(){},addEventListener:(n,f)=>events[n]=f,alert(){},confirm:()=>confirmation});
+ const context=vm.createContext({speechSynthesis:{cancel(){},speak(p){spoken.push(p.text)}},SpeechSynthesisUtterance:class{constructor(text){this.text=text}},DataView,Date:class extends Date{constructor(...a){super(...(a.length?a:[t]))}static now(){return t}},document,navigator:{bluetooth},SpeechRecognition:Recognition,localStorage:store,crypto:{getRandomValues:webcrypto.getRandomValues.bind(webcrypto)},Blob,URL:{createObjectURL:b=>{const key='blob:'+id++;blobs.set(key,b);return key},revokeObjectURL(){}},setInterval(f){intervals.push(f)},setTimeout(f,ms){const k=++nextTimeout;timeouts.set(k,{f,at:t+ms});return k},clearTimeout(k){timeouts.delete(k)},addEventListener:(n,f)=>events[n]=f,alert(){},confirm:()=>confirmation});
  if(journal)vm.runInContext(fs.readFileSync('dist/journal.js','utf8'),context);
  if(devices)vm.runInContext(fs.readFileSync('dist/devices.js','utf8'),context);
  vm.runInContext(source===code?source.replace('\n render();\n}', '\n globalThis.__readForTest=expression=>eval(expression);\n render();\n}'):source,context);
- return {data,node,context,spoken,downloads,blobs,events,docEvents,writeFault:mode=>{writeFault=mode},hears(text){assert(recognition,'Microphone was not started');assert(this.read('voiceActive'),'Microphone stopped');const results=recognitionResults.get(recognition)||[];results.push(Object.assign([{transcript:text}],{isFinal:true}));recognitionResults.set(recognition,results);recognition.onresult({resultIndex:results.length-1,results})},speech(text){this.click('talk');recognition.onresult({resultIndex:0,results:[Object.assign([{transcript:text}],{isFinal:true})]});recognition.onend();if(autoCountdown&&source===code&&this.read('!!db.active?.countdownUntil')){t+=5000;intervals.forEach(f=>f())}},time(ms){t+=ms},fail(v){failed=v},confirm(v){confirmation=v},tick(){intervals.forEach(f=>f())},click(id){node(id).onclick();if(autoCountdown&&source===code&&this.read('!!db.active?.countdownUntil')){t+=5000;intervals.forEach(f=>f())}},input(id,v){node(id).value=v;node(id).input?.()},read(expression){return JSON.parse(vm.runInContext('JSON.stringify(__readForTest('+JSON.stringify(expression)+'))',context))}};
+ return {voiceEnd(){recognition.onend()},voiceError(error){recognition.onerror({error});recognition.onend()},hidden(v){document.hidden=v;docEvents.visibilitychange?.()},data,node,context,spoken,downloads,blobs,events,docEvents,writeFault:mode=>{writeFault=mode},hears(text){assert(recognition,'Microphone was not started');assert(this.read('voiceActive'),'Microphone stopped');const results=recognitionResults.get(recognition)||[];results.push(Object.assign([{transcript:text}],{isFinal:true}));recognitionResults.set(recognition,results);recognition.onresult({resultIndex:results.length-1,results})},speech(text){this.click('talk');recognition.onresult({resultIndex:0,results:[Object.assign([{transcript:text}],{isFinal:true})]});recognition.onend();if(autoCountdown&&source===code&&this.read('!!db.active?.countdownUntil')){t+=5000;intervals.forEach(f=>f())}},time(ms){t+=ms},fail(v){failed=v},confirm(v){confirmation=v},tick(){for(const [k,x] of timeouts)if(x.at<=t){timeouts.delete(k);x.f()}intervals.forEach(f=>f())},click(id){node(id).onclick();if(autoCountdown&&source===code&&this.read('!!db.active?.countdownUntil')){t+=5000;intervals.forEach(f=>f())}},input(id,v){node(id).value=v;node(id).input?.()},read(expression){return JSON.parse(vm.runInContext('JSON.stringify(__readForTest('+JSON.stringify(expression)+'))',context))}};
 }
 test('baseline crash checkpoint reproduces stale step; fixed checkpoint restores next step',()=>{let r=runtime({source:original});r.click('start');r.input('reps','12');r.click('record');let saved=JSON.parse(r.data.get('the-pure-hit-field-test-v1-active'));assert.equal(saved.ex,0);assert.equal(saved.records.length,1);r=runtime();r.click('start');r.input('reps','12');r.click('record');const restarted=runtime({data:r.data});assert.equal(restarted.node('status').textContent,'PAUSED — timer stopped');assert.equal(restarted.node('exercise').textContent,'Exercise: Squat')});
 test('actual UI persists unsubmitted reps and HR draft on every input',()=>{let r=runtime();r.click('start');r.input('reps','14');let restart=runtime({data:r.data});assert.equal(restart.node('reps').value,'14');restart.click('resume');restart.click('record');for(const n of ['20','11']){restart.input('reps',n);restart.click('record')}restart.input('hr','108');r=runtime({data:restart.data});assert.equal(r.node('hr').value,'108');assert.equal(r.node('status').textContent,'PAUSED — timer stopped')});
@@ -195,4 +195,31 @@ test('large countdown labels current exercise and reads transition seconds and b
  r.time(1000);r.tick();assert.equal(r.spoken.at(-1),'4');
  r.time(4000);r.tick();assert.match(r.spoken.at(-1),/Begin Squats/);
  assert.equal(r.read('!!db.active.countdownKind'),false);
+});
+
+test('Android Start enables voice before first exercise without a separate Connect Voice tap',()=>{
+ const r=runtime({devices:true,autoCountdown:false});r.click('start');assert.equal(r.read('voiceActive'),true);
+ r.time(5000);r.tick();r.hears('10 reps');assert.equal(r.read('db.active.records[0].reps'),10);
+});
+test('conditioning resumes voice after recognition interruption without a new Connect Voice tap',()=>{
+ const r=runtime({devices:true,autoCountdown:false});r.click('start');
+ for(const n of [10,11,12]){r.time(5000);r.tick();r.hears(n+' reps')}
+ r.input('hr','108');r.click('loghr');r.voiceEnd();assert.equal(r.read('voiceActive'),false);
+ r.click('recover');r.time(5000);r.tick();assert.equal(r.read('voiceActive'),true);
+ r.hears('8 reps');assert.equal(r.read('db.active.records[3].reps'),8);
+});
+test('permission failure stays disconnected across transitions until a deliberate retry',()=>{
+ const r=runtime({devices:true});r.click('start');r.voiceError('not-allowed');assert.equal(r.read('voiceActive'),false);
+ r.click('pause');r.click('resume');assert.equal(r.read('voiceActive'),false);
+ r.click('talk');assert.equal(r.read('voiceActive'),true);
+});
+test('foreground return restarts enabled voice, but never overrides deliberate mic off',()=>{
+ const r=runtime({devices:true});r.click('start');r.hidden(true);assert.equal(r.read('voiceActive'),false);
+ r.hidden(false);assert.equal(r.read('voiceActive'),true);r.click('stopTalk');r.hidden(true);r.hidden(false);
+ r.click('pause');r.click('resume');assert.equal(r.read('voiceActive'),false);
+});
+test('cooldown does not announce saved when the archive write was silently dropped',()=>{
+ const r=runtime();r.click('start');r.input('reps','8');r.click('record');r.click('end');
+ r.input('hr','106');r.writeFault('drop');r.click('loghr');
+ assert.match(r.node('notice').textContent,/NOT verified/);assert(!r.spoken.includes('Cooldown complete. Workout saved.'));
 });

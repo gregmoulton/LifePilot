@@ -70,7 +70,7 @@ const PureDevices=(()=>{
     characteristic.addEventListener('characteristicvaluechanged',this.listener);
     this.onState('Subscribing to live BPM…');
     await this.stage(characteristic.startNotifications(),'Live heart-rate subscription',attempt);
-    this.onState('Connected. Waiting for first live BPM reading…');
+    if(!this.fresh())this.onState('Connected. Waiting for first live BPM reading…');
    }catch(error){if(attempt===this.attempt)this.disconnect();throw error}
   }
   fresh(){return this.latest&&this.clock()-this.latest.timestamp<=15000&&this.clock()>=this.latest.timestamp?this.latest:null}

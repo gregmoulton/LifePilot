@@ -1,0 +1,80 @@
+name: REA isolated static proof of concept
+
+# This pilot runs only on the explicitly named experiment branch, never on
+# main, deployment branches, production PRs, or scheduled workflows.
+on:
+  push:
+    branches:
+      - experiment/rea-static-proof-20261102
+    paths:
+      - .github/workflows/rea-isolated-poc.yml
+      - experiments/rea/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-evidence-only:
+    if: github.ref == 'refs/heads/experiment/rea-static-proof-20261102'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Prepare temporary evidence directory
+        id: evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          path=$(mktemp -d "${RUNNER_TEMP:?}/rea-evidence.XXXXXX")
+          printf 'path=%s\n' "$path" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout only the isolated experiment branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Use pinned Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24.22.1'
+
+      - name: Install pinned REA without lifecycle scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/rea-tool" --no-audit --no-fund --ignore-scripts --save-exact rea-agents@6.7.0
+          echo "$RUNNER_TEMP/rea-tool/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Copy synthetic, owned JavaScript fixture
+        shell: bash
+        env:
+          REPORT_DIR: ${{ steps.evidence.outputs.path }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/rea-owned-demo"
+          cp experiments/rea/fixture/{package.json,index.js,rules.js} "$RUNNER_TEMP/rea-owned-demo/"
+          (cd "$RUNNER_TEMP/rea-owned-demo" && sha256sum package.json index.js rules.js) > "$REPORT_DIR/input-sha256.txt"
+
+      - name: Read fixture statically with REA (never execute fixture)
+        shell: bash
+        env:
+          REPORT_DIR: ${{ steps.evidence.outputs.path }}
+        run: |
+          set +e
+          rea analyze-javascript-application "$RUNNER_TEMP/rea-owned-demo" --json --full-output > "$REPORT_DIR/analysis.json" 2> "$REPORT_DIR/analysis.stderr"
+          status=$?
+          set -e
+          printf '%s\n' "$status" > "$REPORT_DIR/exit-code.txt"
+          if [ "$status" -eq 0 ]; then
+            node -e 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))' "$REPORT_DIR/analysis.json"
+          fi
+          exit "$status"
+
+      - name: Upload available evidence, including diagnostics on failure
+        if: ${{ always() && steps.evidence.outputs.path != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rea-poc-evidence
+          path: ${{ steps.evidence.outputs.path }}
+          if-no-files-found: warn
+          retention-days: 7

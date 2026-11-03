@@ -103,3 +103,37 @@ test('previously authorized retry rejects ambiguous or absent devices instead of
  await a.rejects(mon.connect({previouslyAllowed:true}),/No previously authorized MOOFIT/);
  a.equal(connected,false);
 });
+
+
+test('browser-branded timers work for real BLE connect and cancel (regression: Illegal invocation)',async()=>{
+ const vm=require('node:vm'),fs=require('node:fs');
+ const sandbox={setTimeout:null,clearTimeout:null};
+ let timerId=0,scheduled=0,cancelled=0;
+ sandbox.setTimeout=function(fn,ms){if(this!==sandbox)throw new TypeError('Illegal invocation');scheduled++;return ++timerId};
+ sandbox.clearTimeout=function(id){if(this!==sandbox)throw new TypeError('Illegal invocation');cancelled++};
+ vm.createContext(sandbox);
+ const deviceCode=fs.readFileSync(require.resolve('../dist/devices.js'),'utf8');
+ const DeviceMonitor=vm.runInContext(deviceCode+'; PureDevices.Monitor',sandbox);
+ const characteristic={addEventListener(){},removeEventListener(){},async startNotifications(){}};
+ const device={name:'MOOFIT',addEventListener(){},removeEventListener(){},gatt:{connected:false,disconnect(){this.connected=false},async connect(){this.connected=true;return {getPrimaryService:async()=>({getCharacteristic:async()=>characteristic})}}}};
+ const monitor=new DeviceMonitor({bluetooth:{async requestDevice(){return device}},onReading(){},onState(){}});
+ await monitor.connect();
+ a(scheduled>=5,'every browser GATT stage uses a window timer');
+ a(cancelled>=4,'stage timeouts are cleared with correct browser context');
+ monitor.disconnect();
+ a.equal(monitor.device,null);
+});
+test('browser-branded timer allows voice auto-reconnect without Illegal invocation',()=>{
+ const vm=require('node:vm'),fs=require('node:fs');
+ const sandbox={setTimeout:null,clearTimeout:null};
+ let scheduled=0,cancelled=0;
+ sandbox.setTimeout=function(){if(this!==sandbox)throw new TypeError('Illegal invocation');scheduled++;return 1};
+ sandbox.clearTimeout=function(){if(this!==sandbox)throw new TypeError('Illegal invocation');cancelled++};
+ vm.createContext(sandbox);
+ const Voice=vm.runInContext(fs.readFileSync(require.resolve('../dist/devices.js'),'utf8')+';PureDevices.Voice',sandbox);
+ let r;
+ class Recognition{constructor(){r=this}start(){}abort(){}}
+ const voice=new Voice({recognition:Recognition,onText(){},onState(){},onError(){}});
+ voice.start();r.onend();
+ a.equal(scheduled,1);voice.stop();a.equal(cancelled,1);
+});

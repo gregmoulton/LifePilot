@@ -1,0 +1,8 @@
+{
+  "name": "rea-owned-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "description": "Synthetic, owned static analysis fixture; not a deployable app"
+}

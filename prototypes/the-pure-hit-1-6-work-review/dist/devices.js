@@ -78,6 +78,7 @@ const PureDevices=(()=>{
       this.disconnect();
       this.onState('No live BPM received within '+Math.round(this.timeoutMs/1000)+' seconds. Check that MOOFIT is worn and transmitting, then retry.');
      },this.timeoutMs);
+     this.readingTimer?.unref?.();
     }
    }catch(error){if(attempt===this.attempt)this.disconnect();throw error}
   }

@@ -27,6 +27,6 @@ jobs:
         with:
           node-version: '22'
       - name: Verify isolated coding loop (no AI, network writes, or profile access)
-        run: node --test tools/runner-poc.test.mjs tools/runner-task-selector.test.mjs
+        run: node --test tools/runner-poc.test.mjs tools/runner-task-selector.test.mjs tools/runner-agent-boundary.test.mjs
       - name: Explain limitations
         run: echo 'Proof only; no model calls, no schedule, no repository write permissions, no PR creation.'

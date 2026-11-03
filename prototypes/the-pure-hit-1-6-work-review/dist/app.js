@@ -266,19 +266,19 @@ if(typeof document!=='undefined'){
    }
   }});
   monitorReading=()=>monitor.device?.gatt?.connected?monitor.fresh():null;
-  const connectMonitor=async(broadScan=false)=>{
+  const connectMonitor=async(broadScan=false,previouslyAllowed=false)=>{
     if(connecting)return;
     connecting=true;
     $('monitorDetails').open=true;
     $('connectHr').disabled=true;
-    $('hrGateConnect').disabled=true;$('hrGateWideScan').disabled=true;$('wideScan').disabled=true;
+    $('hrGateConnect').disabled=true;$('hrGateWideScan').disabled=true;$('wideScan').disabled=true;$('retryAllowedHr').disabled=true;$('hrGateRetryAllowed').disabled=true;
     $('connectHr').textContent='Connecting…';
     $('hrGateConnect').textContent='Connecting…';
     $('disconnectHr').disabled=true;
     try{
-     $('monitorStatus').textContent=broadScan?'Choose MOOFIT in the expanded Bluetooth list; ignore other devices.':'Choose your MOOFIT in the Bluetooth dialog.';
-     $('hrGateDesc').textContent='Choose your MOOFIT in the Bluetooth dialog, then wait for a live BPM.';
-     await monitor.connect({broadScan});
+     $('monitorStatus').textContent=previouslyAllowed?'Looking for a monitor already authorized for this site…':broadScan?'Choose MOOFIT, then tap Pair/Connect in the Bluetooth list.':'Choose MOOFIT, then tap Pair/Connect in Chrome.';
+     $('hrGateDesc').textContent=previouslyAllowed?'Trying a monitor already permitted in this browser. Wait for a live BPM.':'Choose MOOFIT, tap Pair/Connect, and wait for live BPM. If Chrome does not return to the page, an error will appear after a timeout.';
+     await monitor.connect({broadScan,previouslyAllowed});
     }catch(e){
      const message='Could not connect: '+e.message+'. Retry or explicitly continue without HRM.';
      $('monitorStatus').textContent=message;
@@ -287,13 +287,13 @@ if(typeof document!=='undefined'){
     }finally{
      connecting=false;
      $('connectHr').disabled=false;
-     $('hrGateConnect').disabled=false;$('hrGateWideScan').disabled=false;$('wideScan').disabled=false;
+     $('hrGateConnect').disabled=false;$('hrGateWideScan').disabled=false;$('wideScan').disabled=false;$('retryAllowedHr').disabled=false;$('hrGateRetryAllowed').disabled=false;
      $('connectHr').textContent=monitor.device?.gatt?.connected?'Reconnect HR monitor':'Connect HR monitor';
      $('hrGateConnect').textContent='Connect HRM';
      $('disconnectHr').disabled=false;
     }
    };
-   $('connectHr').onclick=()=>connectMonitor(false);$('wideScan').onclick=()=>connectMonitor(true);$('hrGateWideScan').onclick=()=>connectMonitor(true);
+   $('connectHr').onclick=()=>connectMonitor(false);$('wideScan').onclick=()=>connectMonitor(true);$('hrGateWideScan').onclick=()=>connectMonitor(true);$('retryAllowedHr').onclick=()=>connectMonitor(false,true);$('hrGateRetryAllowed').onclick=()=>connectMonitor(false,true);
    // Both buttons invoke this handler *directly* on a trusted user tap.
    // Do not close the warning until an actual Bluetooth BPM packet arrives.
    $('hrGateConnect').onclick=()=>connectMonitor(false);

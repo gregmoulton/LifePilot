@@ -109,9 +109,10 @@ test('browser-branded timers work for real BLE connect and cancel (regression: I
  const vm=require('node:vm'),fs=require('node:fs');
  const sandbox={setTimeout:null,clearTimeout:null};
  let timerId=0,scheduled=0,cancelled=0;
- sandbox.setTimeout=function(fn,ms){if(this!==sandbox)throw new TypeError('Illegal invocation');scheduled++;return ++timerId};
- sandbox.clearTimeout=function(id){if(this!==sandbox)throw new TypeError('Illegal invocation');cancelled++};
+ sandbox.setTimeout=function(fn,ms){if(this!==sandbox.windowOwner)throw new TypeError('Illegal invocation');scheduled++;return ++timerId};
+ sandbox.clearTimeout=function(id){if(this!==sandbox.windowOwner)throw new TypeError('Illegal invocation');cancelled++};
  vm.createContext(sandbox);
+ sandbox.windowOwner=vm.runInContext('globalThis',sandbox);
  const deviceCode=fs.readFileSync(require.resolve('../dist/devices.js'),'utf8');
  const DeviceMonitor=vm.runInContext(deviceCode+'; PureDevices.Monitor',sandbox);
  const characteristic={addEventListener(){},removeEventListener(){},async startNotifications(){}};
@@ -127,9 +128,10 @@ test('browser-branded timer allows voice auto-reconnect without Illegal invocati
  const vm=require('node:vm'),fs=require('node:fs');
  const sandbox={setTimeout:null,clearTimeout:null};
  let scheduled=0,cancelled=0;
- sandbox.setTimeout=function(){if(this!==sandbox)throw new TypeError('Illegal invocation');scheduled++;return 1};
- sandbox.clearTimeout=function(){if(this!==sandbox)throw new TypeError('Illegal invocation');cancelled++};
+ sandbox.setTimeout=function(){if(this!==sandbox.windowOwner)throw new TypeError('Illegal invocation');scheduled++;return 1};
+ sandbox.clearTimeout=function(){if(this!==sandbox.windowOwner)throw new TypeError('Illegal invocation');cancelled++};
  vm.createContext(sandbox);
+ sandbox.windowOwner=vm.runInContext('globalThis',sandbox);
  const Voice=vm.runInContext(fs.readFileSync(require.resolve('../dist/devices.js'),'utf8')+';PureDevices.Voice',sandbox);
  let r;
  class Recognition{constructor(){r=this}start(){}abort(){}}

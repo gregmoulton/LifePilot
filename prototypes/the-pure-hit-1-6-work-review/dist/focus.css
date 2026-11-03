@@ -71,3 +71,13 @@
  .workout-panel button.btn,.workout-panel .voice-toolbar #talk{min-height:44px;padding:6px 10px;font-size:.82rem}
  .workout-panel #voiceHint,.workout-panel #monitorStatus{margin:3px 0;font-size:.75rem}
 }
+@media(max-width:600px){
+ .workout-panel[data-stage="exercise"] #stationRows{gap:5px}
+ .workout-panel[data-stage="exercise"] .station-row{min-height:62px;padding:6px 8px}
+ .workout-panel[data-stage="exercise"] .station-label strong{font-size:17px}
+ .workout-panel[data-stage="exercise"] #sessionTimer{margin-bottom:4px}
+ .workout-panel[data-stage="exercise"] #entry{margin-top:3px}
+ .workout-panel[data-stage="exercise"] #controls{margin-top:4px;padding-top:4px;gap:5px}
+ .workout-panel[data-stage="exercise"] #controls>.btn{padding:6px 8px;min-height:44px}
+ .workout-panel[data-stage="exercise"] #record{min-height:44px}
+}

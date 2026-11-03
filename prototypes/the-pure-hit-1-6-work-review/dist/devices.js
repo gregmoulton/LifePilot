@@ -43,29 +43,40 @@ const PureDevices=(()=>{
    this.listener=e=>{if(!this.device)return;try{const bpm=heartRate(e.target.value);this.latest={bpm,timestamp:this.clock()};if(this.readingTimer!==null){this.cancel(this.readingTimer);this.readingTimer=null}this.onReading(this.latest)}catch(error){this.latest=null;this.onState(error.message)}};
    this.disconnected=()=>{this.disconnect();this.onState('Monitor disconnected. Reconnect or use manual HR.')};
   }
-  async stage(promise,label,attempt){
+  async stage(promise,label,attempt,timeout=this.timeoutMs){
    let timer=null;
    try {
-    const result=await Promise.race([promise,new Promise((_,reject)=>{timer=this.schedule(()=>reject(Error(label+' timed out. Please retry.')),this.timeoutMs)})]);
+    const result=await Promise.race([promise,new Promise((_,reject)=>{timer=this.schedule(()=>reject(Error(label+' timed out. Please retry.')),timeout)})]);
     if(attempt!==this.attempt)throw Error('Connection interrupted or superseded. Please retry.');
     return result;
    }finally{if(timer!==null)this.cancel(timer)}
   }
-  async connect({broadScan=false}={}){
+  async connect({broadScan=false,previouslyAllowed=false}={}){
    if(!this.bluetooth)throw Error('Bluetooth is unavailable here. Use Chrome on Android or manual HR.');
    this.disconnect();
    const attempt=this.attempt;
-   this.onState(broadScan?'Choose your MOOFIT from the expanded device list.':'Choose your heart-rate monitor in the Bluetooth dialog.');
+   this.onState(previouslyAllowed?'Checking devices previously authorized in Chrome…':broadScan?'Choose MOOFIT, then tap Pair/Connect in the Bluetooth popup.':'Choose your heart-rate monitor, then tap Pair/Connect in the popup.');
    // A wearable can expose the standard heart-rate GATT service without advertising
    // that UUID during discovery. Match the device's advertised name as well.
    const discovery=broadScan
     ?{acceptAllDevices:true,optionalServices:['heart_rate']}
     :{filters:[{services:['heart_rate']},{namePrefix:'MOOFIT'},{namePrefix:'Moofit'},{namePrefix:'moofit'}],optionalServices:['heart_rate']};
-   const device=await this.bluetooth.requestDevice(discovery);
+   let device;
+   if(previouslyAllowed){
+    if(typeof this.bluetooth.getDevices!=='function')throw Error('Chrome cannot access previously authorized devices here. Try the Bluetooth picker.');
+    const allowed=await this.stage(this.bluetooth.getDevices(),'Saved Bluetooth permissions',attempt);
+    const matches=allowed.filter(d=>/moofit|heart.?rate|^hrm(?:\b|\d)|^hr\d/i.test(d.name||''));
+    if(matches.length!==1)throw Error(matches.length?'More than one previously authorized heart monitor. Use the Bluetooth picker.':'No previously authorized MOOFIT found for this website. Select it in the Bluetooth picker first.');
+    device=matches[0];
+   }else{
+    // The chooser itself may never resolve after the user taps Pair.
+    // This timeout provides a visible error and leaves no active connection.
+    device=await this.stage(this.bluetooth.requestDevice(discovery),'Chrome Bluetooth device selection',attempt,45000);
+   }
    if(attempt!==this.attempt)throw Error('Connection cancelled. Please retry.');
    this.device=device;device.addEventListener('gattserverdisconnected',this.disconnected);
    try{
-    this.onState('Bluetooth selected. Connecting to monitor…');
+    this.onState('Chrome returned '+(device.name||'your selected monitor')+'. Connecting to heart-rate service…');
     const server=await this.stage(device.gatt.connect(),'Bluetooth connection',attempt);
     this.onState('Finding heart-rate service…');
     const service=await this.stage(server.getPrimaryService('heart_rate'),'Heart-rate service',attempt);

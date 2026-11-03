@@ -258,9 +258,29 @@ if(typeof document!=='undefined'){
    if(p.type==='reps'){$('reps').value=String(p.value);db.active.draft.reps=String(p.value)}
    if(p.type==='end')end();else if(p.type==='save')finishAndSave(false);else if(p.type==='discard')change(()=>{db.active=null});else if(p.type==='recover')$('recover').click();else $(id).click();sayStatus('Command processed. Check the workout status above.');
   };
+  // A live reading is a Bluetooth notification, not a saved/manual sample.
+  // BPM can stay unchanged: time-since-update resets on each real packet.
+  const refreshHrSignal=()=>{
+   const reading=monitorReading(),last=monitor.latest;
+   const age=last?Math.max(0,Math.floor((now()-last.timestamp)/1000)):null;
+   const signal=reading?'live':last?'stale':'offline';
+   $('hrLiveCard').setAttribute?.('data-signal',signal);
+   $('hrLiveValue').textContent=reading?String(reading.bpm):'—';
+   $('hrSignalAge').textContent=reading?(age===0?'New reading received just now':'Last update '+age+'s ago'):
+     last?'SIGNAL STALE · last update '+age+'s ago':'Waiting for live heart-rate data';
+   $('liveBpm').textContent=reading?reading.bpm+' BPM':'— BPM';
+   $('liveBpm').setAttribute?.('aria-label',reading?'Current Bluetooth heart rate '+reading.bpm+' BPM':'No current Bluetooth heart-rate reading');
+  };
+  const flashHrSample=()=>{
+   const icon=$('hrPulseIcon');
+   icon.classList.remove('hr-reading-pulse');
+   // Restart animation only on receipt of an actual Bluetooth sample.
+   void icon.offsetWidth;
+   icon.classList.add('hr-reading-pulse');
+  };
   const setMonitorCompact=live=>{$('monitorDetails').classList.toggle('hr-live',live);if(!live)$('monitorDetails').open=true;else if(!$('monitorDetails').classList.contains?.('hr-live-seen')){$('monitorDetails').open=false;$('monitorDetails').classList.add('hr-live-seen')}};
-  const monitor=new PureDevices.Monitor({bluetooth:globalThis.navigator?.bluetooth,onState:s=>{setMonitorCompact(false);$('monitorDetails').classList.remove('hr-live-seen');$('monitorStatus').textContent=s;$('liveBpm').textContent='— BPM';$('hrPreflight').textContent='Not ready · '+s;if(!$('hrStartGate').classList.contains?.('hidden'))$('hrGateDesc').textContent=s+' Waiting for a live BPM before starting.'},onReading:r=>{
-   setMonitorCompact(true);$('liveBpm').textContent=r.bpm+' BPM';$('monitorStatus').textContent='Live reading · '+new Date(r.timestamp).toLocaleTimeString();$('hrPreflight').textContent='READY · Live heart rate '+r.bpm+' BPM. Start Workout is ready.';closeHrGate();$('hrGateDesc').textContent='The monitor is not connected or not sending a current BPM. Connect your MOOFIT before starting.';monitorSignalSeen=true;if(monitorLossAnnounced){monitorLossAnnounced=false;if(db.active&&!dirty&&!blocked){change(()=>db.active.events.push({event:'hr-signal-restored',timestamp:new Date(r.timestamp).toISOString()}));announce('Heart-rate signal restored.')}}
+  const monitor=new PureDevices.Monitor({bluetooth:globalThis.navigator?.bluetooth,onState:s=>{setMonitorCompact(false);$('monitorDetails').classList.remove('hr-live-seen');$('monitorStatus').textContent=s;refreshHrSignal();$('hrPreflight').textContent='Not ready · '+s;if(!$('hrStartGate').classList.contains?.('hidden'))$('hrGateDesc').textContent=s+' Waiting for a live BPM before starting.'},onReading:r=>{
+   setMonitorCompact(true);refreshHrSignal();flashHrSample();$('monitorStatus').textContent='Live reading · '+new Date(r.timestamp).toLocaleTimeString();$('hrPreflight').textContent='READY · Live heart rate '+r.bpm+' BPM. Start Workout is ready.';closeHrGate();$('hrGateDesc').textContent='The monitor is not connected or not sending a current BPM. Connect your MOOFIT before starting.';monitorSignalSeen=true;if(monitorLossAnnounced){monitorLossAnnounced=false;if(db.active&&!dirty&&!blocked){change(()=>db.active.events.push({event:'hr-signal-restored',timestamp:new Date(r.timestamp).toISOString()}));announce('Heart-rate signal restored.')}}
    if(db.active&&!dirty&&!blocked&&r.timestamp-lastMonitorLog>=1000){
     lastMonitorLog=r.timestamp;let archived=false;change(()=>{Pure.sampleHr(db.active,String(r.bpm),r.timestamp);archived=finishRecoveryIfReady()});if(archived&&!dirty&&!blocked)announce('Cooldown complete. Workout saved.')
    }
@@ -297,8 +317,9 @@ if(typeof document!=='undefined'){
    // Both buttons invoke this handler *directly* on a trusted user tap.
    // Do not close the warning until an actual Bluetooth BPM packet arrives.
    $('hrGateConnect').onclick=()=>connectMonitor(false);
-  $('disconnectHr').onclick=()=>{monitor.disconnect();setMonitorCompact(false);$('monitorDetails').classList.remove('hr-live-seen');$('monitorStatus').textContent='Monitor disconnected. Manual HR remains available.';$('liveBpm').textContent='— BPM';$('hrPreflight').textContent='HRM not connected. Reconnect before starting.'};
-  setInterval(()=>{if(db.active&&monitorSignalSeen&&!monitor.fresh()&&!monitorLossAnnounced&&!dirty&&!blocked){monitorLossAnnounced=true;setMonitorCompact(false);$('monitorDetails').classList.remove('hr-live-seen');change(()=>db.active.events.push({event:'hr-signal-unavailable',timestamp:new Date(now()).toISOString(),reason:'no-fresh-monitor-reading'}));$('monitorStatus').textContent='HR signal lost — reconnect monitor. Workout recording continues.';announce('Heart-rate signal lost. Reconnect your monitor. Workout recording continues.')}if(!db.active&&!connecting){const current=monitor.fresh();$('hrPreflight').textContent=current?'READY · Live heart rate '+current.bpm+' BPM. Start Workout is ready.':monitor.device?.gatt?.connected?'Monitor selected, but no current BPM. Wait for a reading or reconnect.':'Connect HRM and wait for a live BPM reading before starting.';}const last=monitor.fresh()||db.active?.hr.at(-1),fresh=last&&now()-(typeof last.timestamp==='number'?last.timestamp:Date.parse(last.timestamp))<=15000&&now()>=(typeof last.timestamp==='number'?last.timestamp:Date.parse(last.timestamp));$('liveBpm').textContent=fresh?last.bpm+' BPM':'— BPM';$('liveBpm').setAttribute?.('aria-label',fresh?(last.source==='manual'?'Manual':'Current')+' heart rate '+last.bpm+' BPM':'No current heart-rate reading')},1000);
+  $('disconnectHr').onclick=()=>{monitor.disconnect();setMonitorCompact(false);$('monitorDetails').classList.remove('hr-live-seen');$('monitorStatus').textContent='Monitor disconnected. Manual HR remains available.';refreshHrSignal();$('hrPreflight').textContent='HRM not connected. Reconnect before starting.'};
+  setInterval(()=>{if(db.active&&monitorSignalSeen&&!monitor.fresh()&&!monitorLossAnnounced&&!dirty&&!blocked){monitorLossAnnounced=true;setMonitorCompact(false);$('monitorDetails').classList.remove('hr-live-seen');change(()=>db.active.events.push({event:'hr-signal-unavailable',timestamp:new Date(now()).toISOString(),reason:'no-fresh-monitor-reading'}));$('monitorStatus').textContent='HR signal lost — reconnect monitor. Workout recording continues.';announce('Heart-rate signal lost. Reconnect your monitor. Workout recording continues.')}if(!db.active&&!connecting){const current=monitorReading();$('hrPreflight').textContent=current?'READY · Live heart rate '+current.bpm+' BPM. Start Workout is ready.':monitor.latest?'SIGNAL STALE · No recent BPM. Reconnect the HR monitor before starting.':monitor.device?.gatt?.connected?'Monitor selected, but no current BPM. Wait for a reading or reconnect.':'Connect HRM and wait for a live BPM reading before starting.';}refreshHrSignal()},1000);
+  refreshHrSignal();
   const stopVoice=(forget=true)=>{if(forget)handsFree=false;voice.stop();proposal=null;$('voiceProposal').classList.add('hidden')};
   document.addEventListener('visibilitychange',()=>{if(document.hidden)stopVoice(false);else speechHooks.resume?.()});
   addEventListener('hashchange',()=>{if(globalThis.location?.hash!=='#workout'){stopVoice();if(db.active&&!db.active.paused&&!dirty&&!blocked)change(()=>Pure.pause(db.active,now(),'dashboard-opened'))}});

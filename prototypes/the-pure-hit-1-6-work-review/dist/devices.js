@@ -37,7 +37,7 @@ const PureDevices=(()=>{
   stop(){this.wanted=false;if(this.restartTimer!==null&&typeof this.cancel==='function')this.cancel(this.restartTimer);this.restartTimer=null;this.running=false;this.listening=false;const r=this.r;this.r=null;if(r)try{r.abort()}catch{}this.onState('Microphone off.')}
  }
  class Monitor {
-  constructor({bluetooth,onReading,onState,clock=()=>Date.now(),schedule=globalThis.setTimeout,cancel=globalThis.clearTimeout,timeoutMs=12000}) {
+  constructor({bluetooth,onReading,onState,clock=()=>Date.now(),schedule=(fn,ms)=>globalThis.setTimeout(fn,ms),cancel=id=>globalThis.clearTimeout(id),timeoutMs=12000}) {
    Object.assign(this,{bluetooth,onReading,onState,clock,schedule,cancel,timeoutMs});
    this.device=null;this.characteristic=null;this.latest=null;this.attempt=0;this.readingTimer=null;
    this.listener=e=>{if(!this.device)return;try{const bpm=heartRate(e.target.value);this.latest={bpm,timestamp:this.clock()};if(this.readingTimer!==null){this.cancel(this.readingTimer);this.readingTimer=null}this.onReading(this.latest)}catch(error){this.latest=null;this.onState(error.message)}};

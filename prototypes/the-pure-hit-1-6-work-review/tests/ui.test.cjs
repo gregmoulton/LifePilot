@@ -250,7 +250,8 @@ test('overview HRM readiness waits for actual reading and bypasses warning once 
  const r=runtime({devices:true,bluetooth:{async requestDevice(){return device}}});
  const dialog=r.node('hrmStartDialog');
  dialog.showModal=()=>{dialog.open=true};dialog.close=()=>{dialog.open=false};
- await r.node('overviewConnectHr').onclick();
+ r.node('overviewConnectHr').onclick();
+ await r.node('connectHr').onclick();
  assert.match(r.node('overviewBpm').textContent,/monitor not ready/);
  r.click('start');assert.equal(dialog.open,true);r.click('hrmCancel');
  onPacket({target:{value:new DataView(Uint8Array.from([0,114]).buffer)}});

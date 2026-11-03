@@ -28,8 +28,9 @@ test('HRM connection times out instead of remaining Connecting forever; retry wo
  const characteristic={addEventListener(){},removeEventListener(){},async startNotifications(){}};
  const device={addEventListener(){},removeEventListener(){},gatt:{connected:false,disconnect(){this.connected=false},connect(){connectCalls++;if(connectCalls===1)return new Promise(()=>{});this.connected=true;return Promise.resolve({getPrimaryService:async()=>({getCharacteristic:async()=>characteristic})})}}};
  const mon=new D.Monitor({bluetooth:{requestDevice:async()=>device},onReading(){},onState:s=>callbacks.push(s),schedule:fn=>{wake=fn;return 100},cancel(){},timeoutMs:15});
- const first=mon.connect();await Promise.resolve();await Promise.resolve();
- a.equal(typeof wake,'function','timer must be armed after picker');
+ const first=mon.connect();for(let i=0;i<15&&connectCalls<1;i++)await Promise.resolve();
+ a.equal(connectCalls,1,'GATT connect must begin after chooser resolves');
+ a.equal(typeof wake,'function','GATT timeout must be armed');
  wake();await a.rejects(first,/Bluetooth connection timed out/);
  a.equal(mon.device,null);
  await mon.connect();a.equal(connectCalls,2);
@@ -39,7 +40,7 @@ test('cancelled connection cannot install stale Bluetooth characteristic',async(
  let fulfill;
  const device={addEventListener(){},removeEventListener(){},gatt:{connected:false,disconnect(){},connect(){return new Promise(resolve=>fulfill=resolve)}}};
  const mon=new D.Monitor({bluetooth:{async requestDevice(){return device}},onState(){},onReading(){}});
- const first=mon.connect();await Promise.resolve();await Promise.resolve();mon.disconnect();
+ const first=mon.connect();for(let i=0;i<15&&typeof fulfill!=='function';i++)await Promise.resolve();a.equal(typeof fulfill,'function');mon.disconnect();
  fulfill({getPrimaryService:async()=>({})});
  await a.rejects(first,/interrupted|superseded/);
  a.equal(mon.device,null);
@@ -73,4 +74,32 @@ test('expanded scan authorizes HR GATT service even if wearable does not adverti
  await m.connect({broadScan:true});
  a.deepEqual(options,{acceptAllDevices:true,optionalServices:['heart_rate']});
  a.equal(gotService,true);
+});
+
+test('Chrome chooser handoff timeout reports stage and leaves no false connection',async()=>{
+ let timedOut,states=[];
+ const mon=new D.Monitor({bluetooth:{requestDevice:()=>new Promise(()=>{})},onState:s=>states.push(s),onReading(){},schedule:fn=>{timedOut=fn;return 123},cancel(){},timeoutMs:20});
+ const outcome=mon.connect();
+ a.equal(typeof timedOut,'function','requestDevice stage must receive a watchdog immediately');
+ timedOut();
+ await a.rejects(outcome,/Chrome Bluetooth device selection timed out/);
+ a.equal(mon.device,null);
+ a.equal(mon.fresh(),null);
+ a.match(states.at(-1),/Pair\/Connect/);
+});
+test('previously authorized MOOFIT bypasses the failed picker and resumes heart-rate notifications',async()=>{
+ let pickerCalls=0,selected;
+ const characteristic={addEventListener(){},removeEventListener(){},async startNotifications(){selected=true}};
+ const device={name:'MOOFIT HRM',addEventListener(){},removeEventListener(){},gatt:{connected:false,disconnect(){this.connected=false},async connect(){this.connected=true;return {getPrimaryService:async()=>({getCharacteristic:async()=>characteristic})}}}};
+ const mon=new D.Monitor({bluetooth:{getDevices:async()=>[device],requestDevice:()=>{pickerCalls++;throw Error('Picker should not open')}},onState(){},onReading(){}});
+ await mon.connect({previouslyAllowed:true});
+ a.equal(pickerCalls,0);a.equal(selected,true);a.equal(mon.device,device);
+ mon.disconnect();
+});
+test('previously authorized retry rejects ambiguous or absent devices instead of connecting a stranger',async()=>{
+ let connected=false;
+ const bad={name:'Bluetooth keyboard',gatt:{connect(){connected=true}}};
+ const mon=new D.Monitor({bluetooth:{getDevices:async()=>[bad]},onState(){},onReading(){}});
+ await a.rejects(mon.connect({previouslyAllowed:true}),/No previously authorized MOOFIT/);
+ a.equal(connected,false);
 });

@@ -9,7 +9,7 @@ const PureDevices=(()=>{
  }
  function heartRate(value){if(!(value instanceof DataView)||value.byteLength<2)throw Error('Incomplete heart-rate packet');const flags=value.getUint8(0),wide=!!(flags&1);if(wide&&value.byteLength<3)throw Error('Incomplete 16-bit heart-rate packet');const bpm=wide?value.getUint16(1,true):value.getUint8(1);if(bpm<30||bpm>240)throw Error('Heart rate outside supported range');if((flags&4)&&!(flags&2))throw Error('Monitor reports no skin contact');return bpm}
  class Voice {
-  constructor({recognition,onText,onState,onError,clock=()=>Date.now(),schedule=globalThis.setTimeout,cancel=globalThis.clearTimeout}){Object.assign(this,{recognition,onText,onState,onError,clock,schedule,cancel});this.running=false;this.listening=false;this.needsGesture=false;this.seen=new Set();this.wanted=false;this.rapidEnds=0;this.restartTimer=null}
+  constructor({recognition,onText,onState,onError,clock=()=>Date.now(),schedule=(fn,ms)=>globalThis.setTimeout(fn,ms),cancel=id=>globalThis.clearTimeout(id)}){Object.assign(this,{recognition,onText,onState,onError,clock,schedule,cancel});this.running=false;this.listening=false;this.needsGesture=false;this.seen=new Set();this.wanted=false;this.rapidEnds=0;this.restartTimer=null}
   start({gesture=false}={}){
    if(gesture){this.needsGesture=false;if(this.restartTimer!==null&&typeof this.cancel==='function')this.cancel(this.restartTimer);this.restartTimer=null;}
    if(this.needsGesture||this.restartTimer!==null)return;

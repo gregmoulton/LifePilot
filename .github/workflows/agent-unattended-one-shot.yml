@@ -1,0 +1,39 @@
+name: Life Pilot - one unattended synthetic coding run
+on:
+  push:
+    branches:
+      - experiment/agent-unattended-proof-20261103
+    paths:
+      - experiments/agent-proof/START_ONCE
+permissions:
+  contents: write
+  pull-requests: write
+  issues: read
+concurrency:
+  group: lifepilot-agent-synthetic-proof
+  cancel-in-progress: false
+jobs:
+  approved-task-to-draft-pr:
+    if: github.repository == 'gregmoulton/LifePilot'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+      - name: Check exact trigger and isolated source
+        run: |
+          set -euo pipefail
+          test "$(cat experiments/agent-proof/START_ONCE)" = 'RUN_APPROVED_SYNTHETIC_TASK_80_ONCE'
+          test "$(cat experiments/agent-proof/fixture/label.mjs)" = 'export const todayLabel = () => "Todo";'
+      - name: Validate agent boundaries with tests (no model call)
+        run: node --test tools/agent-unattended-one-shot.test.mjs
+      - name: Select approved task, request free AI patch, test, create draft PR
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LIFEPILOT_AGENT_APPROVED: 'yes'
+        run: node tools/agent-unattended-one-shot.mjs

@@ -51,12 +51,17 @@ const PureDevices=(()=>{
     return result;
    }finally{if(timer!==null)this.cancel(timer)}
   }
-  async connect(){
+  async connect({broadScan=false}={}){
    if(!this.bluetooth)throw Error('Bluetooth is unavailable here. Use Chrome on Android or manual HR.');
    this.disconnect();
    const attempt=this.attempt;
-   this.onState('Choose your heart-rate monitor in the Bluetooth dialog.');
-   const device=await this.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});
+   this.onState(broadScan?'Choose your MOOFIT from the expanded device list.':'Choose your heart-rate monitor in the Bluetooth dialog.');
+   // A wearable can expose the standard heart-rate GATT service without advertising
+   // that UUID during discovery. Match the device's advertised name as well.
+   const discovery=broadScan
+    ?{acceptAllDevices:true,optionalServices:['heart_rate']}
+    :{filters:[{services:['heart_rate']},{namePrefix:'MOOFIT'},{namePrefix:'Moofit'},{namePrefix:'moofit'}],optionalServices:['heart_rate']};
+   const device=await this.bluetooth.requestDevice(discovery);
    if(attempt!==this.attempt)throw Error('Connection cancelled. Please retry.');
    this.device=device;device.addEventListener('gattserverdisconnected',this.disconnected);
    try{

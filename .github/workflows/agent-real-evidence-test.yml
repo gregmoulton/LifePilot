@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - agent-output/real-evidence-blank-20261104
+      - agent-output/real-evidence-blank-v2-20261104
     paths:
       - execution.js
       - tests/agent-evidence-input.test.mjs

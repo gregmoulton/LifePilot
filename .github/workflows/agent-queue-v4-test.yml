@@ -1,0 +1,25 @@
+name: Scheduled autonomous agent — second-task acceptance (synthetic)
+on:
+  push:
+    branches:
+      - agent-output/autonomous-queue-v4-20261103
+    paths:
+      - experiments/agent-proof/fixture/queue-v4.mjs
+      - experiments/agent-proof/fixture/queue-v4.test.mjs
+      - .github/workflows/agent-queue-v4-test.yml
+permissions:
+  contents: read
+jobs:
+  tested-generated-patch:
+    if: github.repository == 'gregmoulton/LifePilot'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+      - name: Verify generated synthetic change
+        run: node --test experiments/agent-proof/fixture/queue-v4.test.mjs

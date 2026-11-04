@@ -1,0 +1,24 @@
+name: "Life Pilot agent - blank task minutes regression"
+on:
+  push:
+    branches:
+      - agent-output/task-result-blank-20261104
+    paths:
+      - execution.js
+      - tests/task-result-blank.test.mjs
+      - .github/workflows/agent-task-result-blank.yml
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24.22.1'
+      - name: "Verify real application task-result input validation"
+        run: node --test tests/task-result-blank.test.mjs

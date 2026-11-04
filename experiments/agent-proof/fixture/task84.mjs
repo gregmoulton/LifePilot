@@ -1,1 +1,1 @@
-export const agentStatus = () => "Waiting";
+export const agentStatus = () => "Ready";

@@ -1,0 +1,18 @@
+name: Agent retention diagnostic 76
+on:
+  push:
+    branches:
+      - 'experiment/retention-diagnostic-76-20261104'
+      - 'agent-output/retention-diagnostic-76-20261104'
+  workflow_dispatch:
+jobs:
+  synthetic-retention:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/retention-diagnostic-76.test.mjs

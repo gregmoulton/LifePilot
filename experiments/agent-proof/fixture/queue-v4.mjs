@@ -1,1 +1,1 @@
-export const queueStatus = () => "Queued";
+export const queueStatus = () => "Processed";

@@ -20,6 +20,7 @@ function setup(overrides={}) {
     profile, uid: () => 'synthetic-id',
     $: id => ({value: values[id] ?? ''}),
     save: () => { saves++; }, render: () => {},
+    baseRender: () => {}, document: {querySelector: () => null}, tab: 'dashboard',
   };
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox, {filename:'execution.js'});

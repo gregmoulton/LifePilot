@@ -1,1 +1,1 @@
-export const todayLabel = () => "Todo";
+export const todayLabel = () => "Today";

@@ -47,16 +47,18 @@ test('legacy profile opens in Today storage and survives agenda/HOLD/carryover s
     ['fictional-today-1', 'fictional-hold-2', 'fictional-carry-3']);
 });
 
-test('blank legacy candidate cannot silently replace populated Today profile', async () => {
+test('blank restore actually replaces a populated profile, but original bytes remain recoverable', async () => {
   const populated = { ...legacy(), agenda: { version: 1, events: [], proposals: [], rejections: [] } };
   const raw = JSON.stringify(populated);
   const storage = memory({ [KEY]: raw });
   const store = open({ storage, key: KEY, locks });
   assert.deepEqual(ids(store.value), ids(populated));
-  // A replacement restore is destructive even if it is structurally valid.
-  // This assertion documents the safety requirement for an explicit UI confirmation.
-  assert.notDeepEqual(ids({ goals: [], decision_register: [] }), ids(store.value));
-  assert.equal(storage.getItem(KEY), raw);
+  // Storage.restore is destructive by design and requires explicit UI confirmation.
+  // Exercise the real write instead of merely comparing two in-memory objects.
+  await store.restore({ goals: [], decision_register: [] });
+  assert.deepEqual(ids(open({ storage, key: KEY, locks }).value), { goals: [], decisions: [] });
+  assert.equal(storage.getItem(KEY + ':recovery-original'), raw);
+  assert.deepEqual(ids(JSON.parse(storage.getItem(KEY + ':recovery-original'))), ids(populated));
 });
 
 test('corrupt legacy bytes remain untouched and writes are blocked', async () => {

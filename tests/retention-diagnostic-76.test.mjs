@@ -21,3 +21,19 @@ test('classification never mutates caller-provided bytes', () => {
   classify(raw);
   assert.equal(raw,'{"goals":[{"id":"fictional-1"}]}');
 });
+
+test('v0.4 startup never silently discards unrecognized saved bytes', async () => {
+  const {readFileSync} = await import('node:fs');
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /storageProblem='invalid-json'/);
+  assert.match(html, /storageProblem='invalid-shape'/);
+  assert.match(html, /Download original backup/);
+  assert.match(html, /new Blob\(\[raw\]/);
+  assert.doesNotMatch(html, /storageProblem=null;render\(\);alert\('Original backup download requested/);
+  assert.match(html, /Saved profile remains protected/);
+  assert.match(html, /if\(storageProblem\)\{alert\('Download the original saved profile before replacing it/);
+  assert.match(html, /if\(storageProblem\)\{alert\('Download the original saved profile before importing/);
+  const scripts = [...html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+  assert.ok(scripts.length >= 2);
+  for (const script of scripts) new Function(script);
+});

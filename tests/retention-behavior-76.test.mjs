@@ -14,6 +14,7 @@ function boot(initial) {
   const alerts = [], downloads = [];
   const nodes = new Map();
   const document = {
+    querySelector: () => null,
     getElementById(id) {
       if (!nodes.has(id)) nodes.set(id, {innerHTML:'', textContent:'', style:{}});
       return nodes.get(id);

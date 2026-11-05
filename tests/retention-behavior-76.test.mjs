@@ -5,6 +5,7 @@ import vm from 'node:vm';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const scripts = [...html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(Boolean);
+const execution = readFileSync(new URL('../execution.js', import.meta.url), 'utf8');
 const KEY = 'lifepilot-v02-profile';
 assert.equal(scripts.length, 2, 'exercise the two actual inline app scripts');
 
@@ -34,7 +35,9 @@ function boot(initial) {
     alert: message => alerts.push(message),
     confirm: () => true
   });
-  for (const script of scripts) vm.runInContext(script, context);
+  vm.runInContext(scripts[0], context);
+  vm.runInContext(execution, context);
+  vm.runInContext(scripts[1], context);
   return {context, data, alerts, downloads, html: () => nodes.get('app').innerHTML};
 }
 

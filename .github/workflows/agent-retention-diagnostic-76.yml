@@ -4,6 +4,7 @@ on:
     branches:
       - 'experiment/retention-diagnostic-76-20261104'
       - 'agent-output/retention-diagnostic-76-20261104'
+      - 'agent-output/retention-behavior-76-20261104'
   workflow_dispatch:
 jobs:
   synthetic-retention:
@@ -15,4 +16,4 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/retention-diagnostic-76.test.mjs
+      - run: node --test tests/retention-diagnostic-76.test.mjs tests/retention-behavior-76.test.mjs

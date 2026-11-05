@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const scripts = [...html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]);
+const scripts = [...html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(Boolean);
 const KEY = 'lifepilot-v02-profile';
 assert.equal(scripts.length, 2, 'exercise the two actual inline app scripts');
 

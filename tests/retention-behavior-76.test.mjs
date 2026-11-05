@@ -78,6 +78,7 @@ test('fictional goal IDs and decision IDs survive real app reload and status upd
   assert.equal(persisted.goals[0].status, 'paused');
   assert.equal(persisted.decision_register[0].id, 'fixture-decision-1');
   const reload = boot(app.data.get(KEY));
+  vm.runInContext("showTab('goals')", reload.context);
   assert.match(reload.html(), /Fixture Goal/);
   assert.equal(JSON.parse(reload.data.get(KEY)).decision_register[0].id, 'fixture-decision-1');
 });

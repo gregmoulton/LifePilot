@@ -80,7 +80,7 @@ const Pure = (() => {
 })();
 if(typeof module!=='undefined')module.exports=Pure;
 if(typeof document!=='undefined'){
- const $=id=>document.getElementById(id);let monitorReading=()=>null,voiceActive=false,voiceWanted=false,speechHooks={},speechSerial=0,lastCountdownCue='',lastRecoveryCue='',audio,db,blocked=false,dirty=false,message='',verifiedRaw=null;
+ const $=id=>document.getElementById(id);let monitorReading=()=>null,voiceActive=false,voiceWanted=false,speechHooks={},speechSerial=0,localVoiceSelected=false,lastCountdownCue='',lastRecoveryCue='',audio,db,blocked=false,dirty=false,message='',verifiedRaw=null;
  const uid=()=>Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');
  const duration=ms=>Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0');
  const now=()=>Date.now(), download=(obj,name)=>{const a=document.createElement('a'),u=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)};
@@ -108,7 +108,7 @@ if(typeof document!=='undefined'){
   }catch{ /* The visual countdown remains available. */ }
  }
  function repEntryOpen(a=db.active){return !!a&&!a.paused&&a.phase==='exercise'&&!a.countdownKind}
- function announce(text,queue=false){try{if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined')return;const serial=++speechSerial;if(!queue)speechSynthesis.cancel();const prompt=new SpeechSynthesisUtterance(text);prompt.lang='en-US';prompt.rate=1;prompt.onend=()=>{if(serial===speechSerial)speechHooks.resume?.()};prompt.onerror=prompt.onend;speechSynthesis.speak(prompt)}catch{ /* Visual state remains authoritative if device audio is unavailable. */ }}
+ function announce(text,queue=false){if(localVoiceSelected)return;try{if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined')return;const serial=++speechSerial;if(!queue)speechSynthesis.cancel();const prompt=new SpeechSynthesisUtterance(text);prompt.lang='en-US';prompt.rate=1;prompt.onend=()=>{if(serial===speechSerial)speechHooks.resume?.()};prompt.onerror=prompt.onend;speechSynthesis.speak(prompt)}catch{ /* Visual state remains authoritative if device audio is unavailable. */ }}
  // Compare the exact previous verified bytes, not just a revision number. An
  // unverified write must never be presented as a saved workout or overwrite
  // another tab's update. No storage keys or schema are changed by this repair.
@@ -286,12 +286,36 @@ if(typeof document!=='undefined'){
   let handsFree=false,micOptOut=false,proposal=null,lastMonitorLog=0,connecting=false,monitorSignalSeen=false,monitorLossAnnounced=false;
   const context=()=>JSON.stringify([db.active?.id,db.active?.records.length,db.active?.phase,db.active?.paused,!!db.active?.countdownKind]);
   const sayStatus=s=>{voiceActive=voice.listening;voiceWanted=voice.wanted;$('stopTalk').classList.toggle('hidden',!voice.wanted);$('voiceStatus').classList.toggle('muted-voice',s.startsWith('Listening —'));$('voiceStatus').textContent=s;$('talk').textContent=voice.listening?'Listening':voice.wanted?'Connecting voice…':'Enable voice'};
-  const voice=new PureDevices.Voice({recognition:globalThis.SpeechRecognition||globalThis.webkitSpeechRecognition,onState:sayStatus,onError:sayStatus,onText:text=>{
+  const voiceCallbacks={onState:sayStatus,onError:sayStatus,onText:text=>{
    const parsed=PureDevices.command(text);if(parsed?.type==='confirm'){$('voiceApply').click();return}if(parsed?.type==='cancel'){$('voiceCancel').click();return}if(!parsed){sayStatus('Heard: “'+text+'”. Command not recognized; nothing changed.');return}
    if(parsed.type==='reps'){const a=db.active;if(!a||a.paused||a.countdownKind||a.phase!=='exercise'||dirty||blocked){sayStatus('Not accepting reps during transition or recovery.');return}$('reps').value=String(parsed.value);a.draft.reps=String(parsed.value);$('record').click();return}
    if(parsed.type==='correct'){const a=db.active,r=a?.records.at(-1);if(!r||dirty||blocked||a.paused){sayStatus('No recent reps to correct.');return}if(r.sideReps){sayStatus('Use the left or right field to correct split squat reps.');return}correctRecord(a.records.length-1,parsed.value);return}
    proposal={...parsed,context:context()};$('heard').textContent=(parsed.type==='reps'?parsed.value+' reps for '+(db.active?Pure.EX[db.active.ex]:'this exercise')+'?':'Confirm '+parsed.type+'?')+(parsed.type==='recover'&&db.active?.phase==='recovery'&&Pure.recoveryInfo(db.active,now()).override?' Wait for the recovery target; exceptions are available under Monitor problem.':'')+' Say “confirm” or “cancel”.';$('voiceProposal').classList.remove('hidden');
-  }});
+  }};
+  let voice=new PureDevices.Voice({...voiceCallbacks,recognition:globalThis.SpeechRecognition||globalThis.webkitSpeechRecognition});
+  const localVoiceButton=$('localVoice');
+  if(typeof PureLocalVoice!=='undefined'){
+   localVoiceButton.classList.remove('hidden');
+   localVoiceButton.onclick=async()=>{
+    if(db.active)return;
+    if(!localVoiceSelected){
+     voice.stop();
+     voice=new PureLocalVoice(voiceCallbacks);
+     localVoiceSelected=true;
+     $('voicePrivacy').textContent='Local voice processes audio on this device.';
+    }
+    localVoiceButton.disabled=true;
+    $('localVoiceSetup').textContent='Loading English model (about 40 MB). Microphone off.';
+    try{
+     await voice.prepare();
+     $('localVoiceSetup').textContent='Local voice ready. Start your workout with music playing.';
+     localVoiceButton.textContent='Local voice ready';
+    }catch(error){
+     $('localVoiceSetup').textContent=error.message+' Retry or enter reps on screen.';
+     localVoiceButton.disabled=false;
+    }
+   };
+  }
   const tryVoice=(gesture=false)=>{if(handsFree&&!document.hidden&&repEntryOpen()&&!dirty&&!blocked){try{voice.start({gesture})}catch(e){sayStatus(e.message)}}};
   speechHooks={arm:()=>{handsFree=!micOptOut},stop:()=>{if(voice.running||voice.wanted||proposal)stopVoice(false)},resume:()=>tryVoice(),continue:()=>{handsFree=!micOptOut;tryVoice()}};
   $('talk').onclick=()=>{micOptOut=false;handsFree=true;tryVoice(true)};

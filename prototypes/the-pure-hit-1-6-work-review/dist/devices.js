@@ -9,7 +9,7 @@ const PureDevices=(()=>{
  }
  function heartRate(value){if(!(value instanceof DataView)||value.byteLength<2)throw Error('Incomplete heart-rate packet');const flags=value.getUint8(0),wide=!!(flags&1);if(wide&&value.byteLength<3)throw Error('Incomplete 16-bit heart-rate packet');const bpm=wide?value.getUint16(1,true):value.getUint8(1);if(bpm<30||bpm>240)throw Error('Heart rate outside supported range');if((flags&4)&&!(flags&2))throw Error('Monitor reports no skin contact');return bpm}
  class Voice {
-  constructor({recognition,onText,onState,onError,clock=()=>Date.now(),schedule=globalThis.setTimeout,cancel=globalThis.clearTimeout}){Object.assign(this,{recognition,onText,onState,onError,clock,schedule,cancel});this.running=false;this.listening=false;this.needsGesture=false;this.seen=new Set();this.wanted=false;this.rapidEnds=0;this.restartTimer=null}
+  constructor({recognition,onText,onState,onError,clock=()=>Date.now(),schedule=(fn,ms)=>globalThis.setTimeout(fn,ms),cancel=id=>globalThis.clearTimeout(id)}){Object.assign(this,{recognition,onText,onState,onError,clock,schedule,cancel});this.running=false;this.listening=false;this.needsGesture=false;this.seen=new Set();this.wanted=false;this.rapidEnds=0;this.restartTimer=null}
   start({gesture=false}={}){
    if(gesture){this.needsGesture=false;if(this.restartTimer!==null&&typeof this.cancel==='function')this.cancel(this.restartTimer);this.restartTimer=null;}
    if(this.needsGesture||this.restartTimer!==null)return;
@@ -37,10 +37,76 @@ const PureDevices=(()=>{
   stop(){this.wanted=false;if(this.restartTimer!==null&&typeof this.cancel==='function')this.cancel(this.restartTimer);this.restartTimer=null;this.running=false;this.listening=false;const r=this.r;this.r=null;if(r)try{r.abort()}catch{}this.onState('Microphone off.')}
  }
  class Monitor {
-  constructor({bluetooth,onReading,onState,clock=()=>Date.now()}){Object.assign(this,{bluetooth,onReading,onState,clock});this.device=null;this.characteristic=null;this.latest=null;this.listener=e=>{try{const bpm=heartRate(e.target.value);this.latest={bpm,timestamp:this.clock()};this.onReading(this.latest)}catch(e){this.latest=null;this.onState(e.message)}};this.disconnected=()=>{this.latest=null;this.onState('Monitor disconnected. Reconnect or use manual HR.')}}
-  async connect(){if(!this.bluetooth)throw Error('Bluetooth is unavailable here. Use Chrome on Android or manual HR.');this.disconnect();const device=await this.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});this.device=device;device.addEventListener('gattserverdisconnected',this.disconnected);try{const server=await device.gatt.connect(),service=await server.getPrimaryService('heart_rate');this.characteristic=await service.getCharacteristic('heart_rate_measurement');this.characteristic.addEventListener('characteristicvaluechanged',this.listener);await this.characteristic.startNotifications();this.onState('Connected. Waiting for a heart-rate reading.')}catch(e){this.disconnect();throw e}}
+  constructor({bluetooth,onReading,onState,clock=()=>Date.now(),schedule=(fn,ms)=>globalThis.setTimeout(fn,ms),cancel=id=>globalThis.clearTimeout(id),timeoutMs=12000}) {
+   Object.assign(this,{bluetooth,onReading,onState,clock,schedule,cancel,timeoutMs});
+   this.device=null;this.characteristic=null;this.latest=null;this.attempt=0;this.readingTimer=null;
+   this.listener=e=>{if(!this.device)return;try{const bpm=heartRate(e.target.value);this.latest={bpm,timestamp:this.clock()};if(this.readingTimer!==null){this.cancel(this.readingTimer);this.readingTimer=null}this.onReading(this.latest)}catch(error){this.latest=null;this.onState(error.message)}};
+   this.disconnected=()=>{this.disconnect();this.onState('Monitor disconnected. Reconnect or use manual HR.')};
+  }
+  async stage(promise,label,attempt,timeout=this.timeoutMs){
+   let timer=null;
+   try {
+    const result=await Promise.race([promise,new Promise((_,reject)=>{timer=this.schedule(()=>reject(Error(label+' timed out. Please retry.')),timeout)})]);
+    if(attempt!==this.attempt)throw Error('Connection interrupted or superseded. Please retry.');
+    return result;
+   }finally{if(timer!==null)this.cancel(timer)}
+  }
+  async connect({broadScan=false,previouslyAllowed=false}={}){
+   if(!this.bluetooth)throw Error('Bluetooth is unavailable here. Use Chrome on Android or manual HR.');
+   this.disconnect();
+   const attempt=this.attempt;
+   this.onState(previouslyAllowed?'Checking devices previously authorized in Chrome…':broadScan?'Choose MOOFIT, then tap Pair/Connect in the Bluetooth popup.':'Choose your heart-rate monitor, then tap Pair/Connect in the popup.');
+   // A wearable can expose the standard heart-rate GATT service without advertising
+   // that UUID during discovery. Match the device's advertised name as well.
+   const discovery=broadScan
+    ?{acceptAllDevices:true,optionalServices:['heart_rate']}
+    :{filters:[{services:['heart_rate']},{namePrefix:'MOOFIT'},{namePrefix:'Moofit'},{namePrefix:'moofit'}],optionalServices:['heart_rate']};
+   let device;
+   if(previouslyAllowed){
+    if(typeof this.bluetooth.getDevices!=='function')throw Error('Chrome cannot access previously authorized devices here. Try the Bluetooth picker.');
+    const allowed=await this.stage(this.bluetooth.getDevices(),'Saved Bluetooth permissions',attempt);
+    const matches=allowed.filter(d=>/moofit|heart.?rate|^hrm(?:\b|\d)|^hr\d/i.test(d.name||''));
+    if(matches.length!==1)throw Error(matches.length?'More than one previously authorized heart monitor. Use the Bluetooth picker.':'No previously authorized MOOFIT found for this website. Select it in the Bluetooth picker first.');
+    device=matches[0];
+   }else{
+    // The chooser itself may never resolve after the user taps Pair.
+    // This timeout provides a visible error and leaves no active connection.
+    device=await this.stage(this.bluetooth.requestDevice(discovery),'Chrome Bluetooth device selection',attempt,45000);
+   }
+   if(attempt!==this.attempt)throw Error('Connection cancelled. Please retry.');
+   this.device=device;device.addEventListener('gattserverdisconnected',this.disconnected);
+   try{
+    this.onState('Chrome returned '+(device.name||'your selected monitor')+'. Connecting to heart-rate service…');
+    const server=await this.stage(device.gatt.connect(),'Bluetooth connection',attempt);
+    this.onState('Finding heart-rate service…');
+    const service=await this.stage(server.getPrimaryService('heart_rate'),'Heart-rate service',attempt);
+    this.onState('Finding heart-rate readings…');
+    const characteristic=await this.stage(service.getCharacteristic('heart_rate_measurement'),'Heart-rate characteristic',attempt);
+    this.characteristic=characteristic;
+    characteristic.addEventListener('characteristicvaluechanged',this.listener);
+    this.onState('Subscribing to live BPM…');
+    await this.stage(characteristic.startNotifications(),'Live heart-rate subscription',attempt);
+    if(!this.fresh()){
+     this.onState('Connected. Waiting for first live BPM reading…');
+     this.readingTimer=this.schedule(()=>{
+      this.readingTimer=null;
+      if(attempt!==this.attempt||this.fresh())return;
+      this.disconnect();
+      this.onState('No live BPM received within '+Math.round(this.timeoutMs/1000)+' seconds. Check that MOOFIT is worn and transmitting, then retry.');
+     },this.timeoutMs);
+     this.readingTimer?.unref?.();
+    }
+   }catch(error){if(attempt===this.attempt)this.disconnect();throw error}
+  }
   fresh(){return this.latest&&this.clock()-this.latest.timestamp<=15000&&this.clock()>=this.latest.timestamp?this.latest:null}
-  disconnect(){this.latest=null;if(this.characteristic)this.characteristic.removeEventListener('characteristicvaluechanged',this.listener);this.characteristic=null;if(this.device){this.device.removeEventListener('gattserverdisconnected',this.disconnected);if(this.device.gatt.connected)this.device.gatt.disconnect()}this.device=null}
+  disconnect(){
+   this.attempt++;this.latest=null;
+   if(this.readingTimer!==null){this.cancel(this.readingTimer);this.readingTimer=null}
+   if(this.characteristic)this.characteristic.removeEventListener('characteristicvaluechanged',this.listener);
+   this.characteristic=null;
+   if(this.device){this.device.removeEventListener('gattserverdisconnected',this.disconnected);if(this.device.gatt?.connected)this.device.gatt.disconnect()}
+   this.device=null;
+  }
  }
  return {command,heartRate,Voice,Monitor};
 })();

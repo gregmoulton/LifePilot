@@ -37,3 +37,12 @@ test('v0.4 startup never silently discards unrecognized saved bytes', async () =
   assert.ok(scripts.length >= 2);
   for (const script of scripts) new Function(script);
 });
+
+test('import rejects unstable goal IDs and missing decision register before replacement', async () => {
+  const {readFileSync} = await import('node:fs');
+  const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /Import refused: every goal must have a stable string ID/);
+  assert.match(html, /Import refused: existing decisions would be lost/);
+  assert.match(html, /Import refused: invalid decision register/);
+  assert.ok(html.indexOf('Import refused: every goal') < html.indexOf('Replace the current local profile?'));
+});

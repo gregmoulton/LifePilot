@@ -1,18 +1,23 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),{webcrypto}=require('node:crypto');
 const code=fs.readFileSync('dist/app.js','utf8'),original=fs.readFileSync('tests/fixtures/original.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
-function runtime({data=new Map(),source=code,fail=false,devices=false,journal=false,bluetooth,autoCountdown=true,autoHrGate=true}={}){
- const nodes=new Map(),spoken=[],downloads=[],events={},docEvents={};let t=Date.parse('2026-10-21T20:00:00Z'),failed=fail,confirmation=true,writeFault='normal';const intervals=[],timeouts=new Map();let nextTimeout=0;
+function runtime({data=new Map(),source=code,fail=false,devices=false,journal=false,bluetooth,autoCountdown=true,autoHrGate=true,splitDefault=false}={}){
+ const nodes=new Map(),spoken=[],tones=[],downloads=[],events={},docEvents={};let t=Date.parse('2026-10-21T20:00:00Z'),failed=fail,confirmation=true,writeFault='normal';const intervals=[],timeouts=new Map();let nextTimeout=0;
  const html=fs.readFileSync(source===code?'dist/index.html':'tests/fixtures/original.html','utf8');
  const node=id=>{if(!id.startsWith('download')&&!html.includes('id="'+id+'"'))throw Error('Missing real DOM element: '+id);if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,classList:{toggle(name,on){this[name]=on},add(name){this[name]=true},remove(name){this[name]=false},contains(name){return !!this[name]}},addEventListener(n,f){this[n]=f},remove(){},click(){if(this.download)downloads.push(this.href);else if(!this.disabled)this.onclick?.()}});return nodes.get(id)};
- const document={hidden:false,getElementById:node,createElement:()=>node('download'+downloads.length),body:{append(){}},addEventListener:(n,f)=>docEvents[n]=f};
+ const document={hidden:false,getElementById:node,createElement:()=>node('download'+downloads.length),body:{dataset:{defaultSquat:splitDefault?'split':''},append(){}},addEventListener:(n,f)=>{(docEvents[n]??=[]).push(f)}};
  const store={getItem:k=>data.get(k)??null,setItem:(k,v)=>{if(failed)throw Error('simulated quota');if(writeFault==='drop')return;if(writeFault==='corrupt'){data.set(k,'simulated unexpected storage bytes');return}data.set(k,v)},removeItem:k=>data.delete(k)};
  let blobs=new Map(),id=0,recognition;const recognitionResults=new WeakMap();
  class Recognition{constructor(){recognition=this}start(){this.onstart?.()}abort(){this.onend?.()}}
- const context=vm.createContext({speechSynthesis:{cancel(){},speak(p){spoken.push(p.text)}},SpeechSynthesisUtterance:class{constructor(text){this.text=text}},DataView,Date:class extends Date{constructor(...a){super(...(a.length?a:[t]))}static now(){return t}},document,navigator:{bluetooth},SpeechRecognition:Recognition,localStorage:store,crypto:{getRandomValues:webcrypto.getRandomValues.bind(webcrypto)},Blob,URL:{createObjectURL:b=>{const key='blob:'+id++;blobs.set(key,b);return key},revokeObjectURL(){}},setInterval(f){intervals.push(f)},setTimeout(f,ms){const k=++nextTimeout;timeouts.set(k,{f,at:t+ms});return k},clearTimeout(k){timeouts.delete(k)},addEventListener:(n,f)=>events[n]=f,alert(){},confirm:()=>confirmation});
+ class AudioContext{
+  state='running';currentTime=0;
+  createOscillator(){return {frequency:{},connect(){},start(){tones.push(this.frequency.value)},stop(){}}}
+  createGain(){return {gain:{setValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){}}}
+ }
+ const context=vm.createContext({AudioContext,speechSynthesis:{cancel(){},speak(p){spoken.push(p.text)}},SpeechSynthesisUtterance:class{constructor(text){this.text=text}},DataView,Date:class extends Date{constructor(...a){super(...(a.length?a:[t]))}static now(){return t}},document,navigator:{bluetooth},SpeechRecognition:Recognition,localStorage:store,crypto:{getRandomValues:webcrypto.getRandomValues.bind(webcrypto)},Blob,URL:{createObjectURL:b=>{const key='blob:'+id++;blobs.set(key,b);return key},revokeObjectURL(){}},setInterval(f){intervals.push(f)},setTimeout(f,ms){const k=++nextTimeout;timeouts.set(k,{f,at:t+ms});return k},clearTimeout(k){timeouts.delete(k)},addEventListener:(n,f)=>events[n]=f,alert(){},confirm:()=>confirmation});
  if(journal)vm.runInContext(fs.readFileSync('dist/journal.js','utf8'),context);
  if(devices)vm.runInContext(fs.readFileSync('dist/devices.js','utf8'),context);
  vm.runInContext(source===code?source.replace('\n render();\n}', '\n globalThis.__readForTest=expression=>eval(expression);\n render();\n}'):source,context);
- return {voiceEnd(){recognition.onend()},voiceError(error){recognition.onerror({error});recognition.onend()},hidden(v){document.hidden=v;docEvents.visibilitychange?.()},data,node,context,spoken,downloads,blobs,events,docEvents,writeFault:mode=>{writeFault=mode},hears(text){assert(recognition,'Microphone was not started');assert(this.read('voiceActive'),'Microphone stopped');const results=recognitionResults.get(recognition)||[];results.push(Object.assign([{transcript:text}],{isFinal:true}));recognitionResults.set(recognition,results);recognition.onresult({resultIndex:results.length-1,results})},speech(text){this.click('talk');recognition.onresult({resultIndex:0,results:[Object.assign([{transcript:text}],{isFinal:true})]});recognition.onend();if(autoCountdown&&source===code&&this.read('!!db.active?.countdownUntil')){t+=5000;intervals.forEach(f=>f())}},time(ms){t+=ms},fail(v){failed=v},confirm(v){confirmation=v},tick(){for(const [k,x] of timeouts)if(x.at<=t){timeouts.delete(k);x.f()}intervals.forEach(f=>f())},click(id){node(id).onclick();if(id==='start'&&autoHrGate&&source===code&&!this.read('!!db.active'))node('hrGateProceed').onclick();if(autoCountdown&&source===code&&this.read('!!db.active?.countdownUntil')){t+=5000;intervals.forEach(f=>f())}},input(id,v){node(id).value=v;node(id).input?.()},read(expression){return JSON.parse(vm.runInContext('JSON.stringify(__readForTest('+JSON.stringify(expression)+'))',context))}};
+ return {voiceEnd(){recognition.onend()},voiceError(error){recognition.onerror({error});recognition.onend()},hidden(v){document.hidden=v;docEvents.visibilitychange?.forEach(handler=>handler())},data,node,context,spoken,tones,downloads,blobs,events,docEvents,writeFault:mode=>{writeFault=mode},hears(text){assert(recognition,'Microphone was not started');assert(this.read('voiceActive'),'Microphone stopped');const results=recognitionResults.get(recognition)||[];results.push(Object.assign([{transcript:text}],{isFinal:true}));recognitionResults.set(recognition,results);recognition.onresult({resultIndex:results.length-1,results})},speech(text){this.click('talk');recognition.onresult({resultIndex:0,results:[Object.assign([{transcript:text}],{isFinal:true})]});recognition.onend();if(autoCountdown&&source===code&&this.read('!!db.active?.countdownUntil')){t+=5000;intervals.forEach(f=>f())}},time(ms){t+=ms},fail(v){failed=v},confirm(v){confirmation=v},tick(){for(const [k,x] of timeouts)if(x.at<=t){timeouts.delete(k);x.f()}intervals.forEach(f=>f())},click(id){node(id).onclick();if(id==='start'&&autoHrGate&&source===code&&!this.read('!!db.active'))node('hrGateProceed').onclick();if(autoCountdown&&source===code&&this.read('!!db.active?.countdownUntil')){t+=5000;intervals.forEach(f=>f())}},input(id,v){node(id).value=v;node(id).input?.()},read(expression){return JSON.parse(vm.runInContext('JSON.stringify(__readForTest('+JSON.stringify(expression)+'))',context))}};
 }
 test('baseline crash checkpoint reproduces stale step; fixed checkpoint restores next step',()=>{let r=runtime({source:original});r.click('start');r.input('reps','12');r.click('record');let saved=JSON.parse(r.data.get('the-pure-hit-field-test-v1-active'));assert.equal(saved.ex,0);assert.equal(saved.records.length,1);r=runtime();r.click('start');r.input('reps','12');r.click('record');const restarted=runtime({data:r.data});assert.equal(restarted.node('status').textContent,'PAUSED — timer stopped');assert.equal(restarted.node('exercise').textContent,'Exercise: Squat')});
 test('actual UI persists unsubmitted reps and HR draft on every input',()=>{let r=runtime();r.click('start');r.input('reps','14');let restart=runtime({data:r.data});assert.equal(restart.node('reps').value,'14');restart.click('resume');restart.click('record');for(const n of ['20','11']){restart.input('reps',n);restart.click('record')}restart.input('hr','108');r=runtime({data:restart.data});assert.equal(r.node('hr').value,'108');assert.equal(r.node('status').textContent,'PAUSED — timer stopped')});
@@ -42,8 +47,8 @@ test('partial history distinguishes explicit zero from an unrecorded exercise',(
  test('five-second countdown blocks reps, survives interruption safely, and excludes preparation time',()=>{const r=runtime({autoCountdown:false});r.click('start');assert.match(r.node('status').textContent,/Starting in 5/);r.input('reps','10');r.click('record');assert.equal(r.read('db.active.records.length'),0);r.time(4999);r.tick();assert.equal(r.read('!!db.active.countdownUntil'),true);r.time(1);r.tick();assert.equal(r.read('db.active.paused'),false);assert.equal(r.read('db.active.activeMs'),0);r.time(3000);r.click('pause');r.time(60000);r.click('resume');assert.equal(r.read('db.active.activeMs'),3000);const restarted=runtime({data:r.data,autoCountdown:false});assert.equal(restarted.read('db.active.paused'),true);assert.equal(restarted.read('db.active.activeMs'),3000)});
  test('final recovery survives restart, cannot advance with missing or stale HR, then saves both recoveries once',()=>{let r=runtime();r.click('start');for(let i=0;i<3;i++){r.input('reps','10');r.click('record')}r.click('recover');assert.equal(r.read('db.active.round'),0);r.input('hr','110');r.click('loghr');r.time(16000);r.click('recover');assert.equal(r.read('db.active.round'),0);r.input('hr','109');r.click('loghr');r.click('recover');for(let i=0;i<3;i++){r.input('reps','7');r.click('record')}assert.equal(r.read('db.history.length'),0);r=runtime({data:r.data});assert.equal(r.read('db.active.records.length'),6);assert.equal(r.read('db.active.paused'),true);r.click('resume');r.input('hr','125');r.click('loghr');assert.equal(r.read('db.history.length'),0);r.time(30000);r.input('hr','110');r.click('loghr');assert.equal(r.read('db.history.length'),1);assert.equal(r.read('db.history[0].recoveries.length'),2);assert.equal(r.read('db.history[0].recoveries[1].kind'),'post-workout');assert.equal(r.read('db.history[0].incompleteRecovery||null'),null);assert.match(r.node('savedTitle').textContent,/complete — saved/);r.tick();assert.equal(r.read('db.history.length'),1)});
 
-test('pause announces once, freezes displayed time, and resume excludes interrupted minutes',()=>{const r=runtime();r.click('start');r.time(12000);r.tick();r.click('pause');const shown=r.node('sessionTimer').textContent;assert.match(r.node('status').textContent,/PAUSED — timer stopped/);assert.equal(r.spoken.at(-1),'Workout paused. Timer stopped.');r.time(120000);r.tick();assert.equal(r.node('sessionTimer').textContent,shown);r.click('pause');assert.equal(r.spoken.filter(s=>s==='Workout paused. Timer stopped.').length,1);r.click('resume');assert.equal(r.spoken.at(-1),'Workout resumed.');r.time(3000);r.tick();assert.equal(r.read('db.active.activeMs'),15000)});
-test('spoken five-second start and three-second station countdown block duplicate rep entries',()=>{const r=runtime({autoCountdown:false});r.node('transitionSeconds').value='3';r.node('thresholdSetting').value='110';r.click('saveSettings');r.click('start');assert.equal(r.spoken.at(-1),'5');for(let i=0;i<5;i++){r.time(1000);r.tick()}assert.deepEqual(r.spoken.slice(0,6),['5','4','3','2','1','Begin Push-ups.']);r.input('reps','12');r.click('record');assert.equal(r.read('db.active.records.length'),1);assert.equal(r.spoken.at(-1),'12 saved.');r.click('record');assert.equal(r.read('db.active.records.length'),1);r.time(1000);r.tick();r.click('pause');r.time(60000);r.tick();assert.equal(r.read('db.active.countdownRemainingMs'),2000);r.click('resume');r.time(2000);r.tick();assert.equal(r.spoken.at(-1),'Begin Squats.');assert.equal(r.read('db.active.transitions[0].interruptionSeconds'),60)});
+test('pause freezes displayed time and resume excludes interrupted minutes',()=>{const r=runtime();r.click('start');r.time(12000);r.tick();r.click('pause');const shown=r.node('sessionTimer').textContent;assert.match(r.node('status').textContent,/PAUSED — timer stopped/);r.time(120000);r.tick();assert.equal(r.node('sessionTimer').textContent,shown);r.click('pause');r.click('resume');r.time(3000);r.tick();assert.equal(r.read('db.active.activeMs'),15000)});
+test('countdown tones replace speech and transitions block duplicate rep entries',()=>{const r=runtime({autoCountdown:false});r.node('transitionSeconds').value='3';r.node('thresholdSetting').value='110';r.click('saveSettings');r.click('start');assert.deepEqual(r.tones,[]);for(let i=0;i<5;i++){r.time(1000);r.tick();r.tick()}assert.deepEqual(r.tones,[523,523,523,1047]);assert.deepEqual(r.spoken,[]);r.input('reps','12');r.click('record');assert.equal(r.read('db.active.records.length'),1);assert.deepEqual(r.spoken,[]);r.click('record');assert.equal(r.read('db.active.records.length'),1);r.time(1000);r.tick();r.click('pause');r.time(60000);r.tick();assert.equal(r.read('db.active.countdownRemainingMs'),2000);r.click('resume');r.time(2000);r.tick();assert.equal(r.tones.at(-1),1047);assert.equal(r.read('db.active.transitions[0].interruptionSeconds'),60)});
 test('End confirmation preserves session, then cooldown keeps HR and stops workout clock',()=>{const r=runtime();r.click('start');r.input('reps','8');r.click('record');r.confirm(false);r.click('end');assert.equal(r.read('db.active.workoutEndedAt||null'),null);r.confirm(true);r.click('end');const frozen=r.read('db.active.activeMs');r.time(30000);r.tick();assert.equal(r.read('db.active.activeMs'),frozen);assert.match(r.node('status').textContent,/Cooldown/);r.input('hr','140');r.click('loghr');assert.equal(r.read('db.history.length'),0);r.input('hr','110');r.click('loghr');assert.equal(r.read('db.history[0].status'),'partial');assert.equal(r.read('db.history[0].recoveries.length'),1)});
 test('rep-save failure freezes countdown and never announces accepted data',()=>{const r=runtime({autoCountdown:false});r.click('start');r.time(5000);r.tick();r.input('reps','12');r.fail(true);r.click('record');assert.equal(r.read('dirty'),true);assert.equal(r.read('db.active.paused'),true);assert.equal(r.read('!!db.active.countdownUntil'),false);assert.match(r.spoken.at(-1),/Save failed/);assert.equal(r.spoken.some(s=>s.startsWith('Saved:')),false);r.time(60000);r.tick();assert.equal(r.read('db.active.records.length'),1);r.fail(false);r.click('retry');r.click('resume');r.time(5000);r.tick();assert.equal(r.read('db.active.ex'),1);assert.equal(r.read('db.active.transitions[0].durationSeconds'),5)});
 test('focus screen keeps exercise, phase and transition count tied to the durable state',()=>{const r=runtime({autoCountdown:false});r.click('start');assert.equal(r.node('stationName0').textContent,'Push-ups');assert.equal(r.node('focusCount').textContent,'5');r.time(5000);r.tick();assert.equal(r.node('focusCount').textContent,'');r.input('reps','12');r.click('record');assert.equal(r.node('stationName1').textContent,'Squats');assert.equal(r.node('focusCount').textContent,'5');assert.equal(r.node('repReceipt').textContent,'Saved: 12 Push-ups reps');r.click('pause');assert.equal(r.node('focusTitle').textContent,'Paused');r.click('resume');r.time(5000);r.tick();assert.equal(r.node('stationName1').textContent,'Squats')});
@@ -159,21 +164,27 @@ test('stale BPM cannot silently authorize another workout start',async()=>{
  assert.match(r.node('hrPreflight').textContent,/Start blocked/);
 });
 
-test('one voice activation handles both rounds, pause/resume and cooldown without enabling again',()=>{
+test('mic rests in recovery and countdown, then resumes for conditioning reps',()=>{
  const r=runtime({devices:true,autoCountdown:false});r.click('start');r.time(5000);r.tick();
- r.hears('10 reps');r.time(5000);r.tick();r.hears('20 reps');r.time(5000);r.tick();r.hears('8 reps');
- assert.equal(r.read('db.active.phase'),'recovery');r.hears('pause workout');r.hears('confirm');assert.equal(r.read('db.active.paused'),true);
- r.time(10000);r.hears('resume workout');r.hears('confirm');assert.equal(r.read('db.active.paused'),false);
- r.input('hr','108');r.click('loghr');r.hears('continue recovery');r.hears('confirm');assert.equal(r.read('db.active.round'),1);
- r.hears('9 reps');r.time(5000);r.tick();r.hears('14 reps');r.time(5000);r.tick();r.hears('6 reps');assert.equal(r.read('db.active.finalRecovery'),true);
- assert.equal(r.read('voiceActive'),true);r.input('hr','109');r.click('loghr');assert.equal(r.read('db.active'),null);assert.equal(r.read('db.history[0].records.length'),6);assert.equal(r.read('voiceActive'),false);
+ r.hears('10 reps');assert.equal(r.read('voiceActive'),false);
+ r.time(5000);r.tick();r.hears('20 reps');r.time(5000);r.tick();r.hears('8 reps');
+ assert.equal(r.read('db.active.phase'),'recovery');assert.equal(r.read('voiceActive'),false);
+ r.click('pause');r.time(10000);r.click('resume');assert.equal(r.read('voiceActive'),false);
+ r.input('hr','108');r.click('loghr');r.tick();assert.equal(r.tones.filter(t=>t===784).length,1);
+ r.click('recover');assert.equal(r.read('db.active.round'),1);
+ assert.equal(r.read('db.active.countdownKind'),'conditioning');assert.equal(r.read('voiceActive'),false);
+ assert.match(r.node('status').textContent,/Round two.*Push-ups/);
+ r.time(5000);r.tick();assert.equal(r.tones.at(-1),1047);
+ r.hears('9 reps');r.time(5000);r.tick();r.hears('14 reps');r.time(5000);r.tick();r.hears('6 reps');
+ assert.equal(r.read('db.active.finalRecovery'),true);assert.equal(r.read('voiceActive'),false);
+ r.input('hr','109');r.click('loghr');assert.equal(r.read('db.active'),null);assert.equal(r.read('db.history[0].records.length'),6);
 });
 test('conditioning pause and reload resume retain round, next exercise, reps and transition remainder',()=>{
- let r=runtime({devices:true,autoCountdown:false});r.click('start');r.time(5000);r.tick();for(const n of ['10','20','8']){r.input('reps',n);r.click('record');r.time(5000);r.tick()}r.input('hr','108');r.click('loghr');r.click('recover');r.input('reps','9');r.click('record');r.time(2000);r.tick();r.click('pause');const records=r.read('db.active.records');r=runtime({data:r.data,devices:true,autoCountdown:false});assert.equal(r.read('db.active.round'),1);assert.equal(r.read('db.active.ex'),1);r.click('resume');r.time(2999);r.tick();assert.equal(r.read('!!db.active.countdownUntil'),true);r.time(1);r.tick();assert.equal(r.read('!!db.active.countdownUntil'),false);assert.deepEqual(r.read('db.active.records'),records);r.input('reps','13');r.click('record');assert.equal(r.read('db.active.records[4].round'),'conditioning');assert.equal(r.read('db.active.records[4].exercise'),'Squat');
+ let r=runtime({devices:true,autoCountdown:false});r.click('start');r.time(5000);r.tick();for(const n of ['10','20','8']){r.input('reps',n);r.click('record');r.time(5000);r.tick()}r.input('hr','108');r.click('loghr');r.click('recover');r.time(5000);r.tick();r.input('reps','9');r.click('record');r.time(2000);r.tick();r.click('pause');const records=r.read('db.active.records');r=runtime({data:r.data,devices:true,autoCountdown:false});assert.equal(r.read('db.active.round'),1);assert.equal(r.read('db.active.ex'),1);r.click('resume');r.time(2999);r.tick();assert.equal(r.read('!!db.active.countdownUntil'),true);r.time(1);r.tick();assert.equal(r.read('!!db.active.countdownUntil'),false);assert.deepEqual(r.read('db.active.records'),records);r.input('reps','13');r.click('record');assert.equal(r.read('db.active.records[4].round'),'conditioning');assert.equal(r.read('db.active.records[4].exercise'),'Squat');
 });
 
-test('voice save requires confirmation and archives partial session without HR',()=>{const r=runtime({devices:true});r.click('start');r.hears('10 reps');r.hears('save workout');assert(r.read('db.active'));r.hears('cancel');assert(r.read('db.active'));r.hears('finish and save');r.hears('confirm');assert.equal(r.read('db.active'),null);assert.equal(r.read('db.history[0].records[0].reps'),10);assert.equal(r.read('db.history[0].recoveries[0].manualOverride'),true)});
-test('voice pause rejects reps and resumes the same conditioning station without altering earlier reps',()=>{const r=runtime({devices:true});r.click('start');for(const n of ['10','20','8']){r.input('reps',n);r.click('record')}r.input('hr','108');r.click('loghr');r.click('recover');r.hears('9 reps');r.time(5000);r.tick();const before=r.read('db.active.records');r.hears('pause workout');r.hears('confirm');r.hears('99 reps');assert.deepEqual(r.read('db.active.records'),before);r.hears('resume workout');r.hears('confirm');assert.equal(r.read('db.active.round'),1);assert.equal(r.read('db.active.ex'),1);r.hears('13 reps');assert.deepEqual(r.read('db.active.records.slice(0,4)'),before);assert.equal(r.read('db.active.records[4].reps'),13)});
+test('voice save requires confirmation and archives partial session without HR',()=>{const r=runtime({devices:true});r.click('start');r.hears('10 reps');r.time(5000);r.tick();r.hears('save workout');assert(r.read('db.active'));r.hears('cancel');assert(r.read('db.active'));r.hears('finish and save');r.hears('confirm');assert.equal(r.read('db.active'),null);assert.equal(r.read('db.history[0].records[0].reps'),10);assert.equal(r.read('db.history[0].recoveries[0].manualOverride'),true)});
+test('voice pause rejects reps and resumes the same conditioning station without altering earlier reps',()=>{const r=runtime({devices:true});r.click('start');for(const n of ['10','20','8']){r.input('reps',n);r.click('record')}r.input('hr','108');r.click('loghr');r.click('recover');r.hears('9 reps');r.time(5000);r.tick();const before=r.read('db.active.records');r.hears('pause workout');r.hears('confirm');assert.equal(r.read('voiceActive'),false);assert.deepEqual(r.read('db.active.records'),before);r.click('resume');assert.equal(r.read('db.active.round'),1);assert.equal(r.read('db.active.ex'),1);r.hears('13 reps');assert.deepEqual(r.read('db.active.records.slice(0,4)'),before);assert.equal(r.read('db.active.records[4].reps'),13)});
 
 test('monitor gap warns once, preserves workout and logs restoration without fabricating HR',async()=>{let packet;const characteristic={addEventListener(n,f){packet=f},removeEventListener(){},async startNotifications(){}};const device={addEventListener(){},removeEventListener(){},gatt:{connected:true,disconnect(){},async connect(){return {async getPrimaryService(){return {async getCharacteristic(){return characteristic}}}}}}};const r=runtime({devices:true,bluetooth:{async requestDevice(){return device}}});await r.node('connectHr').onclick();const reading=n=>packet({target:{value:new DataView(Uint8Array.from([0,n]).buffer)}});reading(85);r.click('start');reading(130);const samples=r.read('db.active.hr.length');r.time(16000);r.tick();r.tick();assert.equal(r.read('db.active.hr.length'),samples);assert.equal(r.read('db.active.events.filter(e=>e.event==="hr-signal-unavailable").length'),1);assert.equal(r.read('db.active.paused'),false);assert.match(r.spoken.at(-1),/signal lost/);reading(125);assert.equal(r.read('db.active.events.filter(e=>e.event==="hr-signal-restored").length'),1);assert.equal(r.read('db.active.hr.at(-1).bpm'),125)});
 
@@ -216,28 +227,27 @@ test('verified-save blocks same-revision external modifications, not only newer 
 });
 
 
-test('large countdown labels current exercise and reads transition seconds and begin cue',()=>{
+test('large countdown labels current exercise and plays the distinct go tone',()=>{
  const r=runtime({devices:true,autoCountdown:false});
  const css=fs.readFileSync('dist/focus.css','utf8');
  assert.match(css,/\.workout-panel\[data-stage="countdown"\] #focusCount\{display:block;font-size:clamp\(88px,28vw,148px\)/);
  r.click('start');assert.match(r.node('focusTitle').textContent,/Get ready: Push-ups/);
- r.time(5000);r.tick();assert.match(r.spoken.at(-1),/Begin Push-ups/);
+ r.time(5000);r.tick();assert.equal(r.tones.at(-1),1047);
  r.input('reps','4');r.click('record');assert.match(r.node('focusTitle').textContent,/Get ready: Squats/);
  assert.equal(r.read('db.active.countdownKind'),'transition');
- r.tick();assert.equal(r.spoken.at(-1),'5');
- r.time(1000);r.tick();assert.equal(r.spoken.at(-1),'4');
- r.time(4000);r.tick();assert.match(r.spoken.at(-1),/Begin Squats/);
+ r.time(2000);r.tick();assert.equal(r.tones.at(-1),523);
+ r.time(3000);r.tick();assert.equal(r.tones.at(-1),1047);
  assert.equal(r.read('!!db.active.countdownKind'),false);
 });
 
-test('Android Start enables voice before first exercise without a separate Connect Voice tap',()=>{
- const r=runtime({devices:true,autoCountdown:false});r.click('start');assert.equal(r.read('voiceActive'),true);
+test('Start arms voice and opens the mic only when rep entry starts',()=>{
+ const r=runtime({devices:true,autoCountdown:false});r.click('start');assert.equal(r.read('voiceActive'),false);
  r.time(5000);r.tick();r.hears('10 reps');assert.equal(r.read('db.active.records[0].reps'),10);
 });
 test('conditioning resumes voice after recognition interruption without a new Connect Voice tap',()=>{
  const r=runtime({devices:true,autoCountdown:false});r.click('start');
  for(const n of [10,11,12]){r.time(5000);r.tick();r.hears(n+' reps')}
- r.input('hr','108');r.click('loghr');r.voiceEnd();assert.equal(r.read('voiceActive'),false);
+ r.input('hr','108');r.click('loghr');assert.equal(r.read('voiceActive'),false);
  r.click('recover');r.time(5000);r.tick();assert.equal(r.read('voiceActive'),true);
  r.hears('8 reps');assert.equal(r.read('db.active.records[3].reps'),8);
 });
@@ -246,9 +256,9 @@ test('permission failure stays disconnected across transitions until a deliberat
  r.click('pause');r.click('resume');assert.equal(r.read('voiceActive'),false);
  r.click('talk');assert.equal(r.read('voiceActive'),true);
 });
-test('foreground return restarts enabled voice, but never overrides deliberate mic off',()=>{
+test('return from a hidden page explains the pause and preserves deliberate mic off',()=>{
  const r=runtime({devices:true});r.click('start');r.hidden(true);assert.equal(r.read('voiceActive'),false);
- r.hidden(false);assert.equal(r.read('voiceActive'),true);r.click('stopTalk');r.hidden(true);r.hidden(false);
+ r.hidden(false);assert.equal(r.read('voiceActive'),false);assert.match(r.node('resumeNotice').textContent,/Paused when Chrome went out of view/);r.click('resume');assert.equal(r.read('voiceActive'),true);r.click('stopTalk');r.hidden(true);r.hidden(false);
  r.click('pause');r.click('resume');assert.equal(r.read('voiceActive'),false);
 });
 test('cooldown does not announce saved when the archive write was silently dropped',()=>{
@@ -309,4 +319,21 @@ test('manual or archived HR readings do not impersonate a live Bluetooth pulse',
  assert.equal(r.node('hrLiveValue').textContent,'—');
  r.tick();assert.equal(r.node('liveBpm').textContent,'— BPM');
  assert.match(r.node('hrSignalAge').textContent,/Waiting for live/);
+});
+
+
+test('review defaults to split squat while an explicit plan or active session is preserved',()=>{
+ const r=runtime({splitDefault:true});
+ assert.equal(r.node('stationName1').textContent,'Split squat');
+ r.click('start');r.input('reps','5');r.click('record');
+ r.input('reps','10');r.click('record');r.input('reps','12');r.click('record');
+ assert.deepEqual(r.read('db.active.records[1].sideReps'),{left:10,right:12});
+
+ const custom=runtime();
+ custom.click('savePlan');
+ const restored=runtime({data:custom.data,splitDefault:true});
+ assert.equal(restored.node('stationName1').textContent,'Squats');
+ custom.click('start');
+ const active=runtime({data:custom.data,splitDefault:true});
+ assert.equal(active.read('db.active.exercisePlan[1].unilateral'),false);
 });

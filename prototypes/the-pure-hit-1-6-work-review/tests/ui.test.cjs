@@ -3,7 +3,7 @@ const code=fs.readFileSync('dist/app.js','utf8'),original=fs.readFileSync('tests
 function runtime({data=new Map(),source=code,fail=false,devices=false,journal=false,bluetooth,autoCountdown=true,autoHrGate=true}={}){
  const nodes=new Map(),spoken=[],downloads=[],events={},docEvents={};let t=Date.parse('2026-10-21T20:00:00Z'),failed=fail,confirmation=true,writeFault='normal';const intervals=[],timeouts=new Map();let nextTimeout=0;
  const html=fs.readFileSync(source===code?'dist/index.html':'tests/fixtures/original.html','utf8');
- const node=id=>{if(!id.startsWith('download')&&!html.includes('id="'+id+'"'))throw Error('Missing real DOM element: '+id);if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,classList:{toggle(){},add(){},remove(){}},addEventListener(n,f){this[n]=f},remove(){},click(){if(this.download)downloads.push(this.href);else if(!this.disabled)this.onclick?.()}});return nodes.get(id)};
+ const node=id=>{if(!id.startsWith('download')&&!html.includes('id="'+id+'"'))throw Error('Missing real DOM element: '+id);if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,classList:{toggle(name,on){this[name]=on},add(name){this[name]=true},remove(name){this[name]=false},contains(name){return !!this[name]}},addEventListener(n,f){this[n]=f},remove(){},click(){if(this.download)downloads.push(this.href);else if(!this.disabled)this.onclick?.()}});return nodes.get(id)};
  const document={hidden:false,getElementById:node,createElement:()=>node('download'+downloads.length),body:{append(){}},addEventListener:(n,f)=>docEvents[n]=f};
  const store={getItem:k=>data.get(k)??null,setItem:(k,v)=>{if(failed)throw Error('simulated quota');if(writeFault==='drop')return;if(writeFault==='corrupt'){data.set(k,'simulated unexpected storage bytes');return}data.set(k,v)},removeItem:k=>data.delete(k)};
  let blobs=new Map(),id=0,recognition;const recognitionResults=new WeakMap();
@@ -297,6 +297,7 @@ test('heart icon shows fresh Bluetooth samples, age resets even at unchanged BPM
  assert.equal(r.node('hrLiveValue').textContent,'—','stale BPM cannot look live');
  assert.equal(r.node('liveBpm').textContent,'— BPM');
  assert.match(r.node('hrSignalAge').textContent,/SIGNAL STALE.*16s/);
+ assert.equal(r.node('monitorDetails').open,true,'show reconnect controls when the preflight signal expires');
  r.click('start');
  assert.equal(r.read('db.active'),null,'stale reading must not pass start gate');
 });

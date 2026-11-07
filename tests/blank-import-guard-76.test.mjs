@@ -28,7 +28,7 @@ test('blank fictional import cannot overwrite populated goals or decisions',asyn
 });
 test('nonblank fictional import still requires confirmation and persists',async()=>{
   const f=fixture();
-  await f.context.importFile({text:async()=>JSON.stringify({goals:[{id:'fictional-goal-2'}],decision_register:[]})});
+  await f.context.importFile({text:async()=>JSON.stringify({goals:[{id:'fictional-goal-2'}],decision_register:[{id:'fictional-decision-2'}]})});
   assert.equal(f.confirms(),1);
   assert.equal(f.writes(),1);
   assert.equal(JSON.parse(f.read()).goals[0].id,'fictional-goal-2');

@@ -36,9 +36,19 @@ test('populated decisions survive missing decision register', async()=>{
   assert.equal(events.saved,0);
 });
 
-test('nonempty imported decisions can replace only after confirmation', async()=>{
-  const {after,events}=await attempt({goals:[{id:'fictional-other'}],decision_register:[{id:'fictional-new-decision'}]});
-  assert.equal(after.decision_register[0].id,'fictional-new-decision');
-  assert.equal(events.confirmed,1);
-  assert.equal(events.saved,1);
+test('different nonempty decision ID cannot replace historical approval', async()=>{
+  const {original,after,events}=await attempt({goals:[{id:'fictional-other'}],decision_register:[{id:'fictional-new-decision'}]});
+  assert.deepEqual(after,original);assert.equal(events.saved,0);assert.equal(events.confirmed,0);
+});
+test('same decision ID with changed status is rejected', async()=>{
+  const {original,after,events}=await attempt({goals:[{id:'fictional-other'}],decision_register:[{id:'fictional-decision',status:'rejected'}]});
+  assert.deepEqual(after,original);assert.equal(events.saved,0);
+});
+test('duplicate imported decision IDs are rejected before confirmation', async()=>{
+  const {original,after,events}=await attempt({goals:[{id:'fictional-other'}],decision_register:[{id:'fictional-decision'},{id:'fictional-decision'}]});
+  assert.deepEqual(after,original);assert.equal(events.saved,0);assert.equal(events.confirmed,0);
+});
+test('preserving original decisions while adding a new decision can proceed with confirmation', async()=>{
+  const {after,events}=await attempt({goals:[{id:'fictional-other'}],decision_register:[{id:'fictional-decision'},{id:'fictional-new-decision'}]});
+  assert.equal(after.decision_register.length,2);assert.equal(events.confirmed,1);assert.equal(events.saved,1);
 });

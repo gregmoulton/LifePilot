@@ -7,7 +7,24 @@
   'use strict';
   const answers = new Map();
   let last = null, replaying = false, asked = false;
-  const remember = e => { if (!replaying && e.isTrusted) last = { type: e.type, target: e.target }; };
+  const remember = e => {
+    if (replaying || !e.isTrusted || e.target.closest?.('#previewDialog')) return;
+    let target = e.target;
+    if (e.type === 'click') target = target.closest?.('button,a,input,[onclick],[data-action]') || target;
+    // The app re-renders after a cancelled action, so keep what is needed to find the live copy.
+    const values = e.type === 'submit' ? [...target.querySelectorAll('[id]')].map(el => [el.id, el.type === 'checkbox' || el.type === 'radio' ? el.checked : el.value]) : null;
+    last = { type: e.type, target, values };
+  };
+  const sameAttr = (el, t, a) => el.getAttribute(a) === t.getAttribute(a);
+  function live(t) {
+    if (t.isConnected && !t.disabled) return t;
+    if (t.id && document.getElementById(t.id)) return document.getElementById(t.id);
+    const tag = t.tagName;
+    const pool = [...document.querySelectorAll(tag)];
+    if (t.hasAttribute('data-action')) return pool.find(el => sameAttr(el, t, 'data-action') && sameAttr(el, t, 'data-id')) || null;
+    for (const a of ['onclick', 'onsubmit']) if (t.hasAttribute(a)) return pool.find(el => sameAttr(el, t, a) && el.textContent === t.textContent) || pool.find(el => sameAttr(el, t, a)) || null;
+    return null;
+  }
   ['click', 'submit', 'change'].forEach(t => document.addEventListener(t, remember, true));
 
   function bar() {
@@ -27,9 +44,13 @@
     const { type, target } = last;
     replaying = true; asked = false;
     try {
-      if (type === 'submit') (target.requestSubmit ? target.requestSubmit() : target.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-      else if (type === 'change') target.dispatchEvent(new Event('change', { bubbles: true }));
-      else target.click();
+      if (type === 'change') { target.dispatchEvent(new Event('change', { bubbles: true })); return; } // original node still holds the chosen file
+      const el = live(target);
+      if (!el) { show('alert', 'The screen changed. Please repeat the action.'); return; }
+      if (type === 'submit') {
+        for (const [id, v] of last.values || []) { const f = el.querySelector('#' + CSS.escape(id)); if (f) { if (typeof v === 'boolean') f.checked = v; else f.value = v; } }
+        el.requestSubmit ? el.requestSubmit() : el.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      } else el.click();
     } finally {
       replaying = false;
       // Chain finished without a new question: never reuse these answers for another action.

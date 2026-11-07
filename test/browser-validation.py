@@ -275,7 +275,7 @@ class BrowserValidation(unittest.TestCase):
         self.assertEqual(self.saved(), winning)
         self.assertIn('Another tab changed',b.locator('#storageMessage').inner_text())
 
-    def test_existing_recovery_copy_is_never_overwritten(self):
+    def test_existing_recovery_copy_is_kept_in_history(self):
         raw = json.dumps(fictional_profile())
         self.page.evaluate("""([key,raw]) => {
           localStorage.setItem(key,'FICTIONAL corrupt current');
@@ -287,11 +287,52 @@ class BrowserValidation(unittest.TestCase):
         self.assertEqual(self.saved(),'FICTIONAL corrupt current')
         self.page.once('dialog',lambda d:d.accept())
         self.page.get_by_role('button',name='Restore previous backup',exact=True).first.click()
-        self.page.evaluate('transactionQueue')
-        self.assertIn('earlier recovery copy',self.page.locator('#storageMessage').inner_text())
-        self.assertEqual(self.saved(),'FICTIONAL corrupt current')
-        self.assertEqual(self.download('Download pre-recovery data').read_text(),'FICTIONAL earlier recovery')
-        self.assertEqual(self.download('Download stored data').read_text(),'FICTIONAL corrupt current')
+        self.page.evaluate('transactionQueue'); self.page.wait_for_function('(k)=>localStorage.getItem(k)!=="FICTIONAL corrupt current"', arg=KEY)
+        self.assertEqual(json.loads(self.saved()), json.loads(raw))
+        history = json.loads(self.page.evaluate("(k)=>localStorage.getItem(k+':recovery-history')", KEY))
+        self.assertEqual([e['bytes'] for e in history], ['FICTIONAL earlier recovery','FICTIONAL corrupt current'])
+        archive = json.loads(self.download('Download recovery archive').read_text())
+        self.assertEqual([c['bytes'] for c in archive['copies']], ['FICTIONAL earlier recovery','FICTIONAL corrupt current'])
+
+    def test_full_recovery_history_requires_archive_and_confirmation(self):
+        raw = json.dumps(fictional_profile())
+        history = json.dumps([{'at': None, 'bytes': 'FICTIONAL damaged %d' % i} for i in range(1, 6)])
+        self.page.evaluate("""([key,raw,history]) => {
+          localStorage.setItem(key,'FICTIONAL damaged 6');
+          localStorage.setItem(key+':last-good',raw);
+          localStorage.setItem(key+':recovery-history',history);
+          localStorage.setItem(key+':recovery-original','FICTIONAL damaged 5');
+        }""", [KEY,raw,history])
+        self.page.reload()
+        snapshot = lambda: self.page.evaluate('()=>JSON.stringify(Object.entries(localStorage).sort())')
+        before = snapshot()
+        # Full: recovery is refused and nothing changes.
+        self.page.once('dialog',lambda d:d.accept())
+        self.page.get_by_role('button',name='Restore previous backup',exact=True).first.click(); self.page.evaluate('transactionQueue')
+        self.assertIn('Recovery history is full', self.page.locator('#storageMessage').inner_text())
+        self.assertEqual(snapshot(), before)
+        # Removing older copies before downloading the archive is refused.
+        self.page.get_by_role('button',name='Remove older recovery copies',exact=True).click(); self.page.evaluate('transactionQueue')
+        self.assertIn('Download the recovery archive first', self.page.locator('#storageMessage').inner_text())
+        self.assertEqual(snapshot(), before)
+        archive = json.loads(self.download('Download recovery archive').read_text())
+        self.assertEqual(len(archive['copies']), 5)
+        # Declining the confirmation removes nothing.
+        self.page.once('dialog',lambda d:d.dismiss())
+        self.page.get_by_role('button',name='Remove older recovery copies',exact=True).click(); self.page.evaluate('transactionQueue')
+        self.assertEqual(snapshot(), before)
+        # Confirming keeps the newest copy, then recovery works and survives reload.
+        self.page.once('dialog',lambda d:d.accept())
+        self.page.get_by_role('button',name='Remove older recovery copies',exact=True).click(); self.page.evaluate('transactionQueue')
+        kept = json.loads(self.page.evaluate("(k)=>localStorage.getItem(k+':recovery-history')", KEY))
+        self.assertEqual([e['bytes'] for e in kept], ['FICTIONAL damaged 5'])
+        self.page.once('dialog',lambda d:d.accept())
+        self.page.get_by_role('button',name='Restore previous backup',exact=True).first.click(); self.page.evaluate('transactionQueue')
+        self.page.wait_for_function('(k)=>localStorage.getItem(k)!=="FICTIONAL damaged 6"', arg=KEY)
+        self.page.reload()
+        self.assertEqual(json.loads(self.saved()), json.loads(raw))
+        kept = json.loads(self.page.evaluate("(k)=>localStorage.getItem(k+':recovery-history')", KEY))
+        self.assertEqual([e['bytes'] for e in kept], ['FICTIONAL damaged 5','FICTIONAL damaged 6'])
 
     def test_execution_result_cannot_bypass_agenda_hold(self):
         self.seed(); self.agenda()

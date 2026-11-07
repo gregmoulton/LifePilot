@@ -9,6 +9,7 @@
   const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
   const collection = value => Array.isArray(value) && value.every(object);
   const copy = value => value === null ? null : JSON.parse(JSON.stringify(value));
+  const MAX_RECOVERY = 5;
   function validProfile(value) {
     if (!object(value) || !collection(value.goals)) return false;
     for (const goal of value.goals) for (const key of ['known_context', 'next_actions']) {
@@ -95,6 +96,46 @@
         return write(next);
       });
     }
+    // Recovery history: every profile replaced by a recovery is kept, oldest first,
+    // up to MAX_RECOVERY copies. Copies are never overwritten or removed silently.
+    // ':recovery-original' (the earlier single slot) mirrors the newest copy so older
+    // builds still find it; anything already in it is carried into the history first.
+    const HISTORY = key + ':recovery-history', LEGACY = key + ':recovery-original';
+    function readHistory() {
+      const raw = storage.getItem(HISTORY), legacy = storage.getItem(LEGACY);
+      let list = [];
+      if (raw !== null) {
+        try { list = JSON.parse(raw); } catch (_) { list = null; }
+        if (!Array.isArray(list) || !list.every(entry => object(entry) && typeof entry.bytes === 'string')) {
+          throw failure('Recovery history could not be read. It has not been changed. Download the recovery archive before continuing.');
+        }
+      }
+      if (legacy !== null && !list.some(entry => entry.bytes === legacy)) list = [{ at: null, bytes: legacy }, ...list];
+      return list;
+    }
+    function putVerified(itemKey, text) {
+      try { storage.setItem(itemKey, text); } catch (error) {
+        const quota = /quota/i.test(String(error && (error.name + ' ' + error.message)));
+        throw failure(quota
+          ? 'Not enough browser storage to keep another recovery copy. Download the recovery archive, then remove older copies. Nothing was changed.'
+          : 'Could not preserve the original data. Nothing was changed.');
+      }
+      let actual; try { actual = storage.getItem(itemKey); } catch (_) { actual = undefined; }
+      if (actual !== text) throw failure('Could not verify the recovery copy. Nothing was changed.');
+    }
+    function putBack(itemKey, previous) {
+      try { if (previous === null) storage.removeItem(itemKey); else storage.setItem(itemKey, previous); } catch (_) { /* original profile is still untouched */ }
+    }
+    function saveHistory(list) {
+      const previousHistory = storage.getItem(HISTORY), previousLegacy = storage.getItem(LEGACY);
+      try {
+        putVerified(HISTORY, JSON.stringify(list));
+        if (list.length) putVerified(LEGACY, list[list.length - 1].bytes);
+      } catch (error) {
+        putBack(HISTORY, previousHistory); putBack(LEGACY, previousLegacy);
+        throw error;
+      }
+    }
     // Called only after a separate, explicit recovery confirmation in the UI.
     async function restore(candidate, backupSource) {
       if (!hasLocks()) throw failure(lockReason);
@@ -103,30 +144,54 @@
       return withStorageLock(() => {
         assertCurrent();
         if (backupSource !== undefined && storage.getItem(key + ':last-good') !== backupSource) throw failure('The previous backup changed. Reload before restoring.');
-        // Preserve the exact replaced bytes in a separate slot, never overwrite an
-        // earlier recovery copy. Failed preservation means no profile replacement.
+        // Preserve the exact replaced bytes before replacing anything.
+        // Failed preservation means no profile replacement.
         if (expected !== null) {
-          const prior = storage.getItem(key + ':recovery-original');
-          if (prior !== null && prior !== expected) throw failure('An earlier recovery copy already exists. Download it and the current data before requesting further recovery.');
-          storage.setItem(key + ':recovery-original', expected);
-          if (storage.getItem(key + ':recovery-original') !== expected) throw failure('Could not preserve the original data. Nothing was restored.');
+          const history = readHistory();
+          if (!history.some(entry => entry.bytes === expected)) {
+            if (history.length >= MAX_RECOVERY) throw failure('Recovery history is full (' + MAX_RECOVERY + ' copies). Download the recovery archive, then confirm removing older copies. Nothing was restored.');
+            saveHistory([...history, { at: new Date().toISOString(), bytes: expected }]);
+          }
         }
         const result = write(next);
         blocked = false; reason = '';
         return result;
       });
     }
+    // Removes all but the newest recovery copy. The caller must pass the history
+    // fingerprint taken when the archive was downloaded; any change since then refuses.
+    async function pruneRecovery(archivedFingerprint) {
+      if (!hasLocks()) throw failure(lockReason);
+      return withStorageLock(() => {
+        const history = readHistory();
+        if (typeof archivedFingerprint !== 'string' || JSON.stringify(history) !== archivedFingerprint) {
+          throw failure('Recovery copies changed since the archive was downloaded. Download the recovery archive again. Nothing was removed.');
+        }
+        if (history.length <= 1) return history.length;
+        saveHistory(history.slice(-1));
+        return 1;
+      });
+    }
+    function recoveryArchive() {
+      let copies, unreadable = null;
+      try { copies = readHistory(); } catch (_) { copies = []; unreadable = storage.getItem(HISTORY); }
+      return {
+        fingerprint: unreadable === null ? JSON.stringify(copies) : null,
+        text: JSON.stringify({ product: 'Life Pilot', kind: 'recovery-archive', exported_at: new Date().toISOString(), copies, unreadable_history: unreadable }, null, 2)
+      };
+    }
     return {
       get value() { return copy(value); },
       get blocked() { return blocked; },
       get writable() { return !blocked && !!hasLocks(); },
       get reason() { return reason || (!hasLocks() ? lockReason : ''); },
-      commit, restore,
+      commit, restore, pruneRecovery, recoveryArchive,
       raw() { return storage.getItem(key); },
       backup() { return storage.getItem(key + ':last-good'); },
-      recoveryOriginal() { return storage.getItem(key + ':recovery-original'); }
+      recoveryOriginal() { return storage.getItem(LEGACY); },
+      recoveryCount() { try { return readHistory().length; } catch (_) { return null; } }
     };
   }
-  return { open, validProfile };
+  return { open, validProfile, MAX_RECOVERY };
 });
 

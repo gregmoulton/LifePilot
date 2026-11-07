@@ -69,8 +69,11 @@ test('restore rejects invalid data and preserves an earlier recovery copy', asyn
   const f = fixture(); f.map.set(key, 'BROKEN'); const store = f.open();
   await assert.rejects(store.restore({ goals: [null] })); assert.equal(f.map.get(key), 'BROKEN');
   f.map.set(key + ':recovery-original', 'EARLIER-RECOVERY');
-  await assert.rejects(store.restore(profile('new')), /earlier recovery/);
-  assert.equal(f.map.get(key), 'BROKEN'); assert.equal(store.recoveryOriginal(), 'EARLIER-RECOVERY');
+  await store.restore(profile('new'));
+  // The earlier copy is carried into recovery history, never overwritten away.
+  const copies = JSON.parse(f.map.get(key + ':recovery-history')).map(entry => entry.bytes);
+  assert.deepEqual(copies, ['EARLIER-RECOVERY', 'BROKEN']);
+  assert.equal(store.recoveryOriginal(), 'BROKEN');
 });
 test('restore failure at preservation or main write keeps original and previous backup', async () => {
   for (const failKey of [key + ':recovery-original', key]) {

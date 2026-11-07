@@ -86,12 +86,15 @@ with sync_playwright() as p:
     check("After reload the agenda shows restored work in every section",
           all(s in ws for s in ["Carryover", "HOLD", "Unscheduled", "Upcoming"]) and "Fictional task 1" in ws, ws[:400])
 
-    # Known gap: a second recovery on the same device is refused (single recovery slot). Data must stay untouched.
+    # Second recovery on the same device (formerly impossible): works, and both damaged copies are kept.
     pg.evaluate("([k,v])=>localStorage.setItem(k,v)", [KEY, "{broken"]); pg.reload(); pg.wait_for_load_state("networkidle")
-    pg.get_by_role("button", name="Restore previous backup").first.click(); pg.wait_for_timeout(500)
-    msg = pg.locator("body").inner_text()
-    check("Second recovery on same device is refused without touching data (KNOWN GAP: no way forward)",
-          "earlier recovery copy already exists" in msg and pg.evaluate("k=>localStorage.getItem(k)", KEY) == "{broken")
+    pg.get_by_role("button", name="Restore previous backup").first.click(); pg.evaluate("transactionQueue"); pg.wait_for_timeout(300)
+    second = pg.evaluate("k=>localStorage.getItem(k)", KEY)
+    check("Second recovery on same device succeeds", second != "{broken" and len(json.loads(second)["execution"]["tasks"]) == 400)
+    hist = json.loads(pg.evaluate("k=>localStorage.getItem(k+':recovery-history')", KEY) or "[]")
+    check("Both damaged copies kept in recovery history", [e["bytes"] for e in hist] == [damaged, "{broken"], [e["bytes"][:20] for e in hist])
+    pg.reload(); pg.wait_for_load_state("networkidle")
+    check("Recovery history survives reload", len(json.loads(pg.evaluate("k=>localStorage.getItem(k+':recovery-history')", KEY))) == 2)
 
     # Path 2: restore from a backup file, on a device with no earlier recovery.
     tmp = tempfile.mkdtemp(); fpath = os.path.join(tmp, "LifePilot_backup_fictional.json")

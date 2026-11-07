@@ -22,11 +22,39 @@ function downloadLocalData(text, filename) {
   link.href = url; link.download = filename; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+// Fingerprint of the recovery copies in the archive the user last downloaded.
+// Removing older copies is only possible against exactly that set.
+let recoveryArchivedFingerprint = null;
 function exportRecovery(kind) {
   try {
+    if (kind === 'archive') {
+      const archive = profileStore.recoveryArchive();
+      downloadLocalData(archive.text, 'LifePilot_Recovery_Archive_' + new Date().toISOString().slice(0, 10) + '.json');
+      recoveryArchivedFingerprint = archive.fingerprint;
+      return;
+    }
     const text = kind === 'unsaved' ? JSON.stringify(unsavedProfile, null, 2) : kind === 'backup' ? profileStore.backup() : kind === 'original' ? profileStore.recoveryOriginal() : profileStore.raw();
     downloadLocalData(text, 'LifePilot_' + kind + '_Recovery.json');
   } catch (_) { storageWarning('Browser storage is unavailable. Keep this page open and allow browser storage before trying again.'); }
+}
+function pruneRecoveryHistory() {
+  const run = async () => {
+    const count = profileStore.recoveryCount();
+    if (count === null) { storageWarning('Recovery history could not be read. Download the recovery archive; nothing will be removed.'); return; }
+    if (count <= 1) { storageWarning('There are no older recovery copies to remove.'); return; }
+    if (recoveryArchivedFingerprint === null) { storageWarning('Download the recovery archive first. Older copies can only be removed after you have saved them.'); return; }
+    if (!confirm('Remove ' + (count - 1) + ' older recovery copies from this browser? They are in the recovery archive you downloaded. The newest copy is kept.')) return;
+    try {
+      await profileStore.pruneRecovery(recoveryArchivedFingerprint);
+      recoveryArchivedFingerprint = null;
+      storageWarning('Older recovery copies removed. The newest copy is kept, and the archive you downloaded holds the rest.');
+    } catch (error) {
+      storageWarning(error.name === 'LifePilotStorageError' ? error.message : 'Nothing was removed. Download the recovery archive and try again.');
+    }
+  };
+  const operation = transactionQueue.then(run);
+  transactionQueue = operation.catch(() => {});
+  return operation;
 }
 render = function () { if (!transactionRunning) originalRender(); };
 notify = function (message) { if (transactionRunning) deferredNotices.push(message); else originalNotify(message); };

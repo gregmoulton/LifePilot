@@ -22,17 +22,21 @@ test('classification never mutates caller-provided bytes', () => {
   assert.equal(raw,'{"goals":[{"id":"fictional-1"}]}');
 });
 
-test('v0.4 startup never silently discards unrecognized saved bytes', async () => {
+test('startup never silently discards unrecognized saved bytes (integrated storage.js)', async () => {
   const {readFileSync} = await import('node:fs');
+  const {createRequire} = await import('node:module');
+  const Storage = createRequire(import.meta.url)('../storage.js');
+  for (const raw of ['{not json', '{"goals":"wrong-shape"}', '[1,2,3]']) {
+    let value = raw, writes = 0;
+    const storage = {getItem: () => value, setItem: v => { writes++; value = v; }, removeItem: () => { writes++; value = null; }};
+    const handle = Storage.open({storage, key: 'lifepilot-v02-profile', locks: {request: (n, f) => f()}});
+    assert.equal(writes, 0, 'opening must not write');
+    assert.equal(value, raw, 'original bytes preserved: ' + raw);
+    assert.equal(handle.blocked, true, 'unreadable profile must block saving');
+    assert.equal(handle.writable, false);
+  }
   const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /storageProblem='invalid-json'/);
-  assert.match(html, /storageProblem='invalid-shape'/);
-  assert.match(html, /Download original backup/);
-  assert.match(html, /new Blob\(\[raw\]/);
-  assert.doesNotMatch(html, /storageProblem=null;render\(\);alert\('Original backup download requested/);
-  assert.match(html, /Saved profile remains protected/);
-  assert.match(html, /if\(storageProblem\)\{alert\('Download the original saved profile before replacing it/);
-  assert.match(html, /if\(storageProblem\)\{alert\('Download the original saved profile before importing/);
+  assert.match(html, /exportRecovery\('stored'\)/);
   const scripts = [...html.matchAll(/<script(?: [^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]);
   assert.ok(scripts.length >= 2);
   for (const script of scripts) new Function(script);

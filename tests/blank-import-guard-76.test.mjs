@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+
+const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const start=html.indexOf('async function importFile(file)');
+const end=html.indexOf('function switchProfile()',start);
+assert.ok(start>=0&&end>start,'legacy import source exists');
+const source=html.slice(start,end);
+
+function fixture(){
+  const initial={goals:[{id:'fictional-goal-1',name:'Example'}],decision_register:[{id:'fictional-decision-1'}]};
+  let raw=JSON.stringify(initial),writes=0,confirms=0;
+  const alerts=[];
+  const context={profile:JSON.parse(raw),storageProblem:null,alert:s=>alerts.push(s),confirm:()=>{confirms++;return true;},
+    save:()=>{writes++;raw=JSON.stringify(context.profile)},tab:'dashboard',render:()=>{},notify:()=>{},uid:()=> 'synthetic-id'};
+  vm.runInNewContext(source,context);
+  return {context,alerts,read:()=>raw,writes:()=>writes,confirms:()=>confirms};
+}
+test('blank fictional import cannot overwrite populated goals or decisions',async()=>{
+  const f=fixture(),original=f.read();
+  await f.context.importFile({text:async()=>JSON.stringify({goals:[],decision_register:[]})});
+  assert.equal(f.read(),original);
+  assert.equal(f.writes(),0);
+  assert.equal(f.confirms(),0);
+  assert.match(f.alerts.join(' '),/Blank import refused/);
+});
+test('nonblank fictional import still requires confirmation and persists',async()=>{
+  const f=fixture();
+  await f.context.importFile({text:async()=>JSON.stringify({goals:[{id:'fictional-goal-2'}],decision_register:[]})});
+  assert.equal(f.confirms(),1);
+  assert.equal(f.writes(),1);
+  assert.equal(JSON.parse(f.read()).goals[0].id,'fictional-goal-2');
+});

@@ -37,8 +37,8 @@
   // Owner decisions that an ordinary import must carry over unchanged: the decision
   // register, Agenda rejections, and Agenda proposals the owner already approved or rejected.
   // Returns a list of human-readable problems; empty means nothing would be lost.
-  function retentionProblems(current, incoming) {
-    if (!object(current)) return [];
+  // Shared comparison helpers. Each checker collects human-readable problems.
+  function checker() {
     const problems = [];
     const list = (value, name) => {
       if (value === undefined) return [];
@@ -61,12 +61,29 @@
         else problems.push(name + ' ' + (id ?? '#' + (index + 1)) + ' would be removed');
       });
     }
+    return { problems, list, keepAll };
+  }
+  function retentionProblems(current, incoming) {
+    if (!object(current)) return [];
+    const { problems, list, keepAll } = checker();
     keepAll(list(current.decision_register, 'Existing decisions'), list(incoming?.decision_register, 'Imported decision register'), 'Decision', true);
     const agenda = object(current.agenda) ? current.agenda : {}, nextAgenda = object(incoming?.agenda) ? incoming.agenda : {};
     keepAll(list(agenda.rejections, 'Existing Agenda rejections'), list(nextAgenda.rejections, 'Imported Agenda rejections'), 'Agenda rejection', false);
     const settled = list(agenda.proposals, 'Existing Agenda proposals').filter(p => object(p) && SETTLED_PROPOSALS.includes(p.status));
     const arrivingSettled = list(nextAgenda.proposals, 'Imported Agenda proposals').filter(p => object(p) && SETTLED_PROPOSALS.includes(p.status));
     keepAll(settled, arrivingSettled, 'Agenda decision', true);
+    return problems;
+  }
+  // The same shape the app stores after an import, so a re-exported goal compares equal.
+  const normalGoal = goal => object(goal) ? { ...goal, status: goal.status || 'active', known_context: Array.isArray(goal.known_context) ? goal.known_context : [], next_actions: Array.isArray(goal.next_actions) ? goal.next_actions : [] } : goal;
+  // An ordinary import must carry over every existing goal unchanged (same ID and content).
+  // It may add new goals. Replacing goals on purpose goes through Restore from a backup.
+  function goalProblems(current, incoming) {
+    if (!object(current)) return [];
+    const { problems, list, keepAll } = checker();
+    const existing = list(current.goals, 'Existing goals').map(normalGoal);
+    const arriving = list(incoming?.goals, 'Imported goals').map(normalGoal);
+    keepAll(existing, arriving, 'Goal', true);
     return problems;
   }
   function open({ storage, key, locks }) {
@@ -234,6 +251,6 @@
       recoveryCount() { try { return readHistory().length; } catch (_) { return null; } }
     };
   }
-  return { open, validProfile, retentionProblems, canonical, MAX_RECOVERY };
+  return { open, validProfile, retentionProblems, goalProblems, canonical, MAX_RECOVERY };
 });
 

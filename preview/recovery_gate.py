@@ -38,7 +38,8 @@ with sync_playwright() as p:
     g0, dec0 = base["goals"][0], base["decision_register"][0]
     t0 = base["execution"]["tasks"][0]
     big = json.loads(json.dumps(base))
-    big["goals"] = [dict(json.loads(json.dumps(g0)), id=f"fg-{i}", name=f"Fictional goal {i}") for i in range(40)]
+    # The app-recorded goal is kept too: an ordinary import must not drop or change existing goals.
+    big["goals"] = [g0] + [dict(json.loads(json.dumps(g0)), id=f"fg-{i}", name=f"Fictional goal {i}") for i in range(39)]
     # The app-recorded decision is kept: an ordinary import must not drop or change existing decisions.
     big["decision_register"] = [dec0] + [dict(json.loads(json.dumps(dec0)), id=f"fd-{i}", decision=f"Fictional decision {i}") for i in range(59)]
     tasks = []

@@ -47,7 +47,7 @@ test('unrelated nonempty decisions cannot silently replace existing ones', async
 });
 
 test('imported decisions that keep existing ones and add new ones persist after confirmation', async()=>{
-  const {after,events}=await attempt({goals:[{id:'fictional-other'}],decision_register:[{id:'fictional-decision'},{id:'fictional-new-decision'}]});
+  const {after,events}=await attempt({goals:[{id:'fictional-goal'},{id:'fictional-other'}],decision_register:[{id:'fictional-decision'},{id:'fictional-new-decision'}]});
   assert.deepEqual(after.decision_register.map(d=>d.id),['fictional-decision','fictional-new-decision']);
   assert.equal(events.confirmed,1);
   assert.equal(events.saved,1);

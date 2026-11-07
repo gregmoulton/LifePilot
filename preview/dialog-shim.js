@@ -87,6 +87,12 @@
     }
     el.appendChild(row);
     (input || ok).focus();
+    if (input) {
+      // Like a native prompt: the default is selected, so typing replaces it
+      // (also after the first tap, which on phones would otherwise drop the selection).
+      input.select();
+      input.addEventListener('pointerup', () => setTimeout(() => input.select(), 0), { once: true });
+    }
   }
   window.alert = msg => show('alert', msg);
   window.confirm = msg => {

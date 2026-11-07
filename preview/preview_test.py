@@ -47,7 +47,10 @@ try:
             pg.fill("#agendaName", n); pg.get_by_role("button", name="Today", exact=True).click(); pg.locator("#agendaName").evaluate("e=>e.form.requestSubmit()")
         card("Fictional A").locator("button[data-action='complete']").click()
         check("Minutes bar shown instead of native prompt", settled(expect(bar).to_be_visible))
-        pg.fill("#previewDialogInput", "20"); pg.get_by_role("button", name="Continue").click()
+        # Tap the box and type, as a person would: the default 0 must be replaced, not kept as "020".
+        pg.tap("#previewDialogInput"); pg.keyboard.type("20")
+        check("Typing replaces the default 0", pg.locator("#previewDialogInput").input_value() == "20")
+        pg.get_by_role("button", name="Continue").click()
         check("Minutes bar closes after Continue", settled(expect(bar).to_be_hidden))
         check("Fictional A completed with 20 min", settled(expect(card("Fictional A")).to_contain_text, "20 actual min"))
         # A second complete must ask again: no answer from Fictional A may leak into it.

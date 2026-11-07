@@ -1,0 +1,24 @@
+name: Agent blank import guard #76
+on:
+  push:
+    branches:
+      - 'agent-output/blank-import-guard-76-20261105'
+      - 'agent-output/guard-import-ids-decisions-76-20261106'
+      - 'agent-output/guard-empty-decisions-76-20261106'
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'tests/blank-import-guard-76.test.mjs'
+      - '.github/workflows/agent-blank-import-76.yml'
+permissions:
+  contents: read
+jobs:
+  fictional-blank-import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify blank import guard with fabricated data
+        run: node --test tests/blank-import-guard-76.test.mjs tests/retention-diagnostic-76.test.mjs tests/empty-decision-import-76.test.mjs

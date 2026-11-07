@@ -1,0 +1,57 @@
+name: Life Pilot profile storage checks
+on:
+  pull_request:
+    branches: [main, 'fix/**', 'feature/**', 'test/**']
+    paths:
+      - index.html
+      - execution.js
+      - forward-radar.js
+      - agenda-model.js
+      - agenda.js
+      - storage.js
+      - persistence.js
+      - 'test/**'
+      - 'tests/**'
+      - 'preview/**'
+      - .github/workflows/lifepilot-storage-tests.yml
+concurrency:
+  group: lifepilot-storage-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  profile-storage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: TZ=America/Phoenix node test/radar-original.cjs
+      - run: node --test test/*.test.cjs prime-workout/structure.test.mjs prime-workout/regression.test.mjs
+  browser-storage:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    env:
+      LIFEPILOT_BROWSER: ${{ matrix.browser }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install playwright==1.62.0
+      - name: Install WebKit system dependencies
+        if: matrix.browser == 'webkit'
+        run: python -m playwright install-deps webkit
+      - run: python -m playwright install ${{ matrix.browser }}
+      - run: python test/browser-validation.py
+      # P0 browser gates (Chromium-only scripts): unreadable storage, refused
+      # imports incl. decision identity, and populated-backup recovery.
+      - if: matrix.browser == 'chromium'
+        run: python preview/p0_storage_gate.py .
+      - if: matrix.browser == 'chromium'
+        run: python preview/recovery_gate.py .

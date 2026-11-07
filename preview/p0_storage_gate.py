@@ -32,5 +32,15 @@ with sync_playwright() as p:
     pg.reload(); pg.wait_for_load_state("networkidle")
     after=pg.evaluate("()=>JSON.stringify(Object.fromEntries(Object.entries(localStorage)))")
     check("4 invalid imports + reload leave all stored data and backups unchanged", before==after, after[:200])
+    # Decision identity: a nonempty register that drops, changes or duplicates d1 is refused, with no replace prompt.
+    prompts=[]; pg.on("dialog",lambda dl:prompts.append(dl.type))
+    for lossy in [{"goals":[{"id":"g2"}],"decision_register":[{"id":"d2","decision":"Unrelated fictional decision"}]},
+                  {"goals":[{"id":"g1","name":"Fictional goal"}],"decision_register":[{"id":"d1","decision":"Fictional decision","status":"rejected"}]},
+                  {"goals":[{"id":"g1","name":"Fictional goal"}],"decision_register":[{"id":"d1","decision":"Fictional decision"},{"id":"d1","decision":"Fictional copy"}]}]:
+        pg.evaluate("t=>importFile({text:async()=>t})",json.dumps(lossy)); pg.wait_for_timeout(250)
+    pg.reload(); pg.wait_for_load_state("networkidle")
+    after=pg.evaluate("()=>JSON.stringify(Object.fromEntries(Object.entries(localStorage)))")
+    check("3 decision-losing imports (replaced, modified, duplicated) + reload leave storage byte-for-byte unchanged", before==after, after[:200])
+    check("Decision-losing imports never reach the replace confirmation", "confirm" not in prompts and prompts.count("alert")==3, prompts)
     b.close()
-srv.shutdown(); print(f"{sum(res)}/{len(res)} passed")
+srv.shutdown(); print(f"{sum(res)}/{len(res)} passed"); sys.exit(0 if all(res) else 1)

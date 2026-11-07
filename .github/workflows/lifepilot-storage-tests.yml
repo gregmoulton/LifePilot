@@ -11,6 +11,8 @@ on:
       - storage.js
       - persistence.js
       - 'test/**'
+      - 'tests/**'
+      - 'preview/**'
       - .github/workflows/lifepilot-storage-tests.yml
 concurrency:
   group: lifepilot-storage-${{ github.ref }}
@@ -47,4 +49,9 @@ jobs:
         run: python -m playwright install-deps webkit
       - run: python -m playwright install ${{ matrix.browser }}
       - run: python test/browser-validation.py
-
+      # P0 browser gates (Chromium-only scripts): unreadable storage, refused
+      # imports incl. decision identity, and populated-backup recovery.
+      - if: matrix.browser == 'chromium'
+        run: python preview/p0_storage_gate.py .
+      - if: matrix.browser == 'chromium'
+        run: python preview/recovery_gate.py .

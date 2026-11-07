@@ -27,6 +27,48 @@
     }
     return true;
   }
+  // Key-order-insensitive JSON, so a re-exported record compares equal to its original.
+  function canonical(value) {
+    if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
+    if (object(value)) return '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + canonical(value[k])).join(',') + '}';
+    return JSON.stringify(value === undefined ? null : value);
+  }
+  const SETTLED_PROPOSALS = ['applied', 'rejected'];
+  // Owner decisions that an ordinary import must carry over unchanged: the decision
+  // register, Agenda rejections, and Agenda proposals the owner already approved or rejected.
+  // Returns a list of human-readable problems; empty means nothing would be lost.
+  function retentionProblems(current, incoming) {
+    if (!object(current)) return [];
+    const problems = [];
+    const list = (value, name) => {
+      if (value === undefined) return [];
+      if (!Array.isArray(value)) { problems.push(name + ' is not a list'); return []; }
+      return value;
+    };
+    const label = (record, fallback) => object(record) && typeof record.id === 'string' && record.id ? record.id : fallback;
+    const counts = (records, keyOf) => records.reduce((map, record) => map.set(keyOf(record), (map.get(keyOf(record)) || 0) + 1), new Map());
+    // Every existing record must appear in the incoming list with identical content.
+    function keepAll(existing, arriving, name, byId) {
+      const remaining = counts(arriving, canonical);
+      const arrivingIds = counts(arriving.filter(r => object(r) && typeof r.id === 'string'), r => r.id);
+      const existingIds = counts(existing.filter(r => object(r) && typeof r.id === 'string'), r => r.id);
+      for (const [id, n] of arrivingIds) if (n > 1 && n > (existingIds.get(id) || 0)) problems.push(name + ' ' + id + ' appears more than once');
+      existing.forEach((record, index) => {
+        const text = canonical(record), left = remaining.get(text) || 0;
+        if (left) { remaining.set(text, left - 1); return; }
+        const id = label(record, null);
+        if (byId && id !== null && arrivingIds.has(id)) problems.push(name + ' ' + id + ' would be changed');
+        else problems.push(name + ' ' + (id ?? '#' + (index + 1)) + ' would be removed');
+      });
+    }
+    keepAll(list(current.decision_register, 'Existing decisions'), list(incoming?.decision_register, 'Imported decision register'), 'Decision', true);
+    const agenda = object(current.agenda) ? current.agenda : {}, nextAgenda = object(incoming?.agenda) ? incoming.agenda : {};
+    keepAll(list(agenda.rejections, 'Existing Agenda rejections'), list(nextAgenda.rejections, 'Imported Agenda rejections'), 'Agenda rejection', false);
+    const settled = list(agenda.proposals, 'Existing Agenda proposals').filter(p => object(p) && SETTLED_PROPOSALS.includes(p.status));
+    const arrivingSettled = list(nextAgenda.proposals, 'Imported Agenda proposals').filter(p => object(p) && SETTLED_PROPOSALS.includes(p.status));
+    keepAll(settled, arrivingSettled, 'Agenda decision', true);
+    return problems;
+  }
   function open({ storage, key, locks }) {
     let expected, value = null, blocked = false, reason = '';
     const lockReason = 'Safe saving requires a browser with Web Locks, such as current Chrome, on HTTPS or localhost. You can still export the displayed profile.';
@@ -192,6 +234,6 @@
       recoveryCount() { try { return readHistory().length; } catch (_) { return null; } }
     };
   }
-  return { open, validProfile, MAX_RECOVERY };
+  return { open, validProfile, retentionProblems, canonical, MAX_RECOVERY };
 });
 

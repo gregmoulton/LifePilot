@@ -123,7 +123,12 @@ function restoreLocalBackup(file) {
       if (raw === null) { storageWarning('No previous backup is available. Choose a profile backup file instead.'); return; }
       const candidate = JSON.parse(raw);
       if (!LifePilotStorage.validProfile(candidate)) { storageWarning('This backup is invalid. No stored data was changed.'); return; }
-      if (!confirm('Restore this backup and replace the displayed profile? The original stored bytes will be retained as a separate recovery copy.')) return;
+      // Difference preview: name every owner decision this replacement would remove or change.
+      const lost = LifePilotStorage.retentionProblems(profileStore.value, candidate);
+      const preview = lost.length
+        ? '\n\nThis backup would remove or change ' + lost.length + ' recorded decision' + (lost.length === 1 ? '' : 's') + ':\n- ' + lost.slice(0, 8).join('\n- ') + (lost.length > 8 ? '\n- and ' + (lost.length - 8) + ' more' : '')
+        : '';
+      if (!confirm('Restore this backup and replace the displayed profile? The original stored bytes will be retained as a separate recovery copy.' + preview)) return;
       profile = await profileStore.restore(candidate, file ? undefined : raw);
       tab = 'dashboard';
       originalRender(); storageWarning('Backup restored on this device. The replaced data remains available under Download pre-recovery data.');

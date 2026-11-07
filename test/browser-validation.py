@@ -214,7 +214,7 @@ class BrowserValidation(unittest.TestCase):
         original = self.seed()
         self.page.get_by_role('button', name='Profile & Import', exact=True).click()
         self.page.once('dialog', lambda d: d.accept())
-        self.page.locator('#app input[type=file]').set_input_files(
+        self.page.locator('#app input[type=file][onchange^="importFile"]').set_input_files(
             {'name':'fictional-invalid.json', 'mimeType':'application/json', 'buffer':b'{"goals":[],"execution":{"tasks":{}}}'})
         self.wait_saved()
         self.assertEqual(self.saved(), original)

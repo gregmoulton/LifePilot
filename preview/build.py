@@ -28,6 +28,7 @@ body{background:#f3f6f8;color:#17303b;color-scheme:light}
 #previewBanner{background:#7a3b0c;color:#fff;padding:10px max(16px,calc((100vw - 1100px)/2));font:600 13px/1.4 system-ui,sans-serif}
 #previewBanner b{letter-spacing:1px}
 #previewDialog{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#102d3c;color:#fff;padding:16px max(16px,calc((100vw - 1100px)/2)) calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 18px #0004;display:grid;gap:10px}
+#previewDialog[hidden]{display:none}
 #previewDialog p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
 #previewDialog input{max-width:420px}
 #previewDialog .pd-row{display:flex;gap:9px;flex-wrap:wrap}

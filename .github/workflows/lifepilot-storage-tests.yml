@@ -55,3 +55,14 @@ jobs:
         run: python preview/p0_storage_gate.py .
       - if: matrix.browser == 'chromium'
         run: python preview/recovery_gate.py .
+      # Owner preview: build it, prove the smoke test can fail (negative
+      # control must exit nonzero), then run it for real.
+      - if: matrix.browser == 'chromium'
+        name: Owner preview smoke test (with negative control)
+        run: |
+          out="$RUNNER_TEMP/preview/out"
+          python preview/build.py "$out"
+          if LIFEPILOT_PREVIEW_NEGATIVE_CONTROL=1 python preview/preview_test.py "$out"; then
+            echo "Negative control passed: preview_test.py cannot fail" >&2; exit 1
+          fi
+          python preview/preview_test.py "$out"

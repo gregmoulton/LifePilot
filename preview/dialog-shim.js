@@ -9,6 +9,8 @@
   let last = null, replaying = false, asked = false;
   const remember = e => {
     if (replaying || !e.isTrusted || e.target.closest?.('#previewDialog')) return;
+    // A new tester action never reuses answers given for an earlier one.
+    answers.clear();
     let target = e.target;
     if (e.type === 'click') target = target.closest?.('button,a,input,[onclick],[data-action]') || target;
     // The app re-renders after a cancelled action, so keep what is needed to find the live copy.

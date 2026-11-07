@@ -4,6 +4,7 @@ on:
     branches:
       - 'agent-output/blank-import-guard-76-20261105'
       - 'agent-output/guard-import-ids-decisions-76-20261106'
+      - 'agent-output/guard-empty-decisions-76-20261106'
   pull_request:
     paths:
       - 'index.html'
@@ -20,4 +21,4 @@ jobs:
         with:
           node-version: '22'
       - name: Verify blank import guard with fabricated data
-        run: node --test tests/blank-import-guard-76.test.mjs tests/retention-diagnostic-76.test.mjs
+        run: node --test tests/blank-import-guard-76.test.mjs tests/retention-diagnostic-76.test.mjs tests/empty-decision-import-76.test.mjs

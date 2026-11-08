@@ -64,10 +64,9 @@ try:
         check("Fictional B moved to HOLD", settled(expect(card("Fictional B").locator("button[data-action='release']")).to_be_visible))
         check("No bar left open after HOLD", bar.is_hidden())
         pg.wait_for_function(STORED_HOLD, timeout=5000)
-        # Use the preview's own Reload button, as the owner will on the phone.
-        check("Reload button visible in banner", pg.locator("#previewReload").is_visible())
-        with pg.expect_navigation(): pg.locator("#previewReload").click()
-        pg.wait_for_load_state("networkidle"); pg.evaluate("showTab('agenda')")
+        # The hosted viewer blocks a page reloading itself, so the banner tells testers to use browser refresh.
+        check("Banner tells tester to refresh", pg.locator("#previewReloadHint").is_visible())
+        pg.reload(); pg.wait_for_load_state("networkidle"); pg.evaluate("showTab('agenda')")
         t = pg.locator("#agendaWorkspace").inner_text()
         check("Completed task saved with 20 min after reload", "Fictional A" in t[t.find("Completed"):] and "20 actual min" in t)
         check("Held task in HOLD after reload", "Fictional B" in t[t.find("HOLD"):t.find("Needs review")])

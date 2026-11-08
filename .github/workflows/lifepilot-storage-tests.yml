@@ -55,6 +55,15 @@ jobs:
         run: python preview/p0_storage_gate.py .
       - if: matrix.browser == 'chromium'
         run: python preview/recovery_gate.py .
+      # Deploy safety: upgrade from the production snapshot, rollback and preview
+      # isolation on an HTTPS origin. Prove the gate can fail, then run it.
+      - if: matrix.browser == 'chromium'
+        name: Upgrade / rollback / isolation gate (with negative control)
+        run: |
+          if LIFEPILOT_UPGRADE_NEGATIVE_CONTROL=1 python preview/upgrade_gate.py .; then
+            echo "Negative control passed: upgrade_gate.py cannot fail" >&2; exit 1
+          fi
+          python preview/upgrade_gate.py .
       # Owner preview: build it, prove the smoke test can fail (negative
       # control must exit nonzero), then run it for real.
       - if: matrix.browser == 'chromium'

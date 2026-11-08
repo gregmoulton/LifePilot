@@ -113,3 +113,28 @@ also includes `feature/**` so this PR stacked on #28 receives checks.
 Overall Life Pilot completion is not rebaselined. The roadmap's historical 40%
 is provisional and is not increased by these draft validation results. Development
 occurs only during active implementation sessions.
+
+## Deploy-safety gate (PR #101, Nov 8, 2026)
+
+`python3 preview/upgrade_gate.py .` models releasing PR #101 to the same HTTPS origin
+that serves the current production build. The production snapshot lives in
+`preview/fixtures/production-main/`: `index.html` and `execution.js` from `main` at
+`4710a5e`, vendored so CI needs no git history. The gate serves both builds on one
+self-signed HTTPS localhost origin and swaps the files in place, as a static host does.
+
+It checks four things:
+
+- Opening the new build over a populated production profile writes nothing.
+- Goals, decisions, execution records and unknown fields survive the first save, and
+  that save keeps the production bytes as the last-good backup.
+- Rolling back to the production build still reads the profile, and its saves keep the
+  Agenda data. Rolling forward again works.
+- The owner preview, served on another origin, sees none of the production data and
+  cannot change it.
+
+The gate uses fictional data only. Mutation checks confirmed that it fails when the
+new build writes on open or drops unknown fields. CI runs it on Chromium, with a
+negative control.
+
+Limits: this is a local HTTPS origin, not the real deployed URL. It does not read or
+test the owner's real profile, and it is not physical-device acceptance.

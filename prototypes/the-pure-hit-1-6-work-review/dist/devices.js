@@ -23,11 +23,11 @@ const PureDevices=(()=>{
    r.onend=()=>{
     if(this.r!==r||!this.running)return;this.running=false;this.listening=false;
     this.rapidEnds=this.clock()-this.startedAt<1000?this.rapidEnds+1:0;
-    if(this.wanted&&(this.rapidEnds<=12||this.clock()-this.enabledAt<10000)&&typeof this.schedule==='function'){
+    if(this.wanted&&!this.needsGesture&&typeof this.schedule==='function'){
      this.onState('Voice enabled — reconnecting microphone…');
      // Normal short Chrome recognition sessions must not disable a hands-free workout.
      // Back off repeated immediate exits, but keep a finite circuit breaker for a broken service.
-     const delay=this.rapidEnds<=3?500:Math.min(2500,500+(this.rapidEnds-3)*200);
+     const delay=this.rapidEnds<=3?500:Math.min(10000,1000+(this.rapidEnds-3)*750);
      this.restartTimer=this.schedule(()=>{this.restartTimer=null;if(this.wanted&&!this.running&&this.r===r)try{this.start()}catch(e){this.onError(e.message)}},delay);
     }else{if(this.wanted)this.needsGesture=true;this.wanted=false;this.onState('Voice disconnected. Tap Enable voice to retry.');}
    };

@@ -102,3 +102,7 @@ input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px soli
  .stat{padding:12px 9px}
  .prototype{font-size:8px}
 }
+
+/* Non-blocking PWA update message: no forced reload mid-session. */
+#pure-update-notice{position:fixed;z-index:1000;left:12px;right:12px;bottom:82px;max-width:620px;margin:auto;padding:14px 18px;border:1px solid #529a87;border-radius:14px;background:#102e30;color:#d9fff1;box-shadow:0 12px 36px #0008;font-size:13px;line-height:1.5}
+@media(min-width:761px){#pure-update-notice{bottom:20px}}

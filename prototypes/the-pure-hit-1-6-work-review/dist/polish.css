@@ -1,0 +1,108 @@
+/* The Pure visual polish — isolated review branch, no workout logic changes.
+   Restores editorial brand hierarchy from earlier prototype and retains HIT 1.6 focus mode. */
+:root{--polish-ink:#07111e;--polish-panel:#102137;--polish-line:#284059;--polish-accent:#7dd9bb;--polish-blue:#73c6ff}
+body{background:radial-gradient(ellipse 90% 35% at 60% -8%,#163554 0%,transparent 75%),#07111e;color:#f0f6ff}
+.panel{border-color:var(--polish-line);box-shadow:0 10px 30px #0002}
+.topbar{border-bottom:1px solid #29415a}
+.page-head h1{letter-spacing:-.055em}
+.page-head .eyebrow,.hero .eyebrow{letter-spacing:.19em;color:var(--polish-accent);font-weight:800}
+.hero{background:linear-gradient(125deg,#163b51,#0e2338 65%,#122b38);border:1px solid #34526b;border-radius:22px}
+.hero h2{letter-spacing:-.045em;line-height:1.08}
+.btn{transition:background-color .15s ease,transform .15s ease,border-color .15s ease}
+.btn:focus-visible,.nav-link:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #a8e9ff;outline-offset:3px}
+.btn:active{transform:scale(.985)}
+.stat strong{font-variant-numeric:tabular-nums;letter-spacing:-.045em}
+.workout-mode{background:radial-gradient(circle at 50% -5%,#173753,transparent 48%),#07111e}
+.workout-mode main{max-width:680px}
+.workout-mode .focus-header{border-bottom:1px solid #223c54;margin-bottom:14px}
+.workout-panel .focus-meta{margin:4px 0 14px}
+#focusRound{font-size:12px;letter-spacing:.18em;color:#b4cbe1}
+.hr-pill{border:1px solid #3b7b6a;background:#10362e;color:#a0f0cf;box-shadow:0 0 24px #42bd8820}
+#focusTitle{font-weight:850;letter-spacing:-.055em;color:#f4f8ff}
+#focusCount{color:#8ed6ff;text-shadow:0 0 34px #379bd52b}
+.workout-panel #instruction{color:#c0d1e3}
+.workout-panel #status{color:#8ee3c0}
+.workout-panel #start{background:linear-gradient(110deg,#8ce9c4,#66c7ac);color:#09231c;border:0;font-weight:850;box-shadow:0 12px 30px #46d9aa22}
+.workout-panel #record{font-weight:800}
+.workout-panel #controls>.btn{border-color:#38536d;background:#152a40}
+.workout-panel #controls>.btn:hover{background:#203b55}
+#repReceipt{background:#11382d;border:1px solid #2c7056;border-radius:12px;padding:10px 14px}
+#repReceipt:empty{display:none}
+.workout-panel #recoveryTime,.workout-panel #cooldownTime{color:#8ee3c0;font-variant-numeric:tabular-nums}
+#savedReceipt{background:#103329;border:1px solid #46896d;border-radius:16px}
+@media(max-width:760px){
+ body{background:#07111e}
+ main{padding:20px 16px 110px}
+ .page-head h1{font-size:clamp(36px,10vw,54px)}
+ .hero{border-radius:18px}
+ .workout-mode main{padding:12px 14px 28px}
+ .workout-mode .focus-header{padding:2px 0 10px}
+ .workout-panel .focus-meta{gap:8px}
+ .hr-pill{font-size:18px;padding:8px 12px}
+ #focusTitle{font-size:clamp(38px,11vw,64px)}
+ #focusCount{font-size:clamp(80px,24vw,128px)}
+ .workout-panel #start{min-height:72px;font-size:21px}
+ .workout-panel #controls>.btn{min-height:48px}
+}
+@media(prefers-reduced-motion:reduce){.btn{transition:none}.btn:active{transform:none}}
+
+/* Sprint 2: navigation, dashboard and read-only journal presentation.
+   No HTML IDs, event bindings, or persisted data are modified. */
+.sidebar{background:linear-gradient(180deg,#10243a 0%,#091827 100%);border-right-color:#28435b}
+.sidebar .brand{padding:2px 0 18px;border-bottom:1px solid #294158}
+.sidebar nav{gap:7px;margin-top:30px}
+.sidebar .nav-link{font-weight:650;letter-spacing:.01em;border-radius:12px}
+.sidebar .nav-link.active{background:#193f50;border-color:#38736e;color:#c5f4e4;box-shadow:inset 3px 0 #7dd9bb}
+.sidebar-foot{border-top:1px solid #294158}
+.topbar{background:#0b1a2b}
+.top-label{color:#a4b9d0}
+.top-label #page-label{color:#edf5ff}
+.prototype{color:#a7d8ce;border-color:#37645c;background:#102b2c}
+[data-view="today"] .page-head{margin-bottom:22px}
+[data-view="today"] .page-head .lead{font-size:15px;line-height:1.6;color:#b9cde0}
+[data-view="today"] .hero .btn{background:#8ee8c8;color:#09251c;border-radius:12px;font-weight:850;min-height:54px}
+[data-view="today"] .hero .btn:hover{background:#a5f4d9}
+.stats{gap:14px}
+.stat{background:linear-gradient(145deg,#142c42,#102238);border-radius:16px}
+.stat-label{color:#b2c8dc;font-weight:750;letter-spacing:.07em}
+.stat strong{font-size:clamp(26px,3vw,36px);color:#f7fbff}
+.stat small{color:#a1b8d0;line-height:1.5}
+.section-head h2{letter-spacing:-.03em}
+.section-head a{font-weight:700;text-underline-offset:4px}
+.principle{border-color:#28435b}
+.principle .num{color:#8ee8c8}
+[data-view="history"] .panel,[data-view="body"] .panel,[data-view="backup"] .panel{border-color:#29465e}
+.journal-item{border-top-color:#35506a}
+.journal-item strong{color:#f0f7ff}
+.journal-item p{color:#b5c8da}
+.record-value{color:#b8f3dc;font-variant-numeric:tabular-nums}
+input,textarea,select{border-color:#48617a}
+input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid #a8e9ff;outline-offset:2px}
+:where(.panel,.stat,.hero) p{overflow-wrap:anywhere}
+@media(max-width:760px){
+ .sidebar{background:#0b1b2c;border-top:1px solid #35536b}
+ .sidebar nav{margin:0;gap:2px}
+ .sidebar .nav-link{border-radius:9px;font-size:11px;padding:8px 3px}
+ .sidebar .nav-link.active{box-shadow:inset 0 3px #7dd9bb}
+ .topbar{height:58px}
+ .mobile-brand{letter-spacing:.1em;font-weight:900}
+ .prototype{font-size:9px;letter-spacing:.06em}
+ [data-view="today"] .hero{padding:24px 20px;gap:18px}
+ [data-view="today"] .hero h2{font-size:clamp(25px,7vw,34px)}
+ [data-view="today"] .hero .btn{width:100%}
+ .stats{gap:9px}
+ .stat{padding:15px 12px}
+ .stat strong{font-size:24px}
+ .stat-label{font-size:10px;line-height:1.4}
+ .stat small{font-size:10px}
+ .section-head{flex-wrap:wrap}
+}
+@media(max-width:390px){
+ .stat strong{font-size:21px}
+ .stat{padding:12px 9px}
+ .prototype{font-size:8px}
+}
+
+/* Non-blocking PWA update message: no forced reload mid-session. */
+#pure-update-notice{position:fixed;z-index:1000;left:12px;right:12px;bottom:82px;max-width:620px;margin:auto;padding:14px 18px;border:1px solid #529a87;border-radius:14px;background:#102e30;color:#d9fff1;box-shadow:0 12px 36px #0008;font-size:13px;line-height:1.5}
+@media(min-width:761px){#pure-update-notice{bottom:20px}}

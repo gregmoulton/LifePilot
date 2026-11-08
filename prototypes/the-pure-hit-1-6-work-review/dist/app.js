@@ -84,7 +84,7 @@ if(typeof document!=='undefined'){
  const uid=()=>Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');
  const duration=ms=>Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0');
  const now=()=>Date.now(), download=(obj,name)=>{const a=document.createElement('a'),u=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)};
- function announce(text,queue=false){try{if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined')return;const serial=++speechSerial;if(!queue)speechSynthesis.cancel();const prompt=new SpeechSynthesisUtterance(text);prompt.lang='en-US';prompt.rate=1;prompt.onend=()=>{if(serial===speechSerial)speechHooks.resume?.()};prompt.onerror=prompt.onend;speechSynthesis.speak(prompt)}catch{ /* Visual state remains authoritative if device audio is unavailable. */ }}
+ function announce(text,queue=false){ /* Quiet-by-default workout: preserve music audio focus. Visual notices remain active; never synthesize countdowns or narration. */ speechHooks.resume?.(); }
  // Compare the exact previous verified bytes, not just a revision number. An
  // unverified write must never be presented as a saved workout or overwrite
  // another tab's update. No storage keys or schema are changed by this repair.

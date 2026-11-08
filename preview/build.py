@@ -27,6 +27,8 @@ style = """<style>
 body{background:#f3f6f8;color:#17303b;color-scheme:light}
 #previewBanner{background:#7a3b0c;color:#fff;padding:10px max(16px,calc((100vw - 1100px)/2));font:600 13px/1.4 system-ui,sans-serif}
 #previewBanner b{letter-spacing:1px}
+#previewBanner{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+#previewReload{background:#fff;color:#7a3b0c;padding:8px 14px;min-height:40px}
 #previewDialog{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#102d3c;color:#fff;padding:16px max(16px,calc((100vw - 1100px)/2)) calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -4px 18px #0004;display:grid;gap:10px}
 #previewDialog[hidden]{display:none}
 #previewDialog p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -34,8 +36,9 @@ body{background:#f3f6f8;color:#17303b;color-scheme:light}
 #previewDialog .pd-row{display:flex;gap:9px;flex-wrap:wrap}
 #previewDialog button:focus-visible,#previewDialog input:focus-visible{outline:3px solid #e8c994;outline-offset:2px}
 </style>"""
-banner = ('<div id="previewBanner" role="note"><b>TEST PREVIEW</b> · Fictional data only. '
-          'Separate from your live Life Pilot; nothing here reaches it. Build ' + commit + '.</div>')
+banner = ('<div id="previewBanner" role="note"><span><b>TEST PREVIEW</b> · Fictional data only. '
+          'Separate from your live Life Pilot; nothing here reaches it. Build ' + commit + '.</span>'
+          '<button id="previewReload" type="button" onclick="location.reload()">Reload page</button></div>')
 html = html.replace("<header>", banner + "<header>", 1)
 html = html.replace("</style>", "</style>" + style, 1)
 html = html.replace("<script>", '<script src="dialog-shim.js"></script><script>', 1)

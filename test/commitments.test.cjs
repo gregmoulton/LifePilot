@@ -401,3 +401,94 @@ test('an Agenda completion still counts for its goal if the task is later remove
   assert.equal(w.status, 'verified');
   assert.deepEqual(w.evidence.map(e => e.task_id).sort(), ['gone', 'moved']);
 });
+
+// --- Owner review (PR #103 review 5823078589): verified needs reliable evidence; strict validation.
+
+test('duplicate task IDs cannot reach a target: completions are kept but not counted', () => {
+  let p = active();
+  p.execution.tasks.push(done('dup', '2027-03-09T16:00:00Z'), done('dup', '2027-03-10T16:00:00Z'));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  let w = scorecard(p, 'c1')[0];
+  assert.equal(w.status, 'unverified');
+  assert.equal(w.measured, 0);
+  assert.ok(w.evidence.length === 2 && w.evidence.every(e => e.doubtful === true));
+  assert.ok(w.doubts.some(d => d.reason === 'duplicate task ID'));
+  assert.ok(w.notes.some(n => /only by counting doubtful/.test(n.reason)));
+  // A clean completion still counts; the duplicate pair still does not.
+  let q = active();
+  q.execution.tasks.push(done('dup', '2027-03-09T16:00:00Z'), done('dup', '2027-03-10T16:00:00Z'), done('clean', '2027-03-11T16:00:00Z'));
+  q = apply(q, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  w = scorecard(q, 'c1')[0];
+  assert.deepEqual([w.status, w.measured], ['unverified', 1]);
+  // Reconciliation cannot use the doubtful records either.
+  q.execution.tasks.push({ ...done('dup', '2027-03-12T16:00:00Z'), completed_at: '2027-03-12T16:00:00Z', recorded_at: '2027-03-17T16:00:00Z' });
+  q = apply(q, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-18T00:00:00Z'));
+  assert.equal(scorecard(q, 'c1')[0].status, 'unverified');
+  // Missing minutes on a minutes target: that completion is not counted.
+  let m = active({ target: { kind: 'minutes', count: 30 } });
+  m.execution.tasks.push(task('t1', { status: 'completed', recorded_at: '2027-03-09T16:00:00Z' }), done('t2', '2027-03-10T16:00:00Z', 30));
+  m = apply(m, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  assert.deepEqual([statusOf(m, '2027-03-08'), scorecard(m, 'c1')[0].measured], ['verified', 30]);
+});
+
+test('validProfile accepts every state the engine produces', () => {
+  let p = active();
+  p.execution.tasks.push(task('t1', { due: '2027-03-10' }));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  p = apply(p, { type: 'excuse', commitment_id: 'c1', week_start: '2027-03-08', reason: 'Fictional' }, at('2027-03-16T01:00:00Z'));
+  p = apply(p, { type: 'propose-edit', commitment_id: 'c1', terms: { target: { kind: 'minutes', count: 60 } }, reason: 'Fictional' }, at('2027-03-16T02:00:00Z'));
+  p = apply(p, { type: 'end', commitment_id: 'c1', reason: 'Fictional' }, at('2027-03-16T03:00:00Z'));
+  p = apply(p, { type: 'create', commitment_id: 'c2', terms: terms() }, WED);
+  p = apply(p, { type: 'create', commitment_id: 'c3', terms: terms() }, WED);
+  p = apply(p, { type: 'discard-draft', commitment_id: 'c3' }, WED);
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-04-30T00:00:00Z'));
+  assert.equal(p.commitments.items[0].status, 'ended');
+  assert.ok(validProfile(p));
+});
+
+test('validProfile refuses malformed commitment records', () => {
+  const good = () => apply(active(), { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  const cases = {
+    'item without versions': p => { delete p.commitments.items[0].versions; },
+    'empty versions': p => { p.commitments.items[0].versions = []; },
+    'unknown status': p => { p.commitments.items[0].status = 'paused'; },
+    'duplicate commitment ID': p => { p.commitments.items.push(JSON.parse(JSON.stringify(p.commitments.items[0]))); },
+    'missing ID': p => { delete p.commitments.items[0].id; },
+    'active without approval time': p => { p.commitments.items[0].approved_at = null; },
+    'active without effective date': p => { p.commitments.items[0].versions[0].effective_from = null; },
+    'bad target kind': p => { p.commitments.items[0].versions[0].target.kind = 'money'; },
+    'zero target': p => { p.commitments.items[0].versions[0].target.count = 0; },
+    'versions out of order': p => { p.commitments.items[0].versions[0].version = 2; },
+    'unreadable end date': p => { p.commitments.items[0].ends_from = 'soon'; },
+    'score for an unknown commitment': p => { p.commitments.evaluations[0].commitment_id = 'nope'; },
+    'unknown score status': p => { p.commitments.evaluations[0].status = 'great'; },
+    'exception without week': p => { p.commitments.exceptions.push({ id: 'x', commitment_id: 'c1' }); },
+    'event without type': p => { p.commitments.events.push({}); },
+    'draft with an effective date': p => { p.commitments.items.push({ id: 'd', goal_id: 'fg-1', status: 'draft', versions: [{ ...p.commitments.items[0].versions[0] }] }); }
+  };
+  assert.ok(validProfile(good()));
+  for (const [name, breakIt] of Object.entries(cases)) {
+    const p = good(); breakIt(p);
+    assert.equal(validProfile(p), false, name);
+  }
+  const p = good(); delete p.commitments.items[0].versions;
+  assert.throws(() => apply(p, { type: 'evaluate', commitment_id: 'c1' }, WED), /no terms/);
+});
+
+test('in the app: a malformed commitment import is refused, and a malformed stored profile blocks saving on restart', async () => {
+  const map = new Map([[KEY, JSON.stringify(base())]]);
+  const h = harness(map), before = map.get(KEY);
+  const incoming = { ...base(), commitments: { version: 1, items: [{ id: 'bad', status: 'active', goal_id: 'fg-1' }], evaluations: [], exceptions: [], events: [] } };
+  h.context.__file = { text: async () => JSON.stringify(incoming) };
+  await h.run('importFile(__file)');
+  assert.equal(map.get(KEY), before, 'nothing saved');
+  assert.match(h.element('storageMessage').textContent, /invalid/);
+  // Restart with the malformed record already stored (e.g. written by another tool).
+  const stored = JSON.stringify(incoming), restart = new Map([[KEY, stored]]);
+  const r = harness(restart);
+  assert.equal(r.run('profileStore.blocked'), true);
+  assert.match(r.element('storageMessage').textContent, /could not be read safely/);
+  r.run("tab='commitments'; render()"); // renders the welcome screen, no crash
+  await r.run(`commitmentAction({ type: 'create', commitment_id: 'c1', terms: ${JSON.stringify(terms())} })`);
+  assert.equal(restart.get(KEY), stored, 'stored bytes are never overwritten');
+});

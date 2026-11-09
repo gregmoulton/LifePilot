@@ -82,7 +82,12 @@ test('missing execution object or improvement log reports every record in it', (
 });
 
 test('pending Agenda proposals may be settled by a newer export but not dropped; settled ones stay unchanged', () => {
+  // A bare status flip is not a settlement: the owner's rejection record and event must come
+  // with it (genuine progressions are covered in proposal-integrity.test.cjs).
   const settledLater = populated(); settledLater.agenda.proposals[0].status = 'rejected';
+  assert.deepEqual(all(populated(), settledLater), ['Agenda proposal proposal-1 would be marked rejected without its owner rejection record']);
+  settledLater.agenda.rejections.push({ task_id: 'ft-1', action_type: undefined, rejected_at: '2026-01-07T10:00:00.000Z' });
+  settledLater.agenda.events.push({ type: 'proposal_rejected', task_id: 'ft-1', proposal_id: 'proposal-1', at: '2026-01-07T10:00:00.000Z' });
   assert.deepEqual(all(populated(), settledLater), []);
   const droppedPending = populated(); droppedPending.agenda.proposals = droppedPending.agenda.proposals.slice(1);
   assert.deepEqual(historyProblems(populated(), droppedPending), ['Agenda proposal proposal-1 would be removed']);

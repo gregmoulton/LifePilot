@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#091626">
+<title>Life Pilot — Delivery Command Center</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#101f31;--panel2:#152840;--line:#2b415a;--ink:#f0f6ff;--muted:#a2b4cc;--blue:#40a8ff;--cyan:#74d5ff;--green:#6ce6b0;--amber:#ffd07a;--red:#ff8a98;--radius:17px}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(1100px 500px at 92% -130px,#16365b 0%,transparent 70%),var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.45}
+button,input,select,textarea{font:inherit}a{color:var(--cyan);text-underline-offset:3px}button,a,select,input,textarea{touch-action:manipulation}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.app{max-width:1180px;margin:auto;padding:18px 14px 80px}.mast{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:9px 2px 17px}.brand{display:flex;gap:12px;align-items:center}.mark{width:43px;height:43px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(140deg,#156cc2,#48baff);box-shadow:0 0 0 1px #78c8ff60;font-size:22px;font-weight:900;color:white}.eyebrow{font-size:11px;letter-spacing:.13em;font-weight:800;color:var(--cyan)}h1{font-size:clamp(24px,4vw,35px);letter-spacing:-.045em;line-height:1.08;margin:3px 0}.sub{color:var(--muted);font-size:12px;margin:5px 0 0}.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:1px solid #446080;background:#1b3451;color:var(--ink);border-radius:10px;padding:11px 14px;min-height:44px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;justify-content:center;align-items:center;gap:7px;font-size:13px}.btn:hover{border-color:#84c8ff}.btn.primary{background:linear-gradient(125deg,#1476d3,#269fee);border-color:#5ab9ff;color:#fff}.btn.ghost{background:transparent}.btn.small{min-height:37px;padding:8px 10px;font-size:12px}.btn:disabled{opacity:.55;cursor:wait}
+.nav{display:flex;gap:5px;overflow-x:auto;white-space:nowrap;padding:5px;border:1px solid var(--line);border-radius:13px;background:#0c1a2c;margin-bottom:16px;scrollbar-width:thin}.nav button{flex:0 0 auto;min-height:41px;padding:9px 13px;border-radius:9px;border:0;background:transparent;color:#bacbe0;font-weight:750;cursor:pointer}.nav button[aria-selected=true]{color:white;background:#23537c}
+.hero{border:1px solid #376c9b;background:linear-gradient(130deg,#123354 0%,#10263e 65%,#112539);border-radius:var(--radius);padding:20px;margin:0 0 16px;box-shadow:0 12px 35px #0002}.hero h2{font-size:clamp(20px,3.3vw,28px);letter-spacing:-.03em;margin:6px 0 7px;line-height:1.18}.hero p{color:#c0d3e7;margin:0 0 15px;max-width:760px}.hero .actions{display:flex;flex-wrap:wrap;gap:9px}.hero .tag{display:inline-block;background:#204e78;border:1px solid #3e8dc9;color:#c6edff;border-radius:40px;font-size:11px;padding:4px 8px;font-weight:800;letter-spacing:.06em}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px}.metric{background:#0e1f32;border:1px solid var(--line);border-radius:14px;padding:14px}.metric .value{font-weight:820;font-size:27px;line-height:1.1;letter-spacing:-.045em}.metric .caption{font-size:12px;color:var(--muted);margin-top:6px}.metric .extra{font-size:11px;color:var(--cyan);margin-top:5px}
+.grid{display:grid;grid-template-columns:1fr;gap:14px}.panel{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);padding:17px;min-width:0}.panel h2{font-size:18px;letter-spacing:-.025em;margin:0 0 12px}.panel h3{font-size:14px;margin:14px 0 7px}.muted{color:var(--muted)}.small{font-size:12px}.tiny{font-size:11px}.tight{margin:5px 0}.item{border-top:1px solid #304358;padding:12px 0}.item:first-of-type{border-top:0;padding-top:0}.item:last-of-type{padding-bottom:0}.line{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.line>*{min-width:0}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.badge{border:1px solid #516783;background:#1a2d43;color:#d6e5f4;border-radius:20px;font-size:10px;letter-spacing:.025em;font-weight:850;padding:5px 8px;display:inline-flex;align-items:center;gap:4px;white-space:nowrap}.badge.green{background:#0e443b;border-color:#2c8f70;color:#a8f3d2}.badge.amber{background:#503a1a;border-color:#b38847;color:#ffe2a6}.badge.red{background:#552633;border-color:#c15d70;color:#ffd0d7}.badge.blue{background:#173e65;border-color:#367fc0;color:#b9e4ff}.pills{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.sectionIntro{margin:-4px 0 15px;color:var(--muted);font-size:13px}.dataRow{display:grid;grid-template-columns:1fr;gap:5px;padding:11px 0;border-bottom:1px solid #2b4155}.dataRow:last-child{border-bottom:0}.dataLabel{font-size:12px;color:var(--muted)}.dataVal{font-size:13px;min-width:0;overflow-wrap:anywhere}.note{background:#112c46;border-left:3px solid #50a9f4;padding:10px 12px;border-radius:7px;color:#c7e3fb;font-size:12px;margin-top:10px}.warning{border-color:#e0a760;background:#382b1d;color:#ffe5b9}.critical{border-color:#f67a91;background:#3b1e2b;color:#ffd7df}.stack{display:grid;gap:10px}.check{display:flex;gap:11px;align-items:flex-start;padding:11px;background:#132840;border-radius:11px;border:1px solid #304a65}.check strong{font-size:13px}.check p{font-size:12px;color:var(--muted);margin:3px 0 0}.dot{width:12px;height:12px;border-radius:50%;background:#9eafc5;margin-top:4px;flex:0 0 auto}.dot.green{background:var(--green)}.dot.amber{background:var(--amber)}.dot.red{background:var(--red)}.filterRow{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 10px}.filterRow button{background:#162b43;border:1px solid #37526e;color:#d5e6f7;border-radius:20px;padding:7px 10px;cursor:pointer;font-size:12px;min-height:35px}.filterRow button.active{background:#215c8d;border-color:#51a8eb;color:#fff}
+.pr{padding:14px;border:1px solid #344c66;border-radius:13px;background:#11273e}.pr h3{font-size:14px;margin:0 0 6px}.pr p{font-size:12px;color:var(--muted);margin:5px 0}.pr .meta{font-size:11px;color:#a6c2dd;overflow-wrap:anywhere}.pr .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.formGrid{display:grid;grid-template-columns:1fr;gap:11px}.field label{display:block;font-weight:700;font-size:12px;margin-bottom:5px;color:#cbdced}.field input,.field select,.field textarea{width:100%;border:1px solid #4b637c;border-radius:9px;padding:11px;background:#0a1a2a;color:white;min-height:44px}.field textarea{min-height:90px;resize:vertical}.field input::placeholder,.field textarea::placeholder{color:#738ca5}
+.hidden{display:none!important}.empty{color:var(--muted);border:1px dashed #50637a;border-radius:12px;padding:20px;text-align:center;font-size:13px}.foot{padding-top:20px;font-size:11px;line-height:1.7;color:#879eb7}.footerlinks{display:flex;gap:12px;flex-wrap:wrap}.footerlinks a{color:#afd8f7}.scan{font-size:11px;margin:4px 0;color:#9ebbd5}.sr{position:absolute;width:1px;height:1px;clip:rect(0,0,0,0);overflow:hidden}
+@media(min-width:700px){.app{padding:24px 25px 80px}.metrics{grid-template-columns:repeat(4,1fr)}.grid.two{grid-template-columns:1.15fr .85fr}.grid.prgrid{grid-template-columns:repeat(2,1fr)}.formGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.dataRow{grid-template-columns:180px 1fr}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main class="app">
+<header class="mast">
+ <div class="brand"><div class="mark" aria-hidden="true">LP</div><div><div class="eyebrow">OWNER OPERATIONS / ISOLATED PREVIEW</div><h1>Delivery Command Center</h1><p class="sub">Life Pilot · Read-only GitHub status + local owner evidence</p></div></div>
+ <div class="toolbar"><button id="refreshBtn" class="btn primary" type="button">↻ Refresh GitHub</button><a class="btn ghost" href="https://gregmoulton.github.io/LifePilot/" target="_blank" rel="noopener noreferrer">Open v0.4 ↗</a></div>
+</header>
+<nav class="nav" aria-label="Command center views">
+ <button data-tab="overview" aria-selected="true">Overview</button>
+ <button data-tab="gates" aria-selected="false">Release gates</button>
+ <button data-tab="branches" aria-selected="false">PR / branches</button>
+ <button data-tab="exceptions" aria-selected="false">Exceptions</button>
+ <button data-tab="evidence" aria-selected="false">Test evidence</button>
+</nav>
+<div id="sourceBar" class="scan" role="status" aria-live="polite">Evidence snapshot: 2026-11-09 09:28 MST · GitHub refresh not yet run</div>
+<section id="tab-overview">
+ <div class="hero"><span class="tag">NEXT OWNER ACTION · P0</span><h2 id="nextTitle">Test The Pure practice preview on Android Chrome</h2><p id="nextDesc">Open the isolated practice preview in full Android Chrome. First confirm it loads; then use fictional data to test music + passive voice. Report failure if the link does not open. This is not v0.4.</p><div class="actions"><a id="nextLink" class="btn primary" href="https://the-pure-android-practice-04fd6db.greg-moulton2.chatgpt.site" target="_blank" rel="noopener noreferrer">Android: open practice preview ↗</a><button class="btn" id="logTestBtn" type="button">Record test result</button></div><p class="tiny muted tight">The replacement URL was reported accessible on Nov 8, not independently confirmed on your device. No merge, purchase or production change is authorized.</p></div>
+ <div class="metrics">
+  <div class="metric"><div class="value" id="mVerified">3</div><div class="caption">Workflow successes</div><div class="extra" id="mVerifiedExtra">PR #105 latest head, reported</div></div>
+  <div class="metric"><div class="value" id="mDrafts">45</div><div class="caption">Open PRs</div><div class="extra">None approved here</div></div>
+  <div class="metric"><div class="value" id="mAwait">3</div><div class="caption">Physical device gates</div><div class="extra">Android · Chromebook · Workstation</div></div>
+  <div class="metric"><div class="value" id="mBlocks">—</div><div class="caption">Exceptions</div><div class="extra">Review live + evidence gaps</div></div>
+ </div>
+ <div class="grid two">
+  <section class="panel"><h2>Release state</h2><div id="releaseState" class="stack"></div><div class="note">A passing browser CI run is not physical-device approval. A self-signed HTTPS simulation is not the live deployment check. All release decisions require explicit owner approval.</div></section>
+  <section class="panel"><h2>Protected baseline</h2><div class="dataRow"><div class="dataLabel">Published version</div><div class="dataVal"><span class="badge green">v0.4 · protected by policy</span></div></div><div class="dataRow"><div class="dataLabel">Production branch</div><div class="dataVal"><code>main</code> · <span id="mainSha" class="mono">4710a5e</span></div></div><div class="dataRow"><div class="dataLabel">V0.5 and future builds</div><div class="dataVal">Draft branches only; not merged or deployed</div></div><div class="dataRow"><div class="dataLabel">Delivery dashboard</div><div class="dataVal">Standalone file on an isolated review branch; not deployed</div></div><div class="dataRow"><div class="dataLabel">Owner approval</div><div class="dataVal"><span class="badge amber">Required before merge or release</span></div></div><p class="small muted">The baseline SHA is the repository main commit; it does not prove the hosting CDN currently serves that exact byte set.</p></section>
+ </div>
+</section>
+<section id="tab-gates" class="hidden">
+ <h2>Release gates</h2><p class="sectionIntro">Pass means evidence for that exact build and environment. Owner device results are keyed to an exact SHA; changing that SHA invalidates the previous acceptance.</p><div id="gateList" class="grid two"></div>
+</section>
+<section id="tab-branches" class="hidden">
+ <h2>Pull requests and dependencies</h2><p class="sectionIntro">Branches are independent until explicitly accepted. Stacked PRs are not independent merge approvals. Only the repository is queried; no production code is modified.</p><div class="filterRow" id="prFilters"><button data-filter="all" class="active">Tracked</button><button data-filter="safety">Safety</button><button data-filter="pure">The Pure</button><button data-filter="commitments">Commitments</button></div><div id="prList" class="grid prgrid"></div>
+</section>
+<section id="tab-exceptions" class="hidden">
+ <h2>Exception queue</h2><p class="sectionIntro">Actionable failures, missing proof, stale or conflicting work, link trouble and decisions. An unverified link is not automatically marked broken.</p><div class="filterRow" id="exceptionFilters"><button data-filter="all" class="active">All</button><button data-filter="failed">Failed</button><button data-filter="drift">Branch drift</button><button data-filter="evidence">Missing evidence</button><button data-filter="links">Links</button><button data-filter="decisions">Decisions</button></div><div id="exceptionList" class="stack"></div>
+</section>
+<section id="tab-evidence" class="hidden">
+ <h2>Owner acceptance / evidence</h2><p class="sectionIntro">Save factual device results with exact build SHA and origin. Records stay only in this browser's local storage until exported. A record here does not notify Claude or approve a GitHub merge.</p>
+ <div class="grid two"><section class="panel"><h2>Record test</h2><form id="testForm" class="formGrid">
+  <div class="field"><label for="testPr">Build / track</label><select id="testPr" required><option value="98">#98 · The Pure visual</option><option value="86">#86 · The Pure HRM / voice</option><option value="101">#101 · Today + storage safety</option><option value="103">#103 · Commitments engine</option><option value="105">#105 · Commitments UI</option></select></div>
+  <div class="field"><label for="testDevice">Device</label><select id="testDevice"><option>Android Chrome</option><option>Chromebook Chrome</option><option>Workstation Chrome</option><option>Workstation Firefox</option><option>Workstation Edge</option><option>Workstation Safari/WebKit</option></select></div>
+  <div class="field"><label for="testOrigin">Origin</label><select id="testOrigin"><option>Isolated HTTPS preview</option><option>file:// local artifact</option><option>localhost</option><option>Production HTTPS (read-only)</option></select></div>
+  <div class="field"><label for="testResult">Result</label><select id="testResult"><option value="passed">Passed</option><option value="failed">Failed</option><option value="blocked">Blocked / link not opening</option><option value="needs-review">Needs review</option></select></div>
+  <div class="field" style="grid-column:1/-1"><label for="testSha">Exact tested SHA</label><input id="testSha" class="mono" required spellcheck="false" placeholder="Full 40-character commit SHA" pattern="[a-fA-F0-9]{40}" title="Enter the full 40-character Git commit SHA"></div>
+  <div class="field" style="grid-column:1/-1"><label for="testNotes">Evidence / steps / screenshot reference</label><textarea id="testNotes" placeholder="What you actually tested, what happened, and any issue or screenshot reference." required></textarea></div>
+  <div style="grid-column:1/-1"><button type="submit" class="btn primary">Save local evidence</button></div>
+ </form><div class="note warning">Never enter personal profile data, API keys, passwords or real client records in test notes. Use fictional data only.</div></section>
+ <section class="panel"><h2>Evidence ledger</h2><div class="toolbar" style="margin-bottom:12px"><button id="exportBtn" class="btn small">Export JSON</button><label class="btn small" for="importFile">Import JSON</label><input id="importFile" class="sr" type="file" accept="application/json,.json"></div><p class="small muted">Export before changing browsers or origins. Local browser records do not sync between Android and Chromebook.</p><div id="recordList"></div></section></div>
+</section>
+<footer class="foot"><div class="footerlinks"><a href="https://github.com/gregmoulton/LifePilot" target="_blank" rel="noopener noreferrer">Repository</a><a href="https://github.com/gregmoulton/LifePilot/pulls" target="_blank" rel="noopener noreferrer">Pull requests</a><a href="https://github.com/gregmoulton/LifePilot/actions" target="_blank" rel="noopener noreferrer">Actions</a><a href="https://gregmoulton.github.io/LifePilot/" target="_blank" rel="noopener noreferrer">Protected v0.4</a></div><p>Read-only public GitHub API; no GitHub token, app authentication or repository mutation. Refresh requires a network connection and may be rate limited. Snapshot and reported evidence are labeled separately from directly fetched evidence. This app itself is NOT deployed by this draft branch.</p></footer>
+</main>
+<script>
+'use strict';
+const OWNER_REPO='gregmoulton/LifePilot', API='https://api.github.com/repos/'+OWNER_REPO;
+const SNAPSHOT_AT='2026-11-09T16:28:47Z', MAIN_SEED='4710a5ec56dccd9436fec48369d513144306d7de';
+const tracks={
+  101:{name:'Today + storage retention',type:'safety',head:'c9d7c88dd928c02b335a1fced3cc9ce499c22160',base:'main',phase:'In progress · final code re-review',scope:'Data-retention fix on ordinary imports, integration and HTTPS simulation. Claimed 249 unit tests; three workflows reported green on exact SHA. Owner Android/Chromebook passes were on older 37e0b08 and are stale for this head.',links:['https://github.com/gregmoulton/LifePilot/pull/101#issuecomment-6742288455']},
+  103:{name:'Commitment Contracts — engine',type:'commitments',head:'38cc7db72fc71a82eb4fef41da49cd9b089c78c8',base:'integration/preview-20261106',phase:'In progress · re-review',scope:'Stacked on #101; merged updated base without force push. Claude reported 283 unit tests and 9 passing CI checks; prior accepted scoring fix does not automatically approve this new head.',links:['https://github.com/gregmoulton/LifePilot/pull/103#issuecomment-6744576370']},
+  105:{name:'Commitment Contracts — screens',type:'commitments',head:'8278f5f1178d8567a2cc0815a1a505728d73e85a',base:'feature/commitments-slice1',phase:'Awaiting code review and physical test',scope:'Stacked on #103. Claude reported 287 unit tests and 9 passing CI checks; phone-width browser flow is automated, not owner Android acceptance.',links:['https://github.com/gregmoulton/LifePilot/pull/105#issuecomment-6744576710']},
+  74:{name:'The Pure HIT 1.6 source',type:'pure',head:'b547383c67d0bdbba475ac05affb64b4e214bcd7',base:'main',phase:'In progress · protected working source',scope:'Source baseline for workout restoration; must remain rollback-safe and separate from voice/visual branches.',links:[]},
+  86:{name:'The Pure HRM / voice',type:'pure',head:'cf65a150caf9968dd65285c3bb7ee8e7bd8e72e3',base:'review/pure-work-hit16-verified-save-20261101',phase:'Awaiting integrated Android test',scope:'HRM preflight, explicit no-monitor gate, Bluetooth timeout and voice/music integration under separate draft review.',links:[]},
+  98:{name:'The Pure visual polish',type:'pure',head:'3c388be0be355c85610da3edae6b210ceaaaf9d3',base:'review/pure-work-hit16-verified-save-20261101',phase:'In progress · P0 visual approval',scope:'Nov 9 owner direction: original compact bright-blue logo, red heart and white accent. Not an authorization to merge. Old voice-preview link failed on Android; replacement practice link needs physical verification.',links:['https://github.com/gregmoulton/LifePilot/pull/98#issuecomment-6745349926']}
+};
+const flow=['overview','gates','branches','exceptions','evidence'];
+const latest={prs:{},runs:[],main:MAIN_SEED,openCount:45,live:false,checkedAt:null,error:null};
+const OWNERSHIP_KEY='lp-delivery-center-evidence-v1';
+let records=[], prFilter='all', exceptionFilter='all';
+function el(id){return document.getElementById(id)}
+function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function safeExternal(url){try{const x=new URL(url);return x.protocol==='https:'?x.href:'#'}catch{return '#'}}
+function fmt(ts){if(!ts)return 'Unknown';const d=new Date(ts);return Number.isFinite(d.valueOf())?new Intl.DateTimeFormat('en-US',{timeZone:'America/Phoenix',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(d):'Unknown'}
+function shaFor(n){return latest.prs[n]?.head?.sha||tracks[n]?.head||''}
+function cut(s){return (s||'unknown').slice(0,8)}
+function badge(t,cls='blue'){return '<span class="badge '+cls+'">'+escapeHTML(t)+'</span>'}
+function apiRuns(sha){return latest.runs.filter(r=>r.head_sha===sha)}
+function runStatus(sha){const arr=apiRuns(sha);if(!arr.length)return {label:'No direct workflow evidence',color:'amber',ok:0,total:0};
+ const failed=arr.filter(r=>r.status==='completed'&&r.conclusion!=='success').length, pending=arr.filter(r=>r.status!=='completed').length,ok=arr.filter(r=>r.conclusion==='success').length;
+ return {label:failed?failed+' failed workflow(s)':pending?pending+' workflow(s) pending':ok+'/'+arr.length+' workflow successes',color:failed?'red':pending?'amber':'green',ok,total:arr.length};
+}
+function forBuild(n){return records.filter(r=>r.pr===n&&r.sha===shaFor(n))}
+function passOn(n,needle){return forBuild(n).some(r=>r.result==='passed'&&r.device.toLowerCase().includes(needle)&&r.origin==='Isolated HTTPS preview')}
+function load(){try{const r=JSON.parse(localStorage.getItem(OWNERSHIP_KEY)||'[]');records=Array.isArray(r)?r.filter(validRecord).slice(-300):[]}catch{records=[]}}
+function validRecord(r){return r&&Number.isInteger(r.pr)&&tracks[r.pr]&&/^[a-f0-9]{40}$/i.test(r.sha||'')&&typeof r.device==='string'&&typeof r.origin==='string'&&typeof r.result==='string'&&['passed','failed','blocked','needs-review'].includes(r.result)&&typeof r.notes==='string'&&typeof r.at==='string'&&r.notes.length<=4000}
+function save(){try{localStorage.setItem(OWNERSHIP_KEY,JSON.stringify(records));return true}catch{alert('Local save was blocked. Export your evidence to keep it.');return false}}
+function releaseGates(){
+ const safe=runStatus(shaFor(101)), contract=runStatus(shaFor(105));
+ return [
+  {title:'Production v0.4',status:'Verified baseline / not modified',color:'green',desc:'Repository main '+cut(latest.main)+'. Main was not changed by this command-center draft. Live host content was not byte-verified.'},
+  {title:'#101 automated storage + recovery',status:safe.total?safe.label:'Reported green; direct CI not refreshed',color:safe.total?safe.color:'amber',desc:'Current head '+cut(shaFor(101))+'. PR remains draft. Strict data, decision and history retention and upgrade simulation.'},
+  {title:'#101 Android / Chromebook',status:passOn(101,'android')&&passOn(101,'chromebook')?'Owner tested at latest head':'Awaiting current-head physical acceptance',color:passOn(101,'android')&&passOn(101,'chromebook')?'green':'amber',desc:'Prior passes were on 37e0b08; current head '+cut(shaFor(101))+' differs. Chromebook test was file:// rather than live HTTPS.'},
+  {title:'HTTPS production isolation',status:'Simulated gate only',color:'amber',desc:'Self-signed HTTPS upgrade, rollback, roll-forward, isolation test reported 22/22. Not equivalent to live host PWA/service-worker or true production-upgrade proof.'},
+  {title:'Three browser engines',status:contract.total?contract.label:'CI reported green',color:contract.total?contract.color:'amber',desc:'#105 Chromium, Firefox and WebKit CI reported. Does not establish real device acceptance or that PR #98 shares this gate.'},
+  {title:'The Pure Android music + voice',status:passOn(98,'android')?'Owner test recorded':'Owner physical test blocked / outstanding',color:passOn(98,'android')?'green':'amber',desc:'Replacement practice URL reported online Nov 8; confirm clean Chrome origin and music + passive voice with fictional data. Compare screenshots before accepting #98.'},
+  {title:'Workstation physical acceptance',status:records.some(r=>r.device.startsWith('Workstation')&&r.result==='passed'&&r.sha===shaFor(r.pr))?'Some current-SHA evidence':'No current-SHA evidence',color:records.some(r=>r.device.startsWith('Workstation')&&r.result==='passed'&&r.sha===shaFor(r.pr))?'green':'amber',desc:'Owner workstation browser tests must be recorded with exact branch SHA and origin.'},
+  {title:'Merge / deployment',status:'Not yet approved or deployed',color:'amber',desc:'All tracked change PRs remain draft. No action in this dashboard can merge, deploy or mutate the user profile.'}
+ ];}
+function exceptions(){
+ const out=[];
+ function add(type,title,desc,link){out.push({type,title,desc,link})}
+ if(!latest.live)add('evidence','Live GitHub refresh not verified',latest.error||'Using labeled Nov 9 source snapshot. Click Refresh GitHub to check current PR heads and workflow runs.');
+ for(const n of [101,103,105,74,86,98]){
+  const info=latest.prs[n],t=tracks[n],head=shaFor(n);
+  if(info&&head!==t.head)add('drift','PR #'+n+' changed since evidence snapshot','Snapshot '+cut(t.head)+' → current '+cut(head)+'. Re-review and re-test exact head.',info.html_url);
+  if(info&&info.base?.ref!==t.base)add('drift','PR #'+n+' base changed','Expected '+t.base+'; now '+info.base?.ref+'. Recheck stacked dependencies.',info.html_url);
+  if(info&&info.mergeable===false)add('drift','PR #'+n+' has merge conflicts','GitHub reports mergeable=false. Do not merge without conflict review.',info.html_url);
+  const ci=runStatus(head);
+  if(ci.total&&ci.color==='red')add('failed','Failed CI on #'+n,ci.label+' at '+cut(head)+'. Inspect Actions before continuing.',info?.html_url);
+  if(!ci.total)add('evidence','Current CI evidence missing for PR #'+n,'No directly fetched workflow for '+cut(head)+'. Prior PR comments are historical; missing does not mean failing.',info?.html_url);
+  const dated=info?.updated_at?Date.now()-Date.parse(info.updated_at):null;
+  if(dated!==null&&dated>7*86400000)add('drift','PR #'+n+' has not been updated in 7+ days','Last updated '+fmt(info.updated_at)+'. Check whether stale or superseded.',info.html_url);
+ }
+ if(!passOn(101,'android')||!passOn(101,'chromebook'))add('evidence','#101 owner device approvals are stale','Android + Chromebook passes were on older 37e0b08; no current-head HTTPS physical approval recorded.','https://github.com/gregmoulton/LifePilot/pull/101');
+ if(!passOn(98,'android'))add('evidence','The Pure Android music/voice unaccepted','No exact-current-build owner Android pass is recorded. The practice host SHA and PR #98 SHA differ; test each intended artifact explicitly.','https://github.com/gregmoulton/LifePilot/pull/98');
+ add('links','Old The Pure local-voice URL failed on Android','Confirmed ERR_FAILED reports on Nov 8. Replacement practice URL was reported accessible; owner must check it in Chrome.','https://github.com/gregmoulton/LifePilot/pull/98#issuecomment-6731793510');
+ for(const r of records){if(r.result==='blocked')add('links','Owner-reported blocked preview',r.device+' · PR #'+r.pr+' · '+fmt(r.at)+' · '+r.notes.slice(0,220));if(r.result==='failed')add('failed','Owner-reported failed physical check',r.device+' · PR #'+r.pr+' · '+fmt(r.at)+' · '+r.notes.slice(0,220));}
+ add('decisions','#101 final review and merge authorization needed','Claude applied new history-retention fix at '+cut(shaFor(101))+'. No owner approval to merge or deploy.','https://github.com/gregmoulton/LifePilot/pull/101');
+ add('decisions','#98 owner visual approval outstanding','Bright blues + original logo/heart/white accent required; test before accepting.','https://github.com/gregmoulton/LifePilot/pull/98');
+ add('decisions','#105 review + device acceptance outstanding','Stacked UI is draft; no automatic merge when CI passes.','https://github.com/gregmoulton/LifePilot/pull/105');
+ return out;
+}
+function renderOverview(){
+ const gates=releaseGates(), e=exceptions();
+ el('mDrafts').textContent=latest.openCount;
+ const s=runStatus(shaFor(105));el('mVerified').textContent=s.total?s.ok+'/'+s.total:'Reported';el('mVerifiedExtra').textContent=s.total?'#105 exact head '+cut(shaFor(105)):'#105 latest workflows require refresh';
+ el('mAwait').textContent=3;el('mBlocks').textContent=e.length;
+ el('mainSha').textContent=cut(latest.main);
+ el('releaseState').innerHTML=gates.slice(0,6).map(g=>'<div class="check"><i class="dot '+g.color+'"></i><div><strong>'+escapeHTML(g.title)+'</strong><div class="pills">'+badge(g.status,g.color)+'</div><p>'+escapeHTML(g.desc)+'</p></div></div>').join('');
+}
+function renderGates(){el('gateList').innerHTML=releaseGates().map(g=>'<article class="panel"><div class="line"><h2>'+escapeHTML(g.title)+'</h2>'+badge(g.status,g.color)+'</div><p class="small muted">'+escapeHTML(g.desc)+'</p></article>').join('')}
+function renderPRs(){
+ const nums=[101,103,105,74,86,98].filter(n=>prFilter==='all'||tracks[n].type===prFilter);
+ el('prList').innerHTML=nums.map(n=>{
+ const t=tracks[n],p=latest.prs[n],sh=shaFor(n),run=runStatus(sh);
+ return '<article class="pr"><div class="top"><h3><a href="https://github.com/'+OWNER_REPO+'/pull/'+n+'" target="_blank" rel="noopener noreferrer">#'+n+' '+escapeHTML(t.name)+'</a></h3>'+badge(p?(p.draft?'DRAFT':'Open / review'):'DRAFT · snapshot',p&&!p.draft?'amber':'blue')+'</div><p>'+escapeHTML(t.scope)+'</p><div class="meta"><strong>Head:</strong> <code>'+escapeHTML(p?.head?.ref||'snapshot branch')+'</code> @ <code>'+escapeHTML(cut(sh))+'</code></div><div class="meta"><strong>Base:</strong> <code>'+escapeHTML(p?.base?.ref||t.base)+'</code> · <strong>Updated:</strong> '+escapeHTML(fmt(p?.updated_at))+'</div><div class="pills">'+badge(t.phase,'amber')+badge(run.total?run.label:'CI evidence needs refresh',run.color)+'</div>'+t.links.map(url=>'<p class="tiny"><a href="'+safeExternal(url)+'" target="_blank" rel="noopener noreferrer">Review evidence ↗</a></p>').join('')+'</article>'
+ }).join('')}
+function renderExceptions(){
+ const es=exceptions().filter(e=>exceptionFilter==='all'||e.type===exceptionFilter);
+ el('exceptionList').innerHTML=es.length?es.map(e=>'<article class="check"><i class="dot '+(e.type==='failed'?'red':e.type==='drift'?'amber':'amber')+'"></i><div><div class="line"><strong>'+escapeHTML(e.title)+'</strong>'+badge(e.type,e.type==='failed'?'red':'amber')+'</div><p>'+escapeHTML(e.desc)+'</p>'+(e.link?'<a class="small" href="'+safeExternal(e.link)+'" target="_blank" rel="noopener noreferrer">Evidence / action ↗</a>':'')+'</div></article>').join(''):'<div class="empty">No exceptions match this filter.</div>'
+}
+function renderRecords(){el('recordList').innerHTML=records.length?records.slice().reverse().map(r=>'<article class="item"><div class="line"><strong class="small">PR #'+r.pr+' · '+escapeHTML(r.device)+'</strong>'+badge(r.result,r.result==='passed'?'green':r.result==='failed'?'red':'amber')+'</div><div class="tiny muted">'+escapeHTML(fmt(r.at))+' · '+escapeHTML(r.origin)+'</div><div class="tiny mono">'+escapeHTML(cut(r.sha))+(r.sha!==shaFor(r.pr)?' · STALE SHA':' · current SHA')+'</div><p class="small tight">'+escapeHTML(r.notes)+'</p></article>').join(''):'<div class="empty">No local owner evidence saved yet. Historical reported tests are visible under Release gates.</div>'}
+function renderAll(){renderOverview();renderGates();renderPRs();renderExceptions();renderRecords();
+ el('sourceBar').textContent=latest.live?'GitHub refreshed '+fmt(latest.checkedAt)+' · live public repository data; local owner test notes remain separate':'Snapshot '+fmt(SNAPSHOT_AT)+' · '+(latest.error||'Click Refresh GitHub for current evidence');
+}
+async function getJSON(url){const response=await fetch(url,{headers:{'Accept':'application/vnd.github+json'},cache:'no-store'});if(!response.ok)throw new Error('GitHub HTTP '+response.status+' on '+new URL(url).pathname);return response.json()}
+async function refresh(){
+ const button=el('refreshBtn');button.disabled=true;button.textContent='Refreshing…';
+ try{
+  const [prs,branch,runs]=await Promise.all([getJSON(API+'/pulls?state=open&per_page=100'),getJSON(API+'/branches/main'),getJSON(API+'/actions/runs?per_page=100')]);
+  latest.prs=Object.fromEntries(prs.filter(p=>tracks[p.number]).map(p=>[p.number,p]));latest.openCount=prs.length;latest.main=branch.commit.sha;latest.runs=runs.workflow_runs||[];latest.checkedAt=new Date().toISOString();latest.live=true;latest.error=null;
+ }catch(e){latest.live=false;latest.error='Live refresh unavailable: '+e.message+'; snapshot shown. Do not infer CI passed.'}
+ finally{button.disabled=false;button.textContent='↻ Refresh GitHub';renderAll()}
+}
+function setTab(t){flow.forEach(x=>{el('tab-'+x).classList.toggle('hidden',x!==t);document.querySelector('[data-tab="'+x+'"]').setAttribute('aria-selected',String(x===t))});if(history.replaceState)history.replaceState(null,'','#'+t)}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+el('refreshBtn').addEventListener('click',refresh);el('logTestBtn').addEventListener('click',()=>{setTab('evidence');el('testPr').value='98';el('testSha').value=shaFor(98);el('testNotes').focus()});
+el('prFilters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;prFilter=b.dataset.filter;el('prFilters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));renderPRs()});
+el('exceptionFilters').addEventListener('click',e=>{const b=e.target.closest('button[data-filter]');if(!b)return;exceptionFilter=b.dataset.filter;el('exceptionFilters').querySelectorAll('button').forEach(x=>x.classList.toggle('active',x===b));renderExceptions()});
+el('testPr').addEventListener('change',()=>{el('testSha').value=shaFor(+el('testPr').value)});
+el('testForm').addEventListener('submit',e=>{e.preventDefault();const r={pr:+el('testPr').value,device:el('testDevice').value,origin:el('testOrigin').value,result:el('testResult').value,sha:el('testSha').value.toLowerCase().trim(),notes:el('testNotes').value.trim().slice(0,4000),at:new Date().toISOString()};if(!validRecord(r)){alert('Enter a full 40-character SHA and factual notes.');return}records.push(r);records=records.slice(-300);if(save()){el('testNotes').value='';renderAll();alert('Local evidence saved. Export JSON for a durable copy across browsers.')}});
+el('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify({schema:1,exported_at:new Date().toISOString(),repository:OWNER_REPO,records},null,2)],{type:'application/json'});const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='life-pilot-owner-evidence-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)});
+el('importFile').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{if(f.size>500000)throw new Error('File too large');const obj=JSON.parse(await f.text());if(obj.schema!==1||!Array.isArray(obj.records)||obj.records.some(r=>!validRecord(r)))throw new Error('Invalid evidence file');if(!confirm('Import '+obj.records.length+' records into this browser? Existing records will be kept.'))return;const set=new Map([...records,...obj.records].map(r=>[r.at+'|'+r.sha+'|'+r.device+'|'+r.pr,r]));records=[...set.values()].slice(-300);save();renderAll()}catch(err){alert('Import refused: '+err.message)}finally{e.target.value=''}});
+load();el('testSha').value=shaFor(98);renderAll();setTab(flow.includes(location.hash.slice(1))?location.hash.slice(1):'overview');
+if(location.protocol==='https:'||location.protocol==='http:')refresh();
+</script>
+</body></html>

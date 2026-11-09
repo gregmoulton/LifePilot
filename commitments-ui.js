@@ -21,9 +21,15 @@ const cCurrent = i => i.versions.filter(v => v.effective_from && Date.parse(v.ef
 render = function () {
   priorCommitmentRender(); if (!profile) return;
   document.querySelector('nav')?.insertAdjacentHTML('beforeend', `<button onclick="showTab('commitments')" class="${tab === 'commitments' ? 'active' : ''}">Commitments</button>`);
-  if (tab === 'dashboard') $('app').insertAdjacentHTML('beforeend', commitmentScorecardPanel());
-  if (tab === 'agenda') $('agendaWorkspace')?.insertAdjacentHTML('afterbegin', commitmentWarnings());
-  if (tab === 'commitments') { $('app').insertAdjacentHTML('beforeend', commitmentWorkspace()); $('commitmentsWorkspace')?.addEventListener?.('click', commitmentClick); }
+  // Storage validation refuses malformed commitment records; this guard keeps the rest of the
+  // app usable if anything unexpected still reaches the screen.
+  try {
+    if (tab === 'dashboard') $('app').insertAdjacentHTML('beforeend', commitmentScorecardPanel());
+    if (tab === 'agenda') $('agendaWorkspace')?.insertAdjacentHTML('afterbegin', commitmentWarnings());
+    if (tab === 'commitments') { $('app').insertAdjacentHTML('beforeend', commitmentWorkspace()); $('commitmentsWorkspace')?.addEventListener?.('click', commitmentClick); }
+  } catch (_) {
+    $('app').insertAdjacentHTML('beforeend', '<p class="note">Commitment data needs review. Export a backup before editing.</p>');
+  }
 };
 
 function commitmentBadge(status) {

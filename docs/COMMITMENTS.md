@@ -27,6 +27,17 @@ It is saved through the existing `storage.js` transaction layer, with last-good 
   - **Missed:** only when the record is reliable. Work for the goal was planned (due) that week, nothing about the week's logs is doubtful, and the target was not met.
   - **Unverified:** everything else. That covers no plan, work only logged, a task on HOLD or with an unrecognised status, a task reset or rescheduled by a review, duplicate task IDs, and missing or unreadable times or minutes. Missing evidence is never counted as missed.
 - **Doubts are scoped to their own week.** A doubtful record affects only the weeks it can be placed in, by a readable due date (current or in history) or a dated completion. A problem that can't be placed in any week (for example, a completed task with no times and no due date) is listed under `notes` on every score with "timing unknown". It is never used to turn other, well-documented weeks unverified.
+- **Verified needs reliable evidence.** Completions of a task whose identity or record is doubtful that week (a duplicate task ID, missing minutes) stay in the snapshot marked `doubtful`, but they aren't counted. `measured` is the reliable count. A week that reaches its target only by counting doubtful records is unverified, with a note saying so. Reconciliation follows the same rule.
+- **Strict validation.** `validProfile` checks commitment records before every load and save:
+  - unique IDs and known statuses
+  - a goal on every commitment
+  - at least one version, numbered in order, with a valid target and dates
+  - drafts not yet in effect
+  - active and ended commitments approved, with effective dates in order
+  - scores and exceptions tied to existing commitments, with valid weeks and statuses
+  - every event typed
+
+  A malformed import is refused, and a malformed stored profile blocks saving without being overwritten.
 - **Every score stores its evidence snapshot, its doubts and its notes.** Later edits to task records cannot remove evidence already on record.
 - **Scoring is idempotent and append-only.** A finished week is scored once. If later native evidence, combined with what is already on record, shows a scored week met its target, a superseding entry is appended with `reason: 'later_native_evidence'`, the `supersedes` ID and a `late_evidence` flag. A `reconciled` audit event is added too. Existing entries are never rewritten, scores never go down, and no command can mark a week verified by hand.
 - **Ended commitments are still scored and reconciled** for their in-scope weeks. A discarded draft is never scored.

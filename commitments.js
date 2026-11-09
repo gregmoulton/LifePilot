@@ -74,7 +74,11 @@
     const c = p.commitments;
     if (!object(c) || c.version !== 1 || !['items', 'evaluations', 'exceptions', 'events'].every(k => Array.isArray(c[k]) && c[k].every(object))) fail('Unsupported commitment data; no data changed');
     const ids = new Set();
-    for (const item of c.items) { if (typeof item.id !== 'string' || !item.id || ids.has(item.id)) fail('Invalid or duplicate commitment ID; no data changed'); ids.add(item.id); }
+    for (const item of c.items) {
+      if (typeof item.id !== 'string' || !item.id || ids.has(item.id)) fail('Invalid or duplicate commitment ID; no data changed');
+      if (!Array.isArray(item.versions) || !item.versions.length || !item.versions.every(object)) fail('Commitment ' + item.id + ' has no terms; no data changed');
+      ids.add(item.id);
+    }
     return c;
   }
   function terms(input, goals, existing) {
@@ -132,6 +136,10 @@
     }
     return { tasks, items: [...items.values()], undated };
   }
+  // Doubts that make a task's own completions unreliable (as opposed to doubts that only make a miss unreliable).
+  const EVIDENCE_DOUBTS = ['duplicate task ID', 'actual minutes missing'];
+  const doubtfulIds = doubts => new Set(doubts.filter(d => d.task_id !== null && EVIDENCE_DOUBTS.includes(d.reason)).map(d => d.task_id));
+  const total = (evidence, target) => target.kind === 'tasks_completed' ? evidence.filter(e => e.status === 'completed').length : evidence.reduce((sum, e) => sum + (e.minutes || 0), 0);
   const snapshots = t => Array.isArray(t.history) ? t.history.filter(h => object(h) && h.type === undefined) : [];
   const OPEN = ['planned', 'active', 'today', undefined];
   const dueMs = (due, tz) => validDate(due) ? localMidnight(due, tz) + 12 * 3600000 : Date.parse(due);
@@ -177,8 +185,17 @@
     const unique = list => [...new Map(list.map(d => [d.task_id + '|' + d.reason, d])).values()];
     const snapshot = evidence.map(e => ({ task_id: e.task_id, status: e.status, completed_at: e.completed_at, entered_at: e.entered_at, minutes: e.minutes, late: Date.parse(e.entered_at) >= endMs, sources: e.sources }));
     const weekDoubts = unique(doubts);
-    const status = measured >= version.target.count ? 'verified' : planned && !weekDoubts.length ? 'missed' : 'unverified';
-    return { status, measured, evidence: snapshot, doubts: weekDoubts, notes: unique(notes) };
+    // Verified needs the target met by reliable evidence alone: completions of a task whose
+    // identity or record is doubtful this week (duplicate ID, missing minutes) are kept in the
+    // snapshot, marked doubtful, but not counted.
+    const shaky = doubtfulIds(weekDoubts);
+    for (const e of snapshot) if (shaky.has(e.task_id)) e.doubtful = true;
+    const counted = total(snapshot.filter(e => !e.doubtful), version.target);
+    const status = counted >= version.target.count ? 'verified'
+      : measured >= version.target.count ? 'unverified' // met only with doubtful records
+      : planned && !weekDoubts.length ? 'missed' : 'unverified';
+    if (status === 'unverified' && measured >= version.target.count) notes.push({ task_id: null, reason: 'target reached only by counting doubtful records' });
+    return { status, measured: counted, evidence: snapshot, doubts: weekDoubts, notes: unique(notes) };
   }
 
   function apply(profile, command, now = new Date()) {
@@ -269,10 +286,12 @@
           // Union of evidence already on record and evidence found now; nothing on record is dropped.
           const seen = new Map();
           for (const e of [...c.evaluations.filter(x => x.commitment_id === item.id && x.week_start === week).flatMap(x => x.evidence || []), ...result.evidence]) seen.set(e.task_id + '@' + e.completed_at, e);
-          const union = [...seen.values()];
-          const total = v.target.kind === 'tasks_completed' ? union.filter(e => e.status === 'completed').length : union.reduce((sum, e) => sum + (e.minutes || 0), 0);
-          if (total >= v.target.count) {
-            c.evaluations.push(entry({ status: 'verified', measured: total, evidence: union, doubts: [], supersedes: prior.id, reason: 'later_native_evidence', late_evidence: union.some(e => e.late) }));
+          // Evidence doubtful now or in any earlier entry for this week is never counted.
+          const shaky = doubtfulIds([...result.doubts, ...c.evaluations.filter(x => x.commitment_id === item.id && x.week_start === week).flatMap(x => x.doubts || [])]);
+          const union = [...seen.values()].map(e => shaky.has(e.task_id) || e.doubtful ? { ...e, doubtful: true } : e);
+          const counted = total(union.filter(e => !e.doubtful), v.target);
+          if (counted >= v.target.count) {
+            c.evaluations.push(entry({ status: 'verified', measured: counted, evidence: union, doubts: result.doubts, supersedes: prior.id, reason: 'later_native_evidence', late_evidence: union.some(e => e.late && !e.doubtful) }));
             reconciled++;
           }
         }

@@ -85,7 +85,7 @@ function apply(profile,command,now=new Date()){
    if(state(t)==='completed')return p;
    if(state(t)!=='open'||projection(p,now).hold.some(x=>x.id===t.id))throw Error('Release HOLD and complete prerequisites before recording completion');
    if(!Number.isFinite(command.minutes)||command.minutes<0)throw Error('Enter actual minutes');
-   const before=copy(t);t.status='completed';t.actual_minutes=command.minutes;t.recorded_at=stamp;event('completed',{before});
+   const before=copy(t);t.status='completed';t.actual_minutes=command.minutes;t.recorded_at=stamp;event('completed',{before,actual_minutes:command.minutes});
   }else if(command.type==='hold'||command.type==='release'){
    if(state(t)==='completed')throw Error('Completed tasks stay completed');
    if(command.type==='release'&&['hold','HOLD','waiting','on_hold'].includes(t.status))throw Error('Legacy held status needs reviewed migration before release');

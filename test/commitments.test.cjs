@@ -22,7 +22,7 @@ test('create makes a draft; nothing is scored before approval', () => {
   const p = apply(base(), { type: 'create', commitment_id: 'c1', terms: terms() }, WED);
   assert.equal(p.commitments.items[0].status, 'draft');
   assert.equal(p.commitments.items[0].versions[0].effective_from, null);
-  assert.throws(() => apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-04-01T00:00:00Z')), /Only an active commitment/);
+  assert.throws(() => apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-04-01T00:00:00Z')), /Only an approved commitment/);
   assert.ok(validProfile(p));
 });
 
@@ -91,15 +91,22 @@ test('minutes targets add actual minutes; other goals do not count', () => {
   assert.equal(scorecard(p, 'c1')[0].measured, 65);
 });
 
-test('evaluation is idempotent and append-only', () => {
+test('evaluation is idempotent; later native evidence appends a superseding entry, never a rewrite', () => {
   let p = active();
   p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-23T00:00:00Z'));
   const once = JSON.stringify(p.commitments.evaluations);
-  // Evidence that appears later cannot rewrite an already-scored week.
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-23T00:00:00Z'));
+  assert.equal(JSON.stringify(p.commitments.evaluations), once, 'no new evidence: nothing added');
   p.execution.tasks.push(done('late', '2027-03-10T16:00:00Z'), done('late2', '2027-03-11T16:00:00Z'));
   p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-23T00:00:00Z'));
-  assert.equal(JSON.stringify(p.commitments.evaluations), once);
-  assert.equal(p.commitments.events.filter(e => e.type === 'evaluated').length, 1);
+  assert.ok(p.commitments.evaluations.slice(0, 2).every((e, i) => JSON.stringify(e) === JSON.stringify(JSON.parse(once)[i])), 'original entries untouched');
+  const w8 = p.commitments.evaluations.filter(e => e.week_start === '2027-03-08');
+  assert.deepEqual(w8.map(e => e.status), ['unverified', 'verified']);
+  assert.equal(w8[1].supersedes, w8[0].id); assert.equal(w8[1].reason, 'later_native_evidence');
+  const after = JSON.stringify(p.commitments.evaluations);
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-24T00:00:00Z'));
+  assert.equal(JSON.stringify(p.commitments.evaluations), after, 'reconciliation is idempotent too');
+  assert.deepEqual(p.commitments.events.map(e => e.type).filter(t => t !== 'created' && t !== 'approved'), ['evaluated', 'reconciled']);
 });
 
 test('no command can mark a week verified by hand', () => {
@@ -144,7 +151,9 @@ test('ending an active commitment also waits 48 hours; weeks before the end are 
   p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-04-06T00:00:00Z'));
   assert.deepEqual(scorecard(p, 'c1').map(e => e.week_start), ['2027-03-08', '2027-03-15']);
   assert.equal(p.commitments.items[0].status, 'ended');
-  assert.throws(() => apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-04-06T00:00:00Z')));
+  const done1 = JSON.stringify(p.commitments);
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-04-06T00:00:00Z'));
+  assert.equal(JSON.stringify(p.commitments), done1, 'scoring an ended commitment again adds nothing');
 });
 
 test('self-reported excused weeks are labeled unreviewed, before or after scoring', () => {
@@ -224,4 +233,125 @@ test('in the app: commitmentAction saves through the transaction; an import that
   assert.equal(map.get(KEY), before);
   assert.equal(h.confirms.length, 0);
   assert.match(h.alerts.at(-1), /Commitment c1 would be removed/);
+});
+
+// --- Review fixes (ChatGPT, PR #103 comment 6729689628): history edits, late evidence, final scoring.
+
+test('a week where work was only logged (nothing planned) is unverified, not missed', () => {
+  let p = active();
+  p.execution.tasks.push(done('t1', '2027-03-09T16:00:00Z'));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  assert.equal(statusOf(p, '2027-03-08'), 'unverified');
+});
+
+test('doubtful logs make a short week unverified: task on HOLD, unknown status, duplicate IDs', () => {
+  for (const extra of [[task('t1', { due: '2027-03-10', agenda_hold: true })], [task('t1', { due: '2027-03-10', status: 'someday' })], [task('t1', { due: '2027-03-10' }), task('t1', { due: '2027-03-11' })]]) {
+    let p = active();
+    p.execution.tasks.push(...extra);
+    p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+    assert.equal(statusOf(p, '2027-03-08'), 'unverified', JSON.stringify(extra));
+    assert.ok(scorecard(p, 'c1')[0].doubts.length > 0);
+  }
+});
+
+test('evidence snapshotted in a score survives later edits to the task record', () => {
+  let p = active();
+  p.execution.tasks.push(done('t1', '2027-03-09T16:00:00Z'), done('t2', '2027-03-10T16:00:00Z'));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  assert.equal(statusOf(p, '2027-03-08'), 'verified');
+  assert.deepEqual(scorecard(p, 'c1')[0].evidence.map(e => e.task_id), ['t1', 't2']);
+  // The records are later reset and the timestamps deleted: the score and its evidence stand.
+  for (const t of p.execution.tasks) { t.status = 'planned'; delete t.recorded_at; t.actual_minutes = 0; }
+  const before = JSON.stringify(p.commitments.evaluations);
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-17T00:00:00Z'));
+  assert.equal(JSON.stringify(p.commitments.evaluations), before);
+});
+
+test('completion evidence is recovered from task history snapshots and Agenda completed events', () => {
+  let p = active();
+  // t1: reset by a review; the pre-reset snapshot (completed) is in its history.
+  p.execution.tasks.push(task('t1', { due: '2027-03-30', history: [{ ...done('t1', '2027-03-09T16:00:00Z'), due: '2027-03-09' }] }));
+  // t2: completed through the Agenda; the record later lost its timestamp, the event did not.
+  p.execution.tasks.push(task('t2', { status: 'planned' }));
+  p.agenda = { version: 1, events: [{ type: 'completed', task_id: 't2', at: '2027-03-11T16:00:00.000Z', actual_minutes: 15 }], proposals: [], rejections: [] };
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  const w = scorecard(p, 'c1')[0];
+  assert.equal(w.status, 'verified');
+  assert.deepEqual(w.evidence.map(e => [e.task_id, e.sources[0]]), [['t1', 'task_history'], ['t2', 'agenda_event']]);
+});
+
+test('the same completion seen in several places counts once', () => {
+  let p = active();
+  const t1 = done('t1', '2027-03-09T16:00:00.000Z');
+  p.execution.tasks.push(t1);
+  p.agenda = { version: 1, events: [{ type: 'completed', task_id: 't1', at: '2027-03-09T16:00:00.000Z', actual_minutes: 30 }], proposals: [], rejections: [] };
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  const w = scorecard(p, 'c1')[0];
+  assert.equal(w.measured, 1);
+  assert.deepEqual(w.evidence[0].sources, ['task', 'agenda_event']);
+});
+
+test('late evidence: completion time and entry time are kept apart, and a correction is audited', () => {
+  let p = active();
+  p.execution.tasks.push(task('t1', { due: '2027-03-10' }), done('t2', '2027-03-10T16:00:00Z'));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  assert.equal(statusOf(p, '2027-03-08'), 'missed');
+  // Native proof entered after the week was scored, for a completion inside that week.
+  Object.assign(p.execution.tasks[0], { status: 'completed', completed_at: '2027-03-12T16:00:00Z', recorded_at: '2027-03-17T16:00:00Z', actual_minutes: 30 });
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-18T00:00:00Z'));
+  const all = p.commitments.evaluations.filter(e => e.week_start === '2027-03-08');
+  assert.deepEqual(all.map(e => e.status), ['missed', 'verified']);
+  assert.equal(all[1].late_evidence, true);
+  const late = all[1].evidence.find(e => e.task_id === 't1');
+  assert.deepEqual([late.completed_at, late.entered_at, late.late], ['2027-03-12T16:00:00.000Z', '2027-03-17T16:00:00.000Z', true]);
+  assert.ok(p.commitments.events.some(e => e.type === 'reconciled'));
+});
+
+test('a schedule review through the real app keeps the week unverified, not missed, and loses no history', async () => {
+  const profile = base();
+  profile.execution.programs.push({ id: 'pg', goal_id: 'fg-1', name: 'Fictional program' });
+  profile.execution.milestones.push({ id: 'ms', goal_id: 'fg-1', program_id: 'pg', name: 'Fictional milestone', target: 'x' });
+  profile.execution.tasks.push(...['t1', 't2'].map(id => ({ id, goal_id: 'fg-1', program_id: 'pg', milestone_id: 'ms', name: 'Fictional ' + id, due: '2027-03-10T09:00', planned_minutes: 30, prerequisite_id: null, status: 'planned' })));
+  let p = active(); p.execution = profile.execution;
+  const map = new Map([[KEY, JSON.stringify(p)]]), h = harness(map);
+  await h.run("completeTask('t1','missed',0)"); await h.run("completeTask('t2','missed',0)");
+  const review = await h.run("proposeReview('fg-1','Fictional: busy week','schedule')");
+  await h.run(`approveAdjustment(${JSON.stringify(review.id)},'2027-03-16','2027-03-23','2027-03-30T09:00')`);
+  const saved = JSON.parse(map.get(KEY));
+  assert.ok(saved.execution.tasks.every(t => t.status === 'planned' && t.recorded_at === undefined && t.history.length === 1), 'the real review path resets the records');
+  const scored = apply(saved, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  const w = scorecard(scored, 'c1')[0];
+  assert.equal(w.status, 'unverified');
+  assert.ok(w.doubts.some(d => /reset or rescheduled/.test(d.reason)));
+});
+
+test('final reconciliation still runs after the commitment has ended', () => {
+  let p = active();
+  p = apply(p, { type: 'end', commitment_id: 'c1', reason: 'Fictional' }, at('2027-03-13T19:00:00Z'));
+  p.execution.tasks.push(task('t1', { due: '2027-03-17' }), task('t2', { due: '2027-03-18' }));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-30T00:00:00Z'));
+  assert.equal(p.commitments.items[0].status, 'ended');
+  assert.deepEqual(scorecard(p, 'c1').map(e => [e.week_start, e.status]), [['2027-03-08', 'unverified'], ['2027-03-15', 'missed']]);
+  Object.assign(p.execution.tasks[0], { status: 'completed', completed_at: '2027-03-17T16:00:00Z', recorded_at: '2027-03-31T16:00:00Z' });
+  Object.assign(p.execution.tasks[1], { status: 'completed', completed_at: '2027-03-18T16:00:00Z', recorded_at: '2027-03-31T16:00:00Z' });
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-04-01T00:00:00Z'));
+  assert.equal(statusOf(p, '2027-03-15'), 'verified');
+  assert.equal(p.commitments.evaluations.length, 3);
+  // A week of an ended commitment can still be excused; a discarded draft can never be scored.
+  const d = apply(apply(base(), { type: 'create', commitment_id: 'c1', terms: terms() }, WED), { type: 'discard-draft', commitment_id: 'c1' }, WED);
+  assert.equal(d.commitments.items[0].status, 'discarded');
+  assert.throws(() => apply(d, { type: 'evaluate', commitment_id: 'c1' }, at('2027-04-01T00:00:00Z')), /Only an approved/);
+});
+
+test('reconciliation adds new evidence to what is already on record, even if the record was later erased', () => {
+  let p = active();
+  p.execution.tasks.push(done('t1', '2027-03-09T16:00:00Z'));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  assert.equal(scorecard(p, 'c1')[0].measured, 1);
+  Object.assign(p.execution.tasks[0], { status: 'planned' }); delete p.execution.tasks[0].recorded_at; // evidence erased
+  p.execution.tasks.push(task('t2', { status: 'completed', completed_at: '2027-03-11T16:00:00Z', recorded_at: '2027-03-17T16:00:00Z', actual_minutes: 10 }));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-18T00:00:00Z'));
+  const w = scorecard(p, 'c1')[0];
+  assert.equal(w.status, 'verified');
+  assert.deepEqual(w.evidence.map(e => e.task_id).sort(), ['t1', 't2']);
 });

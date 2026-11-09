@@ -2,17 +2,19 @@
  * referees, notifications or network. Commands return a changed copy; the profile stays authoritative.
  *
  * profile.commitments = { version: 1, items: [], evaluations: [], exceptions: [], events: [] }
- * - item: { id, goal_id, status: draft|active|ended, created_at, approved_at, ends_from, versions: [] }
+ * - item: { id, goal_id, status: draft|active|ended|discarded, created_at, approved_at, ends_from, versions: [] }
  * - version: { version, created_at, effective_from, target: { kind, count }, timezone,
  *              evidence: 'life_pilot_task_logs', reward, consequence, cap, starts_on }
  * - evaluation (append-only): { id, commitment_id, week_start, week_end, version, status,
- *              measured, target, evaluated_at, supersedes?, exception_id?, reviewed? }
+ *              measured, target, evaluated_at, evidence: [snapshot], doubts: [], supersedes?,
+ *              reason?, late_evidence?, exception_id?, reviewed? }
  * - exception (append-only): { id, commitment_id, week_start, reason, recorded_at,
  *              self_reported: true, reviewed: false }
  * Rules: activation needs explicit approval; the first scored week starts after approval;
  * edits and ending an active commitment take effect at the first week boundary at least
  * 48 hours away, never retroactively; no command can mark a week verified by hand;
- * missing or ambiguous evidence is 'unverified', never 'missed'.
+ * missing, ambiguous or doubtful evidence is 'unverified', never 'missed'. Evaluations are
+ * append-only; later native evidence can only add a superseding entry.
  */
 (function (root, factory) {
   const api = factory();
@@ -93,30 +95,68 @@
   const versionAt = (item, weekStartMs) => item.versions.filter(v => Date.parse(v.effective_from) <= weekStartMs).sort((a, b) => b.version - a.version)[0] || null;
   const latestEvaluation = (c, id, week) => c.evaluations.filter(e => e.commitment_id === id && e.week_start === week).at(-1) || null;
 
-  // Evidence for one week, from native task logs only.
-  function measure(profile, item, version, startMs, endMs) {
-    const tasks = (profile.execution?.tasks || []).filter(t => object(t) && t.goal_id === item.goal_id);
-    let measured = 0, ambiguous = false, touched = false;
+  // Native completion evidence for a goal. Task records are mutable (a schedule review can
+  // reset a task and delete recorded_at), so evidence is gathered from every native trace:
+  // the current record, the task's own history snapshots, and Agenda 'completed' events.
+  // Each item keeps the completion time and the time it was entered, separately.
+  const DONE = ['completed', 'done'];
+  function evidenceFor(profile, goalId) {
+    const tasks = (profile.execution?.tasks || []).filter(t => object(t) && t.goal_id === goalId);
+    const ids = new Set(tasks.map(t => t.id)), items = new Map(), doubts = [];
+    const add = (task, rec, source) => {
+      const status = rec.status;
+      if (!DONE.includes(status) && status !== 'partial') return;
+      const entered = Date.parse(rec.recorded_at ?? rec.at);
+      const completed = rec.completed_at !== undefined ? Date.parse(rec.completed_at) : entered;
+      if (!Number.isFinite(entered) || !Number.isFinite(completed)) { doubts.push({ task_id: task.id, reason: 'completion time missing or unreadable', source }); return; }
+      const minutes = Number.isFinite(rec.actual_minutes) && rec.actual_minutes >= 0 ? rec.actual_minutes : null;
+      const key = task.id + '@' + completed;
+      const prev = items.get(key);
+      if (prev) { if (prev.minutes === null && minutes !== null) prev.minutes = minutes; prev.sources.push(source); return; }
+      items.set(key, { key, task_id: task.id, status: DONE.includes(status) ? 'completed' : 'partial', completed_at: new Date(completed).toISOString(), entered_at: new Date(entered).toISOString(), minutes, sources: [source] });
+    };
     for (const t of tasks) {
-      const done = t.status === 'completed' || t.status === 'done';
-      if (typeof t.due === 'string' && t.due) {
-        const due = validDate(t.due) ? localMidnight(t.due, version.timezone) + 12 * 3600000 : Date.parse(t.due);
-        if (!Number.isFinite(due)) ambiguous = true;
-        else if (due >= startMs && due < endMs) touched = true; // work was due this week
-      }
-      if (!done) continue;
-      const at = Date.parse(t.recorded_at);
-      if (!Number.isFinite(at)) { ambiguous = true; continue; }
-      if (at < startMs || at >= endMs) continue;
-      touched = true;
-      if (version.target.kind === 'tasks_completed') measured += 1;
-      else if (Number.isFinite(t.actual_minutes) && t.actual_minutes >= 0) measured += t.actual_minutes;
-      else ambiguous = true;
+      add(t, t, 'task');
+      if (Array.isArray(t.history)) for (const h of t.history) if (object(h) && h.type === undefined) add(t, { ...h, id: t.id }, 'task_history');
     }
-    if (measured >= version.target.count) return { status: 'verified', measured };
-    // A miss needs positive evidence: this goal had work due or logged in the week, and nothing is unclear.
-    if (!touched || ambiguous) return { status: 'unverified', measured };
-    return { status: 'missed', measured };
+    for (const e of profile.agenda?.events || []) {
+      if (!object(e) || e.type !== 'completed' || !ids.has(e.task_id)) continue;
+      const t = tasks.find(x => x.id === e.task_id);
+      const minutes = Number.isFinite(e.actual_minutes) ? e.actual_minutes : (t.recorded_at === e.at ? t.actual_minutes : undefined);
+      add(t, { status: 'completed', recorded_at: e.at, actual_minutes: minutes }, 'agenda_event');
+    }
+    return { tasks, items: [...items.values()], doubts };
+  }
+  const OPEN = ['planned', 'active', 'today', undefined];
+  const dueMs = (due, tz) => validDate(due) ? localMidnight(due, tz) + 12 * 3600000 : Date.parse(due);
+  // Score one week. Verified = the target is met by native Life Pilot logs (not an independent
+  // referee). Missed needs a reliable record: work for the goal was planned (due) in the week,
+  // and nothing about the week's logs is doubtful. Otherwise the week is unverified.
+  function measure(profile, item, version, startMs, endMs) {
+    const { tasks, items, doubts: allDoubts } = evidenceFor(profile, item.goal_id);
+    const inWeek = ms => ms >= startMs && ms < endMs;
+    const evidence = items.filter(e => inWeek(Date.parse(e.completed_at)) && (version.target.kind === 'minutes' || e.status === 'completed'));
+    const doubts = allDoubts.filter(d => d.reason).slice();
+    let planned = false, measured = 0;
+    for (const e of evidence) {
+      if (version.target.kind === 'tasks_completed') measured += 1;
+      else if (e.minutes === null) doubts.push({ task_id: e.task_id, reason: 'actual minutes missing' });
+      else measured += e.minutes;
+    }
+    for (const t of tasks) {
+      const dues = [t.due, ...(Array.isArray(t.history) ? t.history.filter(h => object(h) && h.type === undefined).map(h => h.due) : [])].filter(d => typeof d === 'string' && d);
+      for (const d of dues) if (!Number.isFinite(dueMs(d, version.timezone))) doubts.push({ task_id: t.id, reason: 'due date unreadable' });
+      const dueThisWeek = dues.some(d => inWeek(dueMs(d, version.timezone)));
+      if (!dueThisWeek) continue;
+      planned = true;
+      if (t.agenda_hold || ['hold', 'HOLD', 'waiting', 'on_hold'].includes(t.status)) doubts.push({ task_id: t.id, reason: 'task on hold' });
+      else if (![...OPEN, ...DONE, 'missed', 'partial'].includes(t.status)) doubts.push({ task_id: t.id, reason: 'task status not recognised' });
+      if (Array.isArray(t.history) && t.history.some(h => object(h) && h.type === undefined)) doubts.push({ task_id: t.id, reason: 'task was reset or rescheduled after review' });
+    }
+    if (new Set(tasks.map(t => t.id)).size !== tasks.length) doubts.push({ task_id: null, reason: 'duplicate task IDs' });
+    const snapshot = evidence.map(e => ({ task_id: e.task_id, status: e.status, completed_at: e.completed_at, entered_at: e.entered_at, minutes: e.minutes, late: Date.parse(e.entered_at) >= endMs, sources: e.sources }));
+    const status = measured >= version.target.count ? 'verified' : planned && !doubts.length ? 'missed' : 'unverified';
+    return { status, measured, evidence: snapshot, doubts };
   }
 
   function apply(profile, command, now = new Date()) {
@@ -150,7 +190,7 @@
       event('approved', { effective_from: v.effective_from });
     } else if (command.type === 'discard-draft') {
       if (item.status !== 'draft') fail('Only a draft can be discarded');
-      item.status = 'ended'; item.ends_from = stamp;
+      item.status = 'discarded'; item.ends_from = stamp;
       event('draft_discarded');
     } else if (command.type === 'propose-edit') {
       if (item.status !== 'active' || item.ends_from) fail('Only an active commitment can be revised');
@@ -171,7 +211,7 @@
       item.ends_from = new Date(localMidnight(mondayAtOrAfter(nowMs + COOLING_OFF_MS, v.timezone), v.timezone)).toISOString();
       event('end_scheduled', { ends_from: item.ends_from, reason: text(command.reason, 'a reason for ending', 500) });
     } else if (command.type === 'excuse') {
-      if (item.status !== 'active') fail('Only an active commitment can have an excused week');
+      if (!['active', 'ended'].includes(item.status)) fail('Only an approved commitment can have an excused week');
       const v0 = item.versions[0], week = command.week_start;
       if (!validDate(week) || weekday(week) !== 1) fail('Choose the Monday that starts the week');
       const startMs = localMidnight(week, v0.timezone);
@@ -185,24 +225,40 @@
       if (prior) c.evaluations.push({ ...prior, id: item.id + ':' + week + ':' + (c.evaluations.filter(e => e.commitment_id === item.id && e.week_start === week).length + 1), status: 'excused', exception_id: exception.id, reviewed: false, supersedes: prior.id, evaluated_at: stamp });
       event('week_excused', { week_start: week, exception_id: exception.id });
     } else if (command.type === 'evaluate') {
-      // Idempotent: scores each finished week once; later calls add nothing new.
-      if (item.status !== 'active') fail('Only an active commitment is scored');
+      // Scores each finished in-scope week once, then reconciles: if later native evidence
+      // shows a scored week met its target, a superseding entry is appended (never a rewrite).
+      // Evidence already snapshotted in an earlier entry is kept, so edits cannot erase it.
+      // Runs after the commitment has ended too, so its final weeks are scored and reconciled.
+      if (!['active', 'ended'].includes(item.status)) fail('Only an approved commitment is scored');
       const v0 = item.versions[0];
-      let week = localDate(Date.parse(v0.effective_from), v0.timezone), added = 0;
+      let week = localDate(Date.parse(v0.effective_from), v0.timezone), added = 0, reconciled = 0;
       for (;;) {
         const startMs = localMidnight(week, v0.timezone), endMs = localMidnight(addDays(week, 7), v0.timezone);
         if (endMs > nowMs || (item.ends_from && startMs >= Date.parse(item.ends_from))) break;
-        if (!latestEvaluation(c, item.id, week)) {
-          const v = versionAt(item, startMs), exception = c.exceptions.find(x => x.commitment_id === item.id && x.week_start === week);
-          const result = measure(p, item, v, startMs, endMs);
+        const v = versionAt(item, startMs), exception = c.exceptions.find(x => x.commitment_id === item.id && x.week_start === week);
+        const result = measure(p, item, v, startMs, endMs), prior = latestEvaluation(c, item.id, week);
+        const n = c.evaluations.filter(e => e.commitment_id === item.id && e.week_start === week).length + 1;
+        const entry = extra => ({ id: item.id + ':' + week + ':' + n, commitment_id: item.id, week_start: week, week_end: addDays(week, 7), version: v.version, target: copy(v.target), evaluated_at: stamp, verified_against: 'life_pilot_task_logs', ...extra });
+        if (!prior) {
           const status = exception && result.status !== 'verified' ? 'excused' : result.status;
-          c.evaluations.push({ id: item.id + ':' + week + ':1', commitment_id: item.id, week_start: week, week_end: addDays(week, 7), version: v.version, status, measured: result.measured, target: copy(v.target), evaluated_at: stamp, ...(status === 'excused' ? { exception_id: exception.id, reviewed: false } : {}) });
+          c.evaluations.push(entry({ status, measured: result.measured, evidence: result.evidence, doubts: result.doubts, ...(status === 'excused' ? { exception_id: exception.id, reviewed: false } : {}) }));
           added++;
+        } else if (prior.status !== 'verified') {
+          // Union of evidence already on record and evidence found now; nothing on record is dropped.
+          const seen = new Map();
+          for (const e of [...c.evaluations.filter(x => x.commitment_id === item.id && x.week_start === week).flatMap(x => x.evidence || []), ...result.evidence]) seen.set(e.task_id + '@' + e.completed_at, e);
+          const union = [...seen.values()];
+          const total = v.target.kind === 'tasks_completed' ? union.filter(e => e.status === 'completed').length : union.reduce((sum, e) => sum + (e.minutes || 0), 0);
+          if (total >= v.target.count) {
+            c.evaluations.push(entry({ status: 'verified', measured: total, evidence: union, doubts: [], supersedes: prior.id, reason: 'later_native_evidence', late_evidence: union.some(e => e.late) }));
+            reconciled++;
+          }
         }
         week = addDays(week, 7);
       }
-      if (item.ends_from && Date.parse(item.ends_from) <= nowMs) { item.status = 'ended'; event('ended', { ends_from: item.ends_from }); }
+      if (item.status === 'active' && item.ends_from && Date.parse(item.ends_from) <= nowMs) { item.status = 'ended'; event('ended', { ends_from: item.ends_from }); }
       if (added) event('evaluated', { weeks: added });
+      if (reconciled) event('reconciled', { weeks: reconciled });
     } else fail('Unknown commitment command');
     return p;
   }

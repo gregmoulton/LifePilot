@@ -98,65 +98,87 @@
   // Native completion evidence for a goal. Task records are mutable (a schedule review can
   // reset a task and delete recorded_at), so evidence is gathered from every native trace:
   // the current record, the task's own history snapshots, and Agenda 'completed' events.
-  // Each item keeps the completion time and the time it was entered, separately.
+  // An Agenda event's goal comes from its own pre-completion snapshot (`before.goal_id`), so it
+  // still counts if the task record is later removed or relinked. Each item keeps the completion
+  // time and the time it was entered, separately.
   const DONE = ['completed', 'done'];
   function evidenceFor(profile, goalId) {
-    const tasks = (profile.execution?.tasks || []).filter(t => object(t) && t.goal_id === goalId);
-    const ids = new Set(tasks.map(t => t.id)), items = new Map(), doubts = [];
-    const add = (task, rec, source) => {
+    const all = (profile.execution?.tasks || []).filter(object);
+    const tasks = all.filter(t => t.goal_id === goalId);
+    const items = new Map(), undated = [];
+    const add = (taskId, rec, source) => {
       const status = rec.status;
       if (!DONE.includes(status) && status !== 'partial') return;
       const entered = Date.parse(rec.recorded_at ?? rec.at);
       const completed = rec.completed_at !== undefined ? Date.parse(rec.completed_at) : entered;
-      if (!Number.isFinite(entered) || !Number.isFinite(completed)) { doubts.push({ task_id: task.id, reason: 'completion time missing or unreadable', source }); return; }
+      if (!Number.isFinite(entered) || !Number.isFinite(completed)) { undated.push({ task_id: taskId, source }); return; }
       const minutes = Number.isFinite(rec.actual_minutes) && rec.actual_minutes >= 0 ? rec.actual_minutes : null;
-      const key = task.id + '@' + completed;
+      const key = taskId + '@' + completed;
       const prev = items.get(key);
       if (prev) { if (prev.minutes === null && minutes !== null) prev.minutes = minutes; prev.sources.push(source); return; }
-      items.set(key, { key, task_id: task.id, status: DONE.includes(status) ? 'completed' : 'partial', completed_at: new Date(completed).toISOString(), entered_at: new Date(entered).toISOString(), minutes, sources: [source] });
+      items.set(key, { key, task_id: taskId, status: DONE.includes(status) ? 'completed' : 'partial', completed_at: new Date(completed).toISOString(), entered_at: new Date(entered).toISOString(), minutes, sources: [source] });
     };
     for (const t of tasks) {
-      add(t, t, 'task');
-      if (Array.isArray(t.history)) for (const h of t.history) if (object(h) && h.type === undefined) add(t, { ...h, id: t.id }, 'task_history');
+      add(t.id, t, 'task');
+      for (const h of snapshots(t)) add(t.id, h, 'task_history');
     }
     for (const e of profile.agenda?.events || []) {
-      if (!object(e) || e.type !== 'completed' || !ids.has(e.task_id)) continue;
-      const t = tasks.find(x => x.id === e.task_id);
-      const minutes = Number.isFinite(e.actual_minutes) ? e.actual_minutes : (t.recorded_at === e.at ? t.actual_minutes : undefined);
-      add(t, { status: 'completed', recorded_at: e.at, actual_minutes: minutes }, 'agenda_event');
+      if (!object(e) || e.type !== 'completed') continue;
+      const t = all.find(x => x.id === e.task_id);
+      const goal = object(e.before) && e.before.goal_id !== undefined ? e.before.goal_id : t?.goal_id;
+      if (goal !== goalId) continue;
+      const minutes = Number.isFinite(e.actual_minutes) ? e.actual_minutes : (t && t.recorded_at === e.at ? t.actual_minutes : undefined);
+      add(e.task_id, { status: 'completed', recorded_at: e.at, actual_minutes: minutes }, 'agenda_event');
     }
-    return { tasks, items: [...items.values()], doubts };
+    return { tasks, items: [...items.values()], undated };
   }
+  const snapshots = t => Array.isArray(t.history) ? t.history.filter(h => object(h) && h.type === undefined) : [];
   const OPEN = ['planned', 'active', 'today', undefined];
   const dueMs = (due, tz) => validDate(due) ? localMidnight(due, tz) + 12 * 3600000 : Date.parse(due);
   // Score one week. Verified = the target is met by native Life Pilot logs (not an independent
   // referee). Missed needs a reliable record: work for the goal was planned (due) in the week,
-  // and nothing about the week's logs is doubtful. Otherwise the week is unverified.
+  // and nothing about THIS week's records is doubtful. Otherwise the week is unverified.
+  // A doubtful record affects only the weeks it can be placed in (a readable due date or
+  // completion time). A problem that cannot be placed in any week is listed under `notes` on
+  // every score instead; it never turns other, well-documented weeks unverified.
   function measure(profile, item, version, startMs, endMs) {
-    const { tasks, items, doubts: allDoubts } = evidenceFor(profile, item.goal_id);
-    const inWeek = ms => ms >= startMs && ms < endMs;
+    const { tasks, items, undated } = evidenceFor(profile, item.goal_id);
+    const tz = version.timezone, inWeek = ms => ms >= startMs && ms < endMs;
     const evidence = items.filter(e => inWeek(Date.parse(e.completed_at)) && (version.target.kind === 'minutes' || e.status === 'completed'));
-    const doubts = allDoubts.filter(d => d.reason).slice();
+    const doubts = [], notes = [];
+    // Where a task can be placed in time: its readable due dates and dated completions.
+    const anchors = id => {
+      const dues = tasks.filter(t => t.id === id).flatMap(t => [t.due, ...snapshots(t).map(h => h.due)]).filter(d => typeof d === 'string' && d).map(d => dueMs(d, tz)).filter(Number.isFinite);
+      return [...dues, ...items.filter(e => e.task_id === id).map(e => Date.parse(e.completed_at))];
+    };
+    const place = (id, reason) => {
+      const where = anchors(id);
+      if (where.some(inWeek)) doubts.push({ task_id: id, reason });
+      else if (!where.length) notes.push({ task_id: id, reason: reason + ' (timing unknown; not used to score any week)' });
+    };
     let planned = false, measured = 0;
     for (const e of evidence) {
       if (version.target.kind === 'tasks_completed') measured += 1;
       else if (e.minutes === null) doubts.push({ task_id: e.task_id, reason: 'actual minutes missing' });
       else measured += e.minutes;
     }
+    for (const u of undated) place(u.task_id, 'completion time missing or unreadable');
+    const counts = tasks.reduce((m, t) => m.set(t.id, (m.get(t.id) || 0) + 1), new Map());
+    for (const [id, n] of counts) if (n > 1) place(id, 'duplicate task ID');
     for (const t of tasks) {
-      const dues = [t.due, ...(Array.isArray(t.history) ? t.history.filter(h => object(h) && h.type === undefined).map(h => h.due) : [])].filter(d => typeof d === 'string' && d);
-      for (const d of dues) if (!Number.isFinite(dueMs(d, version.timezone))) doubts.push({ task_id: t.id, reason: 'due date unreadable' });
-      const dueThisWeek = dues.some(d => inWeek(dueMs(d, version.timezone)));
-      if (!dueThisWeek) continue;
+      const dues = [t.due, ...snapshots(t).map(h => h.due)].filter(d => typeof d === 'string' && d);
+      if (dues.some(d => !Number.isFinite(dueMs(d, tz)))) place(t.id, 'due date unreadable');
+      if (!dues.some(d => inWeek(dueMs(d, tz)))) continue;
       planned = true;
       if (t.agenda_hold || ['hold', 'HOLD', 'waiting', 'on_hold'].includes(t.status)) doubts.push({ task_id: t.id, reason: 'task on hold' });
       else if (![...OPEN, ...DONE, 'missed', 'partial'].includes(t.status)) doubts.push({ task_id: t.id, reason: 'task status not recognised' });
-      if (Array.isArray(t.history) && t.history.some(h => object(h) && h.type === undefined)) doubts.push({ task_id: t.id, reason: 'task was reset or rescheduled after review' });
+      if (snapshots(t).length) doubts.push({ task_id: t.id, reason: 'task was reset or rescheduled after review' });
     }
-    if (new Set(tasks.map(t => t.id)).size !== tasks.length) doubts.push({ task_id: null, reason: 'duplicate task IDs' });
+    const unique = list => [...new Map(list.map(d => [d.task_id + '|' + d.reason, d])).values()];
     const snapshot = evidence.map(e => ({ task_id: e.task_id, status: e.status, completed_at: e.completed_at, entered_at: e.entered_at, minutes: e.minutes, late: Date.parse(e.entered_at) >= endMs, sources: e.sources }));
-    const status = measured >= version.target.count ? 'verified' : planned && !doubts.length ? 'missed' : 'unverified';
-    return { status, measured, evidence: snapshot, doubts };
+    const weekDoubts = unique(doubts);
+    const status = measured >= version.target.count ? 'verified' : planned && !weekDoubts.length ? 'missed' : 'unverified';
+    return { status, measured, evidence: snapshot, doubts: weekDoubts, notes: unique(notes) };
   }
 
   function apply(profile, command, now = new Date()) {
@@ -241,7 +263,7 @@
         const entry = extra => ({ id: item.id + ':' + week + ':' + n, commitment_id: item.id, week_start: week, week_end: addDays(week, 7), version: v.version, target: copy(v.target), evaluated_at: stamp, verified_against: 'life_pilot_task_logs', ...extra });
         if (!prior) {
           const status = exception && result.status !== 'verified' ? 'excused' : result.status;
-          c.evaluations.push(entry({ status, measured: result.measured, evidence: result.evidence, doubts: result.doubts, ...(status === 'excused' ? { exception_id: exception.id, reviewed: false } : {}) }));
+          c.evaluations.push(entry({ status, measured: result.measured, evidence: result.evidence, doubts: result.doubts, notes: result.notes, ...(status === 'excused' ? { exception_id: exception.id, reviewed: false } : {}) }));
           added++;
         } else if (prior.status !== 'verified') {
           // Union of evidence already on record and evidence found now; nothing on record is dropped.

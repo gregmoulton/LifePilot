@@ -74,7 +74,7 @@ test('week boundaries use Phoenix local time', () => {
 
 test('ambiguous evidence is unverified, never missed', () => {
   let p = active();
-  p.execution.tasks.push(task('t1', { due: '2027-03-10' }), task('t2', { status: 'completed', actual_minutes: 30 })); // no recorded_at
+  p.execution.tasks.push(task('t1', { due: '2027-03-10' }), task('t2', { due: '2027-03-11', status: 'completed', actual_minutes: 30 })); // in-week task, no recorded_at
   p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
   assert.equal(statusOf(p, '2027-03-08'), 'unverified');
   let m = active({ target: { kind: 'minutes', count: 60 } });
@@ -354,4 +354,50 @@ test('reconciliation adds new evidence to what is already on record, even if the
   const w = scorecard(p, 'c1')[0];
   assert.equal(w.status, 'verified');
   assert.deepEqual(w.evidence.map(e => e.task_id).sort(), ['t1', 't2']);
+});
+
+// --- Re-review fix (ChatGPT, PR #103 comment 6729872350): doubts are scoped to their own week.
+
+test('a malformed task in another week does not make a well-documented week unverified', () => {
+  let p = active();
+  // Week of 03-08: a completed task with no completion time (doubtful, in that week by its due date).
+  p.execution.tasks.push(task('bad', { due: '2027-03-10', status: 'completed', actual_minutes: 30 }));
+  // Week of 03-15: a clean plan, not met.
+  p.execution.tasks.push(task('t1', { due: '2027-03-16' }), task('t2', { due: '2027-03-17' }), done('t3', '2027-03-16T16:00:00Z'));
+  // Week of 03-22: a duplicate task ID and an unreadable due date, both placed only in that week.
+  p.execution.tasks.push(task('dup', { due: '2027-03-23' }), task('dup', { due: '2027-03-24' }), task('baddue', { due: 'not a date', history: [{ id: 'baddue', status: 'planned', due: '2027-03-25' }] }));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-30T00:00:00Z'));
+  assert.equal(statusOf(p, '2027-03-08'), 'unverified', 'the doubtful completion is in this week');
+  assert.ok(scorecard(p, 'c1')[0].doubts.some(d => d.task_id === 'bad' && /completion time/.test(d.reason)));
+  assert.equal(statusOf(p, '2027-03-15'), 'missed', 'a clean later week keeps its missed score');
+  assert.deepEqual(scorecard(p, 'c1')[1].doubts, []);
+  const w22 = scorecard(p, 'c1')[2];
+  assert.equal(w22.status, 'unverified');
+  assert.deepEqual(w22.doubts.map(d => d.task_id).sort(), ['baddue', 'baddue', 'dup']);
+});
+
+test('a problem that cannot be placed in any week is noted, not used to score', () => {
+  let p = active();
+  p.execution.tasks.push(task('t1', { due: '2027-03-10' }), task('nowhere', { status: 'completed' }), task('nodate', { due: 'someday' }));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  const w = scorecard(p, 'c1')[0];
+  assert.equal(w.status, 'missed');
+  assert.deepEqual(w.doubts, []);
+  assert.deepEqual(w.notes.map(n => n.task_id).sort(), ['nodate', 'nowhere']);
+  assert.ok(w.notes.every(n => /timing unknown/.test(n.reason)));
+});
+
+test('an Agenda completion still counts for its goal if the task is later removed or relinked', () => {
+  let p = active();
+  const before = { id: 'gone', goal_id: 'fg-1', name: 'Fictional', status: 'planned' };
+  p.agenda = { version: 1, proposals: [], rejections: [], events: [
+    { type: 'completed', task_id: 'gone', at: '2027-03-09T16:00:00.000Z', before, actual_minutes: 10 },
+    { type: 'completed', task_id: 'moved', at: '2027-03-10T16:00:00.000Z', before: { ...before, id: 'moved' }, actual_minutes: 10 },
+    { type: 'completed', task_id: 'other', at: '2027-03-10T17:00:00.000Z', before: { ...before, id: 'other', goal_id: 'elsewhere' }, actual_minutes: 10 }] };
+  p.execution.tasks.push({ ...before, id: 'moved', goal_id: 'elsewhere', status: 'completed', recorded_at: '2027-03-10T16:00:00.000Z' });
+  p.execution.tasks.push({ ...before, id: 'other', goal_id: 'fg-1', status: 'planned' });
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-16T00:00:00Z'));
+  const w = scorecard(p, 'c1')[0];
+  assert.equal(w.status, 'verified');
+  assert.deepEqual(w.evidence.map(e => e.task_id).sort(), ['gone', 'moved']);
 });

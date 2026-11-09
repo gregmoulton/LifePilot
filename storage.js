@@ -128,6 +128,70 @@
     keepAll(list(now.events, 'Existing commitment history'), list(next.events, 'Imported commitment history'), 'Commitment history entry', false);
     return problems;
   }
+  // Agenda proposals still waiting on the owner (proposed, deferred, stale) may move on in a
+  // newer export, but only the way agenda-model.js moves them, and may not disappear:
+  //   proposed <-> deferred, proposed/deferred -> stale, applied or rejected; stale is final.
+  // Everything else in the proposal (task_id, type, summary, before, created_at, ...) must stay
+  // identical. Status timestamps (deferred_at, resumed_at, approved_at, applied_at) may be
+  // added or updated but not dropped. A proposal that arrives settled must arrive with its
+  // owner-decision audit records. Settled proposals are checked unchanged by retentionProblems.
+  const PENDING_FROM = { proposed: ['proposed', 'deferred', 'stale', 'applied', 'rejected'], deferred: ['proposed', 'deferred', 'stale', 'applied', 'rejected'], stale: ['stale'] };
+  const PROPOSAL_STAMPS = ['deferred_at', 'resumed_at', 'approved_at', 'applied_at'];
+  const MUTABLE_PROPOSAL_KEYS = ['status', ...PROPOSAL_STAMPS];
+  const stamp = value => typeof value === 'string' && value.length > 0;
+  function proposalFollows(before, after) {
+    if (!object(after)) return false;
+    if (canonical(before) === canonical(after)) return true;
+    const allowed = PENDING_FROM[before.status];
+    if (!allowed || !allowed.includes(after.status)) return false;
+    const fixed = record => { const rest = { ...record }; MUTABLE_PROPOSAL_KEYS.forEach(k => delete rest[k]); return canonical(rest); };
+    if (fixed(before) !== fixed(after)) return false;
+    if (PROPOSAL_STAMPS.some(k => (before[k] !== undefined || after[k] !== undefined) && !stamp(after[k]))) return false;
+    if (after.status === 'deferred' && before.status !== 'deferred' && !stamp(after.deferred_at)) return false;
+    if (after.status === 'proposed' && before.status === 'deferred' && !stamp(after.resumed_at)) return false;
+    if (after.status === 'applied' && !(stamp(after.approved_at) && stamp(after.applied_at))) return false;
+    return true;
+  }
+  // The audit trail agenda-model.js writes when a proposal is settled, deferred or resumed.
+  function missingAudit(before, after, incoming, list) {
+    if (after.status === before.status) return null;
+    const nextAgenda = object(incoming?.agenda) ? incoming.agenda : {};
+    const events = list(nextAgenda.events, 'Imported Agenda events').filter(e => object(e) && e.proposal_id === before.id);
+    const event = types => events.some(e => types.includes(e.type));
+    if (after.status === 'applied') {
+      const decision = list(incoming?.decision_register, 'Imported decision register').some(d => object(d) && d.proposal_id === before.id && d.status === 'approved');
+      if (!decision || !event(['rescheduled', 'prioritized', 'prerequisite_reviewed'])) return 'would be marked applied without its owner approval record';
+    } else if (after.status === 'rejected') {
+      const rejection = list(nextAgenda.rejections, 'Imported Agenda rejections').some(r => object(r) && r.task_id === before.task_id && r.action_type === before.type);
+      if (!rejection || !event(['proposal_rejected'])) return 'would be marked rejected without its owner rejection record';
+    } else if (after.status === 'deferred') {
+      if (!event(['proposal_deferred'])) return 'would be marked deferred without its Agenda event';
+    } else if (after.status === 'proposed') {
+      if (!event(['proposal_resumed'])) return 'would be resumed without its Agenda event';
+    }
+    return null;
+  }
+  function pendingProposalProblems(agenda, nextAgenda, incoming, problems, list) {
+    const existing = list(agenda.proposals, 'Existing Agenda proposals');
+    const arriving = list(nextAgenda.proposals, 'Imported Agenda proposals');
+    const idCount = records => records.reduce((map, r) => object(r) && typeof r.id === 'string' ? map.set(r.id, (map.get(r.id) || 0) + 1) : map, new Map());
+    const existingIds = idCount(existing);
+    for (const [id, n] of idCount(arriving)) if (n > 1 && n > (existingIds.get(id) || 0)) problems.push('Agenda proposal ' + id + ' appears more than once');
+    const used = new Set();
+    const take = (predicate) => { const index = arriving.findIndex((r, i) => !used.has(i) && predicate(r)); if (index >= 0) used.add(index); return index; };
+    // Exact copies first, so an unchanged duplicate is never consumed by a changed one.
+    const pending = existing.map((proposal, index) => ({ proposal, index })).filter(({ proposal }) => object(proposal) && !SETTLED_PROPOSALS.includes(proposal.status));
+    const unmatched = pending.filter(({ proposal }) => take(r => canonical(r) === canonical(proposal)) < 0);
+    unmatched.forEach(({ proposal, index }) => {
+      const id = typeof proposal.id === 'string' && proposal.id ? proposal.id : null;
+      const name = 'Agenda proposal ' + (id ?? '#' + (index + 1));
+      if (id === null) { problems.push(name + ' would be removed'); return; }
+      const at = take(r => object(r) && r.id === id && proposalFollows(proposal, r));
+      if (at < 0) { problems.push(name + (arriving.some(r => object(r) && r.id === id) ? ' would be changed' : ' would be removed')); return; }
+      const audit = missingAudit(proposal, arriving[at], incoming, list);
+      if (audit) problems.push(name + ' ' + audit);
+    });
+  }
   // An ordinary import must also keep every other durable record: every Agenda event
   // (including completion events), every pending Agenda proposal, every Execution record
   // (tasks with results and history, programs, milestones, observations, experiments,
@@ -139,15 +203,7 @@
     const { problems, list, keepAll } = checker();
     const agenda = object(current.agenda) ? current.agenda : {}, nextAgenda = object(incoming?.agenda) ? incoming.agenda : {};
     keepAll(list(agenda.events, 'Existing Agenda events'), list(nextAgenda.events, 'Imported Agenda events'), 'Agenda event', false);
-    // Agenda proposals still waiting on the owner (proposed, deferred, stale) may move on
-    // (for example to applied or rejected) in a newer export, but may not disappear.
-    // Settled ones are checked unchanged by retentionProblems.
-    const arrivingProposalIds = new Set(list(nextAgenda.proposals, 'Imported Agenda proposals').filter(p => object(p) && typeof p.id === 'string').map(p => p.id));
-    list(agenda.proposals, 'Existing Agenda proposals').forEach((proposal, index) => {
-      if (!object(proposal) || SETTLED_PROPOSALS.includes(proposal.status)) return;
-      const id = typeof proposal.id === 'string' && proposal.id ? proposal.id : null;
-      if (id === null || !arrivingProposalIds.has(id)) problems.push('Agenda proposal ' + (id ?? '#' + (index + 1)) + ' would be removed');
-    });
+    pendingProposalProblems(agenda, nextAgenda, incoming, problems, list);
     const execution = object(current.execution) ? current.execution : {}, nextExecution = object(incoming?.execution) ? incoming.execution : {};
     for (const [key, name] of EXECUTION_RECORDS) {
       keepAll(list(execution[key], 'Existing ' + key), list(nextExecution[key], 'Imported ' + key), name, true);

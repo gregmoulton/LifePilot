@@ -152,6 +152,72 @@ class BrowserValidation(unittest.TestCase):
         self.assertEqual(self.saved(), before)
         self.assertIn('not awaiting approval', self.page.locator('#storageMessage').inner_text())
 
+    def test_commitment_screens_flow_on_phone_width(self):
+        # #95 Slice 2: owner flow through the real screens, fictional data, fixed clock.
+        page = self.page
+        page.set_viewport_size({'width': 390, 'height': 844})
+        answers = []
+        page.on('dialog', lambda d: (answers.append(d.message),
+                                     d.accept('20' if 'minutes' in d.message else 'Fictional reason') if d.type == 'prompt' else d.accept()))
+        self.seed(fictional_profile())
+        page.clock.set_fixed_time('2027-03-03T19:00:00Z')
+        page.reload()
+        page.get_by_role('button', name='Commitments', exact=True).click()
+        page.get_by_role('button', name='New commitment').click()
+        page.select_option('#cGoal', 'g1')
+        page.fill('#cCount', '2')
+        # A refused save keeps what was typed (blank reward).
+        page.fill('#cConsequence', 'Fictional consequence'); page.fill('#cCap', 'Fictional cap')
+        page.locator('#cReward').evaluate("e => { e.value = '   '; e.form.requestSubmit(); }")
+        self.wait_saved()
+        self.assertIn('reward', page.locator('#storageMessage').inner_text())
+        self.assertEqual(page.input_value('#cConsequence'), 'Fictional consequence')
+        self.assertNotIn('commitments', json.loads(self.saved()))
+        page.fill('#cReward', 'Fictional reward')
+        page.get_by_role('button', name='Save draft').click(); self.wait_saved()
+        self.assertIn('first scored week starts Mon, Mar 8, 2027', page.locator('#commitmentsWorkspace').inner_text())
+        page.get_by_role('button', name='Approve and start').click(); self.wait_saved()
+        self.assertIn('first scored week starts Mon, Mar 8, 2027', answers[-1])
+        # Week of Mar 8: two Agenda tasks linked to the goal; one completed.
+        page.clock.set_fixed_time('2027-03-09T19:00:00Z'); page.reload(); self.agenda()
+        for name in ('Fictional linked A', 'Fictional linked B'):
+            page.fill('#agendaName', name); page.select_option('#agendaGoal', 'g1')
+            page.get_by_role('button', name='Today', exact=True).click()
+            page.get_by_role('button', name='Add task', exact=True).click(); self.wait_saved()
+        page.locator('#agendaWorkspace article', has_text='Fictional linked A').locator("button[data-action='complete']").click(); self.wait_saved()
+        # Saturday: the Today warning shows 1 of 2 with 2 days left.
+        page.clock.set_fixed_time('2027-03-13T19:00:00Z'); page.reload(); self.agenda()
+        warning = page.locator('#agendaWorkspace .panel.warn').first.inner_text()
+        self.assertIn('1 of 2 completed tasks a week', warning); self.assertIn('ends in 2 days', warning)
+        # Opening and rendering never write.
+        before = self.saved()
+        for tab in ('Overview', 'Commitments', "Today's Agenda"):
+            page.get_by_role('button', name=tab, exact=True).click()
+        self.assertEqual(self.saved(), before)
+        # Score, excuse, revise.
+        page.clock.set_fixed_time('2027-03-16T19:00:00Z'); page.reload()
+        page.get_by_role('button', name='Commitments', exact=True).click()
+        page.get_by_role('button', name='Score finished weeks').click(); self.wait_saved()
+        self.assertIn('Missed', page.locator('#commitmentsWorkspace table').inner_text())
+        page.get_by_role('button', name='Excuse week').click(); self.wait_saved()
+        self.assertIn('Excused: self-reported, unreviewed', page.locator('#commitmentsWorkspace table').inner_text())
+        page.get_by_role('button', name='Revise').click()
+        page.fill('#cCount', '1'); page.fill('#cReason', 'Fictional: too ambitious')
+        page.get_by_role('button', name='Schedule revision').click(); self.wait_saved()
+        self.assertIn('week of Mon, Mar 22, 2027', answers[-1])
+        text = page.locator('#commitmentsWorkspace').inner_text()
+        self.assertIn('Revision waiting: 1 completed task a week from Mon, Mar 22, 2027', text)
+        page.get_by_role('button', name='Overview', exact=True).click()
+        self.assertIn('2 completed tasks a week', page.locator('#app').inner_text(), 'Overview shows the terms in force')
+        page.reload()
+        saved = json.loads(self.saved())
+        self.assertEqual([e['type'] for e in saved['commitments']['events']],
+                         ['created', 'approved', 'evaluated', 'week_excused', 'revision_proposed'])
+        self.assertEqual([e['status'] for e in saved['commitments']['evaluations']], ['missed', 'excused'])
+        for key in ('goals', 'decision_register', 'system_improvement_log', 'unknown_top'):
+            self.assertEqual(saved[key], fictional_profile()[key])
+        self.assertFalse(page.evaluate('document.documentElement.scrollWidth > innerWidth'), 'no sideways scroll at phone width')
+
     def test_native_lock_queue_stale_tab_download_and_reload(self):
         original = self.seed()
         a = self.page

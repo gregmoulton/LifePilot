@@ -48,7 +48,7 @@ function apply(profile,command,now=new Date()){
   if(command.task.due&&!Number.isFinite(engine.daysUntil(command.task.due,new Date(now))))throw Error('Choose a valid date');
   const importance=command.task.agenda_importance||'normal';
   if(!['high','normal','low'].includes(importance))throw Error('Choose High, Normal or Low priority');
-  list.push({agenda_importance:importance,importance:{high:3,normal:1,low:0.5}[importance],id:command.task.id,name:command.task.name.trim(),due:command.task.due||'',status:'planned',created_at:stamp});event('added',{task_id:command.task.id});
+  const goal=command.task.goal_id;if(goal!==undefined&&goal!==''&&!(p.goals||[]).some(g=>g&&g.id===goal))throw Error('Choose an existing goal');list.push({agenda_importance:importance,importance:{high:3,normal:1,low:0.5}[importance],id:command.task.id,name:command.task.name.trim(),due:command.task.due||'',status:'planned',created_at:stamp,...(goal?{goal_id:goal}:{})});event('added',{task_id:command.task.id});
  }else if(command.type==='refresh'){
   const normalized=list.map(t=>({...t,status:state(t)==='open'?'planned':state(t)==='completed'?'completed':state(t)==='hold'?'hold':'review'}));
   const report=engine.forwardRadar({tasks:normalized,rejections:a.rejections,now});

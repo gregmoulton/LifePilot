@@ -312,7 +312,43 @@
     for (const e of c.evaluations) if (e.commitment_id === id) weeks.set(e.week_start, e);
     return [...weeks.values()].sort((a, b) => a.week_start.localeCompare(b.week_start));
   }
-  return { apply, scorecard, COOLING_OFF_MS, WEEK_MS, localMidnight, localDate };
+  // --- Read-only helpers for the screens (Slice 2). None of these write.
+  const iso = ms => new Date(ms).toISOString();
+  // When an action taken now would take effect, so the owner sees it before confirming.
+  function effectiveDates(item, now = new Date()) {
+    const nowMs = new Date(now).getTime(), v = item.versions.at(-1), tz = v.timezone;
+    const firstWeek = [nextMondayAfter(nowMs, tz), mondayAtOrAfter(localMidnight(v.starts_on, tz), tz)].sort().at(-1);
+    const boundary = localDate(localMidnight(mondayAtOrAfter(nowMs + COOLING_OFF_MS, tz), tz), tz);
+    return { approve_first_week: firstWeek, revision_or_end_from: boundary };
+  }
+  // The current week's progress against the version in force, from native logs (no write).
+  function progress(profile, id, now = new Date()) {
+    const item = profile?.commitments?.items?.find(x => x.id === id);
+    if (!item || item.status !== 'active') return null;
+    const nowMs = new Date(now).getTime(), v0 = item.versions[0], tz = v0.timezone;
+    if (nowMs < Date.parse(v0.effective_from) || (item.ends_from && nowMs >= Date.parse(item.ends_from))) return null;
+    let week = localDate(nowMs, tz);
+    while (weekday(week) !== 1) week = addDays(week, -1);
+    const startMs = localMidnight(week, tz), endMs = localMidnight(addDays(week, 7), tz), v = versionAt(item, startMs);
+    const result = measure(profile, item, v, startMs, endMs);
+    const daysLeft = Math.ceil((endMs - nowMs) / 86400000);
+    return { week_start: week, measured: result.measured, target: copy(v.target), met: result.measured >= v.target.count, days_left: daysLeft, ends_at: iso(endMs) };
+  }
+  // Started weeks in scope that can still be excused (not verified, no exception yet).
+  function excusableWeeks(profile, id, now = new Date()) {
+    const c = profile?.commitments, item = c?.items?.find(x => x.id === id);
+    if (!item || !['active', 'ended'].includes(item.status)) return [];
+    const nowMs = new Date(now).getTime(), v0 = item.versions[0], tz = v0.timezone, out = [];
+    for (let week = localDate(Date.parse(v0.effective_from), tz); ; week = addDays(week, 7)) {
+      const startMs = localMidnight(week, tz);
+      if (startMs > nowMs || (item.ends_from && startMs >= Date.parse(item.ends_from))) break;
+      const last = latestEvaluation(c, id, week);
+      if (last?.status === 'verified' || c.exceptions.some(x => x.commitment_id === id && x.week_start === week)) continue;
+      out.push(week);
+    }
+    return out;
+  }
+  return { apply, scorecard, effectiveDates, progress, excusableWeeks, COOLING_OFF_MS, WEEK_MS, localMidnight, localDate };
 });
 
 // Browser entry point; wrapped in a save transaction by persistence.js. Slice 2 adds the screens.

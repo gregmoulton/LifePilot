@@ -11,6 +11,7 @@ on:
       - storage.js
       - persistence.js
       - commitments.js
+      - commitments-ui.js
       - 'test/**'
       - 'tests/**'
       - 'preview/**'

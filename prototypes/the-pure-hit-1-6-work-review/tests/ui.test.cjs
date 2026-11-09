@@ -1,10 +1,10 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),vm=require('node:vm'),fs=require('node:fs'),{webcrypto}=require('node:crypto');
 const code=fs.readFileSync('dist/app.js','utf8'),original=fs.readFileSync('tests/fixtures/original.html','utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
-function runtime({data=new Map(),source=code,fail=false,devices=false,journal=false,bluetooth,autoCountdown=true,autoHrGate=true,splitDefault=false}={}){
+function runtime({data=new Map(),source=code,fail=false,devices=false,journal=false,bluetooth,autoCountdown=true,autoHrGate=true,splitDefault=false,release=false}={}){
  const nodes=new Map(),spoken=[],tones=[],downloads=[],events={},docEvents={};let t=Date.parse('2026-10-21T20:00:00Z'),failed=fail,confirmation=true,writeFault='normal';const intervals=[],timeouts=new Map();let nextTimeout=0;
  const html=fs.readFileSync(source===code?'dist/index.html':'tests/fixtures/original.html','utf8');
  const node=id=>{if(!id.startsWith('download')&&!html.includes('id="'+id+'"'))throw Error('Missing real DOM element: '+id);if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,classList:{toggle(name,on){this[name]=on},add(name){this[name]=true},remove(name){this[name]=false},contains(name){return !!this[name]}},addEventListener(n,f){this[n]=f},remove(){},click(){if(this.download)downloads.push(this.href);else if(!this.disabled)this.onclick?.()}});return nodes.get(id)};
- const document={hidden:false,getElementById:node,createElement:()=>node('download'+downloads.length),body:{dataset:{defaultSquat:splitDefault?'split':''},append(){}},addEventListener:(n,f)=>{(docEvents[n]??=[]).push(f)}};
+ const document={hidden:false,getElementById:node,createElement:()=>node('download'+downloads.length),body:{dataset:{defaultSquat:release?'jump':splitDefault?'split':''},append(){}},addEventListener:(n,f)=>{(docEvents[n]??=[]).push(f)}};
  const store={getItem:k=>data.get(k)??null,setItem:(k,v)=>{if(failed)throw Error('simulated quota');if(writeFault==='drop')return;if(writeFault==='corrupt'){data.set(k,'simulated unexpected storage bytes');return}data.set(k,v)},removeItem:k=>data.delete(k)};
  let blobs=new Map(),id=0,recognition;const recognitionResults=new WeakMap();
  class Recognition{constructor(){recognition=this}start(){this.onstart?.()}abort(){this.onend?.()}}
@@ -336,4 +336,39 @@ test('review defaults to split squat while an explicit plan or active session is
  custom.click('start');
  const active=runtime({data:custom.data,splitDefault:true});
  assert.equal(active.read('db.active.exercisePlan[1].unilateral'),false);
+});
+
+test('release Bluetooth recovery arms at 110, resets at 113, latches one cue and permits manual conditioning',async()=>{
+ let packet;const ch={addEventListener(n,f){packet=f},removeEventListener(){},async startNotifications(){}};
+ const device={addEventListener(){},removeEventListener(){},gatt:{connected:true,disconnect(){},async connect(){return {async getPrimaryService(){return {async getCharacteristic(){return ch}}}}}}};
+ const r=runtime({release:true,devices:true,bluetooth:{async requestDevice(){return device}}});
+ await r.node('connectHr').onclick();
+ const feed=(bpm,ms=1000)=>{r.time(ms);packet({target:{value:new DataView(Uint8Array.from([0,bpm]).buffer)}});r.tick()};
+ feed(120);r.click('start');
+ for(const n of ['10','20','8']){r.input('reps',n);r.click('record')}
+ assert.equal(r.read('db.active.records[1].exerciseName'),'Jump Squats');
+ assert.equal(r.read('db.active.records[2].exerciseName'),'Inverted rows');
+ assert.equal(r.node('recover').disabled,true);
+ feed(110);feed(112);feed(113);
+ for(let i=0;i<7;i++)feed(112);
+ assert.equal(r.node('recover').disabled,true);
+ feed(110);feed(112,3000);for(let i=0;i<5;i++)feed(112);
+ assert.equal(r.node('recover').disabled,true);
+ r.input('hr','105');r.click('loghr');assert.equal(r.node('recover').disabled,true);
+ feed(110);for(let i=0;i<4;i++)feed(112);
+ assert.equal(r.node('recover').disabled,true);
+ feed(111);assert.equal(r.node('recover').disabled,false);
+ assert.equal(r.read('db.active.round'),0);
+ assert.equal(r.tones.filter(n=>n===784).length,1);
+ for(let i=0;i<45;i++)feed(112);
+ assert.equal(r.tones.filter(n=>n===784).length,1);
+ assert.equal(r.node('recover').disabled,false);
+ const reload=runtime({release:true,data:r.data});reload.click('resume');
+ assert.equal(reload.node('recover').disabled,false);
+ assert.equal(reload.tones.filter(n=>n===784).length,0);
+ r.click('recover');
+ assert.equal(r.read('db.active.round'),1);
+ assert.equal(r.read('db.active.ex'),0);
+ assert.equal(r.read('db.active.recoveries[0].manualOverride'),false);
+ assert.deepEqual(r.spoken,[]);
 });

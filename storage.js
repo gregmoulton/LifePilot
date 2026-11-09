@@ -10,6 +10,35 @@
   const collection = value => Array.isArray(value) && value.every(object);
   const copy = value => value === null ? null : JSON.parse(JSON.stringify(value));
   const MAX_RECOVERY = 5;
+  // Commitment records (#95) must be complete enough for the engine and screens to use safely.
+  const isoTime = v => typeof v === 'string' && Number.isFinite(Date.parse(v));
+  const day = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  const COMMITMENT_STATUS = ['draft', 'active', 'ended', 'discarded'], SCORE_STATUS = ['verified', 'missed', 'unverified', 'excused'];
+  function validTerms(v, index) {
+    return object(v) && v.version === index + 1 && object(v.target) && ['tasks_completed', 'minutes'].includes(v.target.kind)
+      && Number.isInteger(v.target.count) && v.target.count >= 1 && typeof v.timezone === 'string' && day(v.starts_on)
+      && ['reward', 'consequence', 'cap'].every(k => typeof v[k] === 'string')
+      && (v.effective_from === null || isoTime(v.effective_from));
+  }
+  function validCommitments(c) {
+    if (!object(c) || c.version !== 1 || !['items', 'evaluations', 'exceptions', 'events'].every(key => collection(c[key]))) return false;
+    const ids = new Set();
+    for (const item of c.items) {
+      if (typeof item.id !== 'string' || !item.id || ids.has(item.id)) return false;
+      ids.add(item.id);
+      if (!COMMITMENT_STATUS.includes(item.status) || typeof item.goal_id !== 'string') return false;
+      if (!Array.isArray(item.versions) || !item.versions.length || !item.versions.every(validTerms)) return false;
+      if (item.versions.some(v => v.goal_id !== undefined && v.goal_id !== item.goal_id)) return false;
+      if (item.ends_from !== null && item.ends_from !== undefined && !isoTime(item.ends_from)) return false;
+      if (['active', 'ended'].includes(item.status)) {
+        if (!isoTime(item.approved_at) || !item.versions.every(v => isoTime(v.effective_from))) return false;
+        for (let i = 1; i < item.versions.length; i++) if (Date.parse(item.versions[i].effective_from) < Date.parse(item.versions[i - 1].effective_from)) return false;
+      } else if (item.versions.length !== 1 || item.versions[0].effective_from !== null) return false;
+    }
+    if (!c.evaluations.every(e => ids.has(e.commitment_id) && day(e.week_start) && SCORE_STATUS.includes(e.status) && typeof e.id === 'string')) return false;
+    if (!c.exceptions.every(x => ids.has(x.commitment_id) && day(x.week_start) && typeof x.id === 'string')) return false;
+    return c.events.every(e => typeof e.type === 'string');
+  }
   function validProfile(value) {
     if (!object(value) || !collection(value.goals)) return false;
     for (const goal of value.goals) for (const key of ['known_context', 'next_actions']) {
@@ -19,6 +48,7 @@
       if (value[key] !== undefined && !collection(value[key])) return false;
     }
     if (value.agenda !== undefined && (!object(value.agenda) || value.agenda.version !== 1 || !['events', 'proposals', 'rejections'].every(key => collection(value.agenda[key])))) return false;
+    if (value.commitments !== undefined && !validCommitments(value.commitments)) return false;
     if (value.execution !== undefined) {
       if (!object(value.execution)) return false;
       for (const key of ['programs', 'milestones', 'tasks', 'observations', 'experiments', 'reviews']) {
@@ -84,6 +114,18 @@
     const existing = list(current.goals, 'Existing goals').map(normalGoal);
     const arriving = list(incoming?.goals, 'Imported goals').map(normalGoal);
     keepAll(existing, arriving, 'Goal', true);
+    return problems;
+  }
+  // Commitments (#95) are an audit record: an ordinary import must keep every commitment,
+  // evaluation, exception and audit event unchanged. Deliberate replacement uses Restore.
+  function commitmentProblems(current, incoming) {
+    if (!object(current) || current.commitments === undefined) return [];
+    const { problems, list, keepAll } = checker();
+    const now = object(current.commitments) ? current.commitments : {}, next = object(incoming?.commitments) ? incoming.commitments : {};
+    keepAll(list(now.items, 'Existing commitments'), list(next.items, 'Imported commitments'), 'Commitment', true);
+    keepAll(list(now.evaluations, 'Existing commitment scores'), list(next.evaluations, 'Imported commitment scores'), 'Commitment score', true);
+    keepAll(list(now.exceptions, 'Existing commitment exceptions'), list(next.exceptions, 'Imported commitment exceptions'), 'Commitment exception', true);
+    keepAll(list(now.events, 'Existing commitment history'), list(next.events, 'Imported commitment history'), 'Commitment history entry', false);
     return problems;
   }
   // Agenda proposals still waiting on the owner (proposed, deferred, stale) may move on in a
@@ -335,6 +377,6 @@
       recoveryCount() { try { return readHistory().length; } catch (_) { return null; } }
     };
   }
-  return { open, validProfile, retentionProblems, goalProblems, historyProblems, canonical, MAX_RECOVERY };
+  return { open, validProfile, retentionProblems, goalProblems, commitmentProblems, historyProblems, canonical, MAX_RECOVERY };
 });
 

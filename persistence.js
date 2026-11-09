@@ -109,7 +109,7 @@ function transactional(handler) {
     return operation;
   };
 }
-for (const name of ['agendaAdd', 'agendaSaveBatch', 'agendaAction', 'fresh', 'setStatus', 'submitGoal', 'addDecision', 'saveLabel', 'importFile', 'switchProfile', 'createStructure', 'createTask', 'completeTask', 'taskResult', 'recordObservation', 'proposeReview', 'explainMisses', 'approveAdjustment', 'approveReview', 'rejectReview', 'finishExperiment', 'recordImprovement', 'submitImprovement']) {
+for (const name of ['agendaAdd', 'agendaSaveBatch', 'agendaAction', 'fresh', 'setStatus', 'submitGoal', 'addDecision', 'saveLabel', 'importFile', 'switchProfile', 'createStructure', 'createTask', 'completeTask', 'taskResult', 'recordObservation', 'proposeReview', 'explainMisses', 'approveAdjustment', 'approveReview', 'rejectReview', 'finishExperiment', 'recordImprovement', 'submitImprovement', 'commitmentAction']) {
   if (typeof globalThis[name] === 'function') globalThis[name] = transactional(globalThis[name]);
 }
 render();
@@ -124,9 +124,9 @@ function restoreLocalBackup(file) {
       const candidate = JSON.parse(raw);
       if (!LifePilotStorage.validProfile(candidate)) { storageWarning('This backup is invalid. No stored data was changed.'); return; }
       // Difference preview: name every owner decision this replacement would remove or change.
-      const lost = LifePilotStorage.retentionProblems(profileStore.value, candidate);
+      const lost = [...LifePilotStorage.retentionProblems(profileStore.value, candidate), ...LifePilotStorage.commitmentProblems(profileStore.value, candidate)];
       const preview = lost.length
-        ? '\n\nThis backup would remove or change ' + lost.length + ' recorded decision' + (lost.length === 1 ? '' : 's') + ':\n- ' + lost.slice(0, 8).join('\n- ') + (lost.length > 8 ? '\n- and ' + (lost.length - 8) + ' more' : '')
+        ? '\n\nThis backup would remove or change ' + lost.length + ' recorded decision' + (lost.length === 1 ? '' : 's') + ' or commitment record' + (lost.length === 1 ? '' : 's') + ':\n- ' + lost.slice(0, 8).join('\n- ') + (lost.length > 8 ? '\n- and ' + (lost.length - 8) + ' more' : '')
         : '';
       if (!confirm('Restore this backup and replace the displayed profile? The original stored bytes will be retained as a separate recovery copy.' + preview)) return;
       profile = await profileStore.restore(candidate, file ? undefined : raw);

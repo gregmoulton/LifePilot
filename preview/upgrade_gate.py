@@ -6,6 +6,7 @@ SAME HTTPS origin, so the new code opens the profile the production build wrote.
   1. Opening the new build writes nothing (stored bytes and key set unchanged).
   2. All production goals, decisions, execution records and unknown fields survive,
      and the first save keeps the production bytes as the last-good backup.
+     An approved commitment (#95) created by the new build survives rollback.
   3. Rolling back to the production build still reads the profile, and its saves keep
      the new Agenda data; rolling forward again works.
   4. The owner-test preview on a different origin sees none of it and cannot change it.
@@ -16,7 +17,7 @@ import sys, os, json, shutil, ssl, subprocess, tempfile, threading, http.server,
 from playwright.sync_api import sync_playwright
 
 repo = os.path.abspath(sys.argv[1])
-APP = ["index.html", "execution.js", "storage.js", "forward-radar.js", "agenda-model.js", "agenda.js", "persistence.js"]
+APP = ["index.html", "execution.js", "storage.js", "forward-radar.js", "agenda-model.js", "agenda.js", "commitments.js", "persistence.js"]
 PROD = os.path.join(repo, "preview", "fixtures", "production-main")
 KEY = "lifepilot-v02-profile"
 tmp = tempfile.mkdtemp(prefix="lp-upgrade-")
@@ -115,8 +116,18 @@ try:
         pg.fill("#agendaName", "Fictional new-build task"); pg.get_by_role("button", name="Today", exact=True).click()
         pg.locator("#agendaName").evaluate("e=>e.form.requestSubmit()")
         pg.wait_for_function("k=>(localStorage.getItem(k)||'').includes('Fictional new-build task')", arg=KEY)
+        first_save = storage(pg)
+        # Commitment Contracts (#95): an approved commitment must survive rollback and roll-forward.
+        pg.evaluate("""() => commitmentAction({type:'create', commitment_id:'fc-1', terms:{goal_id: profile.goals[0].id,
+            target:{kind:'tasks_completed', count:2}, timezone:'America/Phoenix', starts_on:'2030-01-07',
+            reward:'Fictional reward', consequence:'Fictional consequence', cap:'Fictional cap'}})""")
+        pg.wait_for_function("!transactionRunning")
+        pg.evaluate("() => commitmentAction({type:'approve', commitment_id:'fc-1', approved:true})")
+        pg.wait_for_function("!transactionRunning")
         after = storage(pg); new = json.loads(after[KEY])
-        check("First new-build save keeps production bytes as last-good backup", after.get(KEY + ":last-good") == prod_bytes)
+        check("New build saved an approved fictional commitment",
+              [i["status"] for i in new.get("commitments", {}).get("items", [])] == ["active"])
+        check("First new-build save keeps production bytes as last-good backup", first_save.get(KEY + ":last-good") == prod_bytes)
         check("Production goals unchanged by the new build", new["goals"] == prod["goals"])
         check("Production decisions unchanged by the new build", new["decision_register"] == prod["decision_register"])
         check("Production execution records kept",
@@ -130,6 +141,7 @@ try:
         pg.evaluate("showTab('decisions')"); pg.fill("#decisionText", "Fictional: decision made after rollback")
         pg.locator("#decisionText").evaluate("e=>e.form.requestSubmit()")
         rolled = json.loads(storage(pg)[KEY])
+        check("Rollback save keeps commitments and their history unchanged", rolled.get("commitments") == new.get("commitments"))
         check("Rollback save keeps the new build's Agenda task and metadata",
               any(t.get("name") == "Fictional new-build task" for t in rolled["execution"]["tasks"]) and rolled.get("agenda") == new.get("agenda"))
 
@@ -139,6 +151,8 @@ try:
         pg.evaluate("showTab('decisions')")
         check("Roll forward: decision made during rollback is shown", "Fictional: decision made after rollback" in pg.locator("#app").inner_text())
         pg.evaluate("showTab('agenda')")
+        check("Roll forward: commitments readable by the new build",
+              pg.evaluate("() => LifePilotCommitments.scorecard(profile, 'fc-1').length === 0 && profile.commitments.items[0].status === 'active'"))
         check("Roll forward: Agenda tasks shown and saving enabled",
               "Fictional new-build task" in pg.locator("#agendaWorkspace").inner_text() and pg.locator("#storageWarning").is_hidden() and not errs, "; ".join(errs))
 

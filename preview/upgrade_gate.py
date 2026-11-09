@@ -17,7 +17,7 @@ import sys, os, json, shutil, ssl, subprocess, tempfile, threading, http.server,
 from playwright.sync_api import sync_playwright
 
 repo = os.path.abspath(sys.argv[1])
-APP = ["index.html", "execution.js", "storage.js", "forward-radar.js", "agenda-model.js", "agenda.js", "commitments.js", "persistence.js"]
+APP = ["index.html", "execution.js", "storage.js", "forward-radar.js", "agenda-model.js", "agenda.js", "commitments.js", "commitments-ui.js", "persistence.js"]
 PROD = os.path.join(repo, "preview", "fixtures", "production-main")
 KEY = "lifepilot-v02-profile"
 tmp = tempfile.mkdtemp(prefix="lp-upgrade-")

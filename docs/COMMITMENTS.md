@@ -39,3 +39,29 @@ It is saved through the existing `storage.js` transaction layer, with last-good 
 - `test/commitments.test.cjs`
 - The commitment case in `test/browser-validation.py`
 - `preview/upgrade_gate.py`, where an approved commitment survives rollback to production `main`
+
+# Slice 2: screens
+
+The screens live in `commitments-ui.js`. Every change goes through `commitmentAction`, which is one save transaction. Opening or switching tabs never writes. Scoring runs only when the owner presses **Score finished weeks**.
+
+- **Commitments tab**
+  - A **New commitment** form: goal, weekly target (completed tasks or minutes), earliest start, reward, consequence and hard limit. A refused save keeps what was typed.
+  - **Drafts** show the date the first scored week would start. They can be approved (the confirm shows the full terms and that date), edited or discarded.
+  - **Active and ended commitments** show:
+    - the terms in force and the version number
+    - the first scored week
+    - any waiting revision with its start date, with a way to cancel it
+    - the end date, if one is set
+    - this week's progress
+    - a table of finished weeks with the result, doubts, a "late evidence" mark and the count
+    - the full score history
+  - Buttons on each commitment: **Score finished weeks**, **Revise** (shows when the 48-hour, week-boundary change takes effect), **End commitment**, and **Excuse week** for started, unverified weeks.
+- **Result labels:**
+  - "Verified by your logs"
+  - "Missed"
+  - "Unverified"
+  - "Excused: self-reported, unreviewed"
+- **Overview:** a commitments scorecard with the last four scored weeks, using the terms in force.
+- **Today:** a deadline warning when a commitment's week ends within two days and its target isn't met yet.
+- **Agenda:** an optional **Goal** selector on new tasks. This is an additive `goal_id`, checked against existing goals, so Agenda tasks count toward that goal's commitments.
+- **Read-only engine helpers:** `effectiveDates`, `progress` and `excusableWeeks`.

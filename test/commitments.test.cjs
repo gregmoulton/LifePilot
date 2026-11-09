@@ -401,3 +401,50 @@ test('an Agenda completion still counts for its goal if the task is later remove
   assert.equal(w.status, 'verified');
   assert.deepEqual(w.evidence.map(e => e.task_id).sort(), ['gone', 'moved']);
 });
+
+// --- Slice 2 read-only helpers and the Agenda goal link.
+const { effectiveDates, progress, excusableWeeks } = require('../commitments.js');
+const agendaModel = require('../agenda-model.js');
+
+test('effectiveDates previews approval, revision and end dates without writing', () => {
+  const draft = apply(base(), { type: 'create', commitment_id: 'c1', terms: terms() }, WED);
+  const before = JSON.stringify(draft);
+  assert.deepEqual(effectiveDates(draft.commitments.items[0], WED), { approve_first_week: '2027-03-08', revision_or_end_from: '2027-03-08' });
+  assert.deepEqual(effectiveDates(draft.commitments.items[0], at('2027-03-13T19:00:00Z')).revision_or_end_from, '2027-03-22');
+  assert.equal(JSON.stringify(draft), before);
+  // Matches what approve actually does.
+  assert.equal(apply(draft, { type: 'approve', commitment_id: 'c1', approved: true }, WED).commitments.items[0].versions[0].effective_from, '2027-03-08T07:00:00.000Z');
+});
+
+test('progress shows the current week against the terms in force, and is null outside scope', () => {
+  let p = active();
+  assert.equal(progress(p, 'c1', WED), null, 'before the first week');
+  p.execution.tasks.push(done('t1', '2027-03-09T16:00:00Z'));
+  const before = JSON.stringify(p);
+  assert.deepEqual(progress(p, 'c1', at('2027-03-13T19:00:00Z')), { week_start: '2027-03-08', measured: 1, target: { kind: 'tasks_completed', count: 2 }, met: false, days_left: 2, ends_at: '2027-03-15T07:00:00.000Z' });
+  assert.equal(JSON.stringify(p), before);
+  p = apply(p, { type: 'propose-edit', commitment_id: 'c1', terms: { target: { kind: 'tasks_completed', count: 1 } }, reason: 'Fictional' }, at('2027-03-13T19:00:00Z'));
+  assert.equal(progress(p, 'c1', at('2027-03-23T19:00:00Z')).target.count, 1, 'the revision applies from its week');
+  assert.equal(progress(p, 'c1', at('2027-03-16T19:00:00Z')).target.count, 2);
+  assert.equal(progress(p, 'missing', WED), null);
+});
+
+test('excusableWeeks lists started, in-scope weeks that are not verified or already excused', () => {
+  let p = active();
+  p.execution.tasks.push(done('t1', '2027-03-09T16:00:00Z'), done('t2', '2027-03-10T16:00:00Z'));
+  p = apply(p, { type: 'evaluate', commitment_id: 'c1' }, at('2027-03-23T00:00:00Z'));
+  assert.deepEqual(excusableWeeks(p, 'c1', at('2027-03-23T00:00:00Z')), ['2027-03-15', '2027-03-22']);
+  p = apply(p, { type: 'excuse', commitment_id: 'c1', week_start: '2027-03-15', reason: 'Fictional' }, at('2027-03-23T00:00:00Z'));
+  assert.deepEqual(excusableWeeks(p, 'c1', at('2027-03-23T00:00:00Z')), ['2027-03-22']);
+  // Every listed week is accepted by the engine.
+  for (const w of excusableWeeks(p, 'c1', at('2027-03-23T00:00:00Z'))) apply(p, { type: 'excuse', commitment_id: 'c1', week_start: w, reason: 'x' }, at('2027-03-23T00:00:00Z'));
+});
+
+test('Agenda tasks can be linked to an existing goal, so they count toward its commitments', () => {
+  const p = base();
+  const added = agendaModel.apply(p, { type: 'add', task: { id: 'a1', name: 'Fictional linked', due: '2027-03-10', goal_id: 'fg-1' } }, WED);
+  assert.equal(added.execution.tasks[0].goal_id, 'fg-1');
+  const unlinked = agendaModel.apply(p, { type: 'add', task: { id: 'a2', name: 'Fictional unlinked', goal_id: '' } }, WED);
+  assert.equal('goal_id' in unlinked.execution.tasks[0], false);
+  assert.throws(() => agendaModel.apply(p, { type: 'add', task: { id: 'a3', name: 'Fictional bad', goal_id: 'nope' } }, WED), /existing goal/);
+});

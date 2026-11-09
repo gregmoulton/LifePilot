@@ -86,19 +86,34 @@
     keepAll(existing, arriving, 'Goal', true);
     return problems;
   }
-  // An ordinary import must also keep the activity history: every Agenda event
-  // (including completion events) and every Execution task record (including its
-  // result and history) unchanged. It may add new ones. Replacing history on purpose
+  // An ordinary import must also keep every other durable record: every Agenda event
+  // (including completion events), every pending Agenda proposal, every Execution record
+  // (tasks with results and history, programs, milestones, observations, experiments,
+  // reviews) and every System Improvement Log entry
+  // unchanged. It may add new ones. Replacing records on purpose
   // goes through Restore from a backup, which keeps the current data as a recovery copy.
   function historyProblems(current, incoming) {
     if (!object(current)) return [];
     const { problems, list, keepAll } = checker();
     const agenda = object(current.agenda) ? current.agenda : {}, nextAgenda = object(incoming?.agenda) ? incoming.agenda : {};
     keepAll(list(agenda.events, 'Existing Agenda events'), list(nextAgenda.events, 'Imported Agenda events'), 'Agenda event', false);
+    // Agenda proposals still waiting on the owner (proposed, deferred, stale) may move on
+    // (for example to applied or rejected) in a newer export, but may not disappear.
+    // Settled ones are checked unchanged by retentionProblems.
+    const arrivingProposalIds = new Set(list(nextAgenda.proposals, 'Imported Agenda proposals').filter(p => object(p) && typeof p.id === 'string').map(p => p.id));
+    list(agenda.proposals, 'Existing Agenda proposals').forEach((proposal, index) => {
+      if (!object(proposal) || SETTLED_PROPOSALS.includes(proposal.status)) return;
+      const id = typeof proposal.id === 'string' && proposal.id ? proposal.id : null;
+      if (id === null || !arrivingProposalIds.has(id)) problems.push('Agenda proposal ' + (id ?? '#' + (index + 1)) + ' would be removed');
+    });
     const execution = object(current.execution) ? current.execution : {}, nextExecution = object(incoming?.execution) ? incoming.execution : {};
-    keepAll(list(execution.tasks, 'Existing tasks'), list(nextExecution.tasks, 'Imported tasks'), 'Task', true);
+    for (const [key, name] of EXECUTION_RECORDS) {
+      keepAll(list(execution[key], 'Existing ' + key), list(nextExecution[key], 'Imported ' + key), name, true);
+    }
+    keepAll(list(current.system_improvement_log, 'Existing improvement log'), list(incoming?.system_improvement_log, 'Imported improvement log'), 'Improvement log entry', true);
     return problems;
   }
+  const EXECUTION_RECORDS = [['tasks', 'Task'], ['programs', 'Program'], ['milestones', 'Milestone'], ['observations', 'Observation'], ['experiments', 'Experiment'], ['reviews', 'Review']];
   function open({ storage, key, locks }) {
     let expected, value = null, blocked = false, reason = '';
     const lockReason = 'Safe saving requires a browser with Web Locks, such as current Chrome, on HTTPS or localhost. You can still export the displayed profile.';

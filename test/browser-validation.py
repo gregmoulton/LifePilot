@@ -119,6 +119,39 @@ class BrowserValidation(unittest.TestCase):
     def agenda(self, page=None):
         (page or self.page).get_by_role('button', name="Today's Agenda", exact=True).click()
 
+    def test_commitment_engine_saves_scores_and_survives_reload(self):
+        # #95 Slice 1: engine through the real save transaction, with a fixed fictional clock.
+        profile = fictional_profile()
+        profile['execution']['tasks'] += [
+            dict(id='c-done-1', name='Fictional done 1', goal_id='g1', status='completed', recorded_at='2027-03-09T16:00:00Z', actual_minutes=20),
+            dict(id='c-done-2', name='Fictional done 2', goal_id='g1', status='completed', recorded_at='2027-03-11T16:00:00Z', actual_minutes=20)]
+        original = self.seed(profile)
+        terms = dict(goal_id='g1', target=dict(kind='tasks_completed', count=2), timezone='America/Phoenix',
+                     starts_on='2027-03-03', reward='Fictional reward', consequence='Fictional consequence', cap='Fictional cap')
+        self.page.clock.set_fixed_time('2027-03-03T19:00:00Z')
+        self.assertEqual(self.saved(), original, 'opening must not write')
+        self.page.evaluate("t => commitmentAction({type:'create', commitment_id:'c1', terms:t})", terms)
+        self.wait_saved()
+        self.page.evaluate("() => commitmentAction({type:'approve', commitment_id:'c1', approved:true})")
+        self.wait_saved()
+        self.page.clock.set_fixed_time('2027-03-16T08:00:00Z')
+        self.page.evaluate("() => commitmentAction({type:'evaluate', commitment_id:'c1'})")
+        self.wait_saved()
+        self.page.reload()
+        saved = json.loads(self.saved())
+        item = saved['commitments']['items'][0]
+        self.assertEqual((item['status'], item['versions'][0]['effective_from']), ('active', '2027-03-08T07:00:00.000Z'))
+        self.assertEqual([e['status'] for e in saved['commitments']['evaluations']], ['verified'])
+        self.assertEqual([e['type'] for e in saved['commitments']['events']], ['created', 'approved', 'evaluated'])
+        for key in ('goals', 'decision_register', 'system_improvement_log', 'unknown_top', 'agenda'):
+            self.assertEqual(saved[key], json.loads(original)[key])
+        # A refused command writes nothing and explains why.
+        before = self.saved()
+        self.page.evaluate("() => commitmentAction({type:'approve', commitment_id:'c1', approved:true})")
+        self.wait_saved()
+        self.assertEqual(self.saved(), before)
+        self.assertIn('not awaiting approval', self.page.locator('#storageMessage').inner_text())
+
     def test_native_lock_queue_stale_tab_download_and_reload(self):
         original = self.seed()
         a = self.page

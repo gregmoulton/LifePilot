@@ -19,6 +19,7 @@
       if (value[key] !== undefined && !collection(value[key])) return false;
     }
     if (value.agenda !== undefined && (!object(value.agenda) || value.agenda.version !== 1 || !['events', 'proposals', 'rejections'].every(key => collection(value.agenda[key])))) return false;
+    if (value.commitments !== undefined && (!object(value.commitments) || value.commitments.version !== 1 || !['items', 'evaluations', 'exceptions', 'events'].every(key => collection(value.commitments[key])))) return false;
     if (value.execution !== undefined) {
       if (!object(value.execution)) return false;
       for (const key of ['programs', 'milestones', 'tasks', 'observations', 'experiments', 'reviews']) {
@@ -84,6 +85,18 @@
     const existing = list(current.goals, 'Existing goals').map(normalGoal);
     const arriving = list(incoming?.goals, 'Imported goals').map(normalGoal);
     keepAll(existing, arriving, 'Goal', true);
+    return problems;
+  }
+  // Commitments (#95) are an audit record: an ordinary import must keep every commitment,
+  // evaluation, exception and audit event unchanged. Deliberate replacement uses Restore.
+  function commitmentProblems(current, incoming) {
+    if (!object(current) || current.commitments === undefined) return [];
+    const { problems, list, keepAll } = checker();
+    const now = object(current.commitments) ? current.commitments : {}, next = object(incoming?.commitments) ? incoming.commitments : {};
+    keepAll(list(now.items, 'Existing commitments'), list(next.items, 'Imported commitments'), 'Commitment', true);
+    keepAll(list(now.evaluations, 'Existing commitment scores'), list(next.evaluations, 'Imported commitment scores'), 'Commitment score', true);
+    keepAll(list(now.exceptions, 'Existing commitment exceptions'), list(next.exceptions, 'Imported commitment exceptions'), 'Commitment exception', true);
+    keepAll(list(now.events, 'Existing commitment history'), list(next.events, 'Imported commitment history'), 'Commitment history entry', false);
     return problems;
   }
   function open({ storage, key, locks }) {
@@ -251,6 +264,6 @@
       recoveryCount() { try { return readHistory().length; } catch (_) { return null; } }
     };
   }
-  return { open, validProfile, retentionProblems, goalProblems, canonical, MAX_RECOVERY };
+  return { open, validProfile, retentionProblems, goalProblems, commitmentProblems, canonical, MAX_RECOVERY };
 });
 

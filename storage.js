@@ -86,6 +86,19 @@
     keepAll(existing, arriving, 'Goal', true);
     return problems;
   }
+  // An ordinary import must also keep the activity history: every Agenda event
+  // (including completion events) and every Execution task record (including its
+  // result and history) unchanged. It may add new ones. Replacing history on purpose
+  // goes through Restore from a backup, which keeps the current data as a recovery copy.
+  function historyProblems(current, incoming) {
+    if (!object(current)) return [];
+    const { problems, list, keepAll } = checker();
+    const agenda = object(current.agenda) ? current.agenda : {}, nextAgenda = object(incoming?.agenda) ? incoming.agenda : {};
+    keepAll(list(agenda.events, 'Existing Agenda events'), list(nextAgenda.events, 'Imported Agenda events'), 'Agenda event', false);
+    const execution = object(current.execution) ? current.execution : {}, nextExecution = object(incoming?.execution) ? incoming.execution : {};
+    keepAll(list(execution.tasks, 'Existing tasks'), list(nextExecution.tasks, 'Imported tasks'), 'Task', true);
+    return problems;
+  }
   function open({ storage, key, locks }) {
     let expected, value = null, blocked = false, reason = '';
     const lockReason = 'Safe saving requires a browser with Web Locks, such as current Chrome, on HTTPS or localhost. You can still export the displayed profile.';
@@ -251,6 +264,6 @@
       recoveryCount() { try { return readHistory().length; } catch (_) { return null; } }
     };
   }
-  return { open, validProfile, retentionProblems, goalProblems, canonical, MAX_RECOVERY };
+  return { open, validProfile, retentionProblems, goalProblems, historyProblems, canonical, MAX_RECOVERY };
 });
 

@@ -42,8 +42,10 @@ with sync_playwright() as p:
     big["goals"] = [g0] + [dict(json.loads(json.dumps(g0)), id=f"fg-{i}", name=f"Fictional goal {i}") for i in range(39)]
     # The app-recorded decision is kept: an ordinary import must not drop or change existing decisions.
     big["decision_register"] = [dec0] + [dict(json.loads(json.dumps(dec0)), id=f"fd-{i}", decision=f"Fictional decision {i}") for i in range(59)]
-    tasks = []
-    for i in range(400):
+    # The app-recorded task (and its Agenda event) is kept: an ordinary import must not drop
+    # or change existing task records or Agenda events.
+    tasks = [t0]
+    for i in range(1, 400):
         t = json.loads(json.dumps(t0)); t["id"] = f"ft-{i}"; t["name"] = f"Fictional task {i}"
         kind = i % 5
         t["due"] = {0: (today - datetime.timedelta(days=1 + i % 9)).isoformat(), 1: today.isoformat(),

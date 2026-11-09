@@ -106,8 +106,9 @@ if(typeof document!=='undefined'){
  function tone(kind){
   if(audio?.state!=='running'||document.hidden)return;
   try{
-   const [frequency,duration]=kind==='go'?[1047,.18]:kind==='ready'?[784,.14]:kind==='pause'?[392,.075]:kind==='resume'?[659,.075]:[523,.075];
+   const [frequency,duration]=kind==='go'?[1047,.18]:kind==='rep'?[587,.10]:kind==='ready'?[784,.14]:kind==='pause'?[392,.075]:kind==='resume'?[659,.075]:[523,.075];
    const at=audio.currentTime,oscillator=audio.createOscillator(),gain=audio.createGain();
+   if(release&&(kind==='go'||kind==='rep'))oscillator.type='triangle';
    oscillator.frequency.value=frequency;
    gain.gain.setValueAtTime(.0001,at);
    gain.gain.exponentialRampToValueAtTime(.09,at+.012);
@@ -118,6 +119,7 @@ if(typeof document!=='undefined'){
    oscillator.stop(at+duration);
   }catch{ /* The visual countdown remains available. */ }
  }
+ function savedCue(){tone('rep')}
  function repEntryOpen(a=db.active){return !!a&&!a.paused&&a.phase==='exercise'&&!a.countdownKind}
  const release=document.body.dataset?.defaultSquat==='jump';
  function announce(text,queue=false){if(release||localVoiceSelected)return;try{if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined')return;const serial=++speechSerial;if(!queue)speechSynthesis.cancel();const prompt=new SpeechSynthesisUtterance(text);prompt.lang='en-US';prompt.rate=1;prompt.onend=()=>{if(serial===speechSerial)speechHooks.resume?.()};prompt.onerror=prompt.onend;speechSynthesis.speak(prompt)}catch{ /* Visual state remains authoritative if device audio is unavailable. */ }}
@@ -196,7 +198,7 @@ if(typeof document!=='undefined'){
   }
   renderStationRows();if(typeof PureJournal!=='undefined')renderJournal();
  }
- function change(fn){if(blocked||dirty)return;try{fn();if(!persist()&&db.active?.flowVersion===3)Pure.pause(db.active,now(),'save-failed');render()}catch(e){message=e.message;render()}}
+ function change(fn){if(blocked||dirty)return;try{const activeId=db.active?.id;fn();const saved=persist();if(!saved&&db.active?.flowVersion===3)Pure.pause(db.active,now(),'save-failed');render();if(release&&saved&&activeId&&!db.active&&(db.history.at(-1)?.id===activeId||db.practiceReceipt?.id===activeId))savedCue()}catch(e){message=e.message;render()}}
  function end(){if(!db.active)return;if(db.active.flowVersion===3){change(()=>Pure.endWorkout(db.active,now()));announce('Workout finished. Cooldown recording continues.')}else{Pure.archive(db,now());persist();render()}}
  $('start').onclick=()=>change(()=>{if(db.active)return;delete db.practiceReceipt;db.active=Pure.startHandsFree(now(),Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join(''),{...db.settings,exercisePlan:plan()});if(release){db.active.stableRecovery=true;db.active.thresholdBpm=110;}db.active.practice=!!$('practiceMode').checked;Pure.countdown(db.active,now())});
 
@@ -237,7 +239,7 @@ if(typeof document!=='undefined'){
  }
 
  $('record').onclick=()=>change(()=>{const done=Pure.reps(db.active,$('reps').value,now());if(done)Pure.archive(db,now())});
- const recordReps=$('record').onclick;$('record').onclick=()=>{const before=db.active?.records.length,side=!!db.active?.pendingSide;recordReps();if(db.active&&(db.active.records.length>before||!side&&db.active.pendingSide)){if(dirty||blocked){announce('Save failed. Workout paused. Keep this page open.');return}if(release)tone('rep');if(db.active.pendingSide)announce('Right leg next.');cueCountdown()}};
+ const recordReps=$('record').onclick;$('record').onclick=()=>{const before=db.active?.records.length,side=!!db.active?.pendingSide;recordReps();if(db.active&&(db.active.records.length>before||!side&&db.active.pendingSide)){if(dirty||blocked){announce('Save failed. Workout paused. Keep this page open.');return}if(release)savedCue();if(db.active.pendingSide)announce('Right leg next.');cueCountdown()}};
 
  $('loghr').onclick=()=>{let archived=false;change(()=>{Pure.hr(db.active,$('hr').value,now());archived=finishRecoveryIfReady()});if(archived&&!dirty&&!blocked)announce('Cooldown complete. Workout saved.')};
  function finishRecoveryIfReady(){const a=db.active;if(a?.flowVersion>=2&&a.finalRecovery&&!a.paused&&!Pure.recoveryInfo(a,now()).override){Pure.recover(a,now());Pure.archive(db,now());return true}}
@@ -331,7 +333,7 @@ if(typeof document!=='undefined'){
   }
   const tryVoice=(gesture=false)=>{if(handsFree&&!document.hidden&&(repEntryOpen()||release&&!!db.active&&!db.active.paused)&&!dirty&&!blocked){try{voice.start({gesture})}catch(e){sayStatus(e.message)}}};
   speechHooks={arm:()=>{handsFree=!micOptOut;if(release)tryVoice(true)},stop:()=>{if(voice.running||voice.wanted||proposal)stopVoice(false)},resume:()=>tryVoice(),continue:()=>{handsFree=!micOptOut;tryVoice()}};
-  $('talk').onclick=()=>{micOptOut=false;handsFree=true;tryVoice(true)};
+  $('talk').onclick=()=>{if(release)unlockAudio();micOptOut=false;handsFree=true;tryVoice(true)};
   $('stopTalk').onclick=()=>{micOptOut=true;handsFree=false;voice.stop()};
   $('voiceCancel').onclick=()=>{proposal=null;$('voiceProposal').classList.add('hidden');sayStatus('Command cancelled. Nothing changed.')};
   $('voiceApply').onclick=()=>{

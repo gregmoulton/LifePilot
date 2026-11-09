@@ -372,3 +372,21 @@ test('release Bluetooth recovery arms at 110, resets at 113, latches one cue and
  assert.equal(r.read('db.active.recoveries[0].manualOverride'),false);
  assert.deepEqual(r.spoken,[]);
 });
+
+test('release go cue and single verified rep/final-save cues play without narration',()=>{
+ const r=runtime({release:true});r.click('start');
+ assert.equal(r.tones.filter(n=>n===1047).length,1);
+ r.input('reps','10');r.click('record');
+ assert.equal(r.tones.filter(n=>n===587).length,1);
+ r.click('saveNow');
+ assert.equal(r.tones.filter(n=>n===587).length,2);
+ const resumed=runtime({release:true,data:r.data});
+ assert.equal(resumed.read('db.history[0].records[0].reps'),10);
+ assert.deepEqual(r.spoken,[]);
+});
+test('release makes no rep or final-save cue when storage rejects the write',()=>{
+ for(const action of ['record','saveNow']){
+  const r=runtime({release:true});r.click('start');r.input('reps','10');r.writeFault('drop');r.click(action);
+  assert.equal(r.read('dirty'),true);assert(!r.tones.includes(587));assert.deepEqual(r.spoken,[]);
+ }
+});

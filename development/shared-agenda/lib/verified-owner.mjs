@@ -17,7 +17,11 @@ export function verifiedOwnerProfile({verifyIdToken,ownerSubs}={}){
   const match=/^Bearer ([A-Za-z0-9._~+/=-]+)$/.exec(request.headers.get('authorization')||'');
   if(!match)return response(401,{error:'Owner sign-in required'});
   let claims;
-  try{claims=await verifyIdToken(match[1]);}catch{return response(401,{error:'Owner sign-in required'});}
+  try{claims=await verifyIdToken(match[1]);}catch(e){
+   // Google's keys unreachable: not the owner's fault, so do not ask them to sign in again.
+   if(e?.unavailable)return response(503,{error:'Sign-in could not be checked right now; local data unchanged'});
+   return response(401,{error:'Owner sign-in required'});
+  }
   const sub=claims?.sub;
   if(typeof sub!=='string'||!sub)return response(401,{error:'Owner sign-in required'});
   if(claims.exp!==undefined&&!(Number(claims.exp)*1000>Date.now()))return response(401,{error:'Owner sign-in required'});

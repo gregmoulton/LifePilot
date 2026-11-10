@@ -4,7 +4,7 @@
 
 ## How it works
 1. `app/route.ts` puts the public `GOOGLE_CLIENT_ID` into the page as `<meta name="lifepilot-google-client-id">`, but only if the value is strictly formatted.
-2. `public/google-sign-in.js` loads Google Identity Services only from `https://accounts.google.com/gsi/client`, and only when that meta tag is present. It receives an ID token and keeps it **in memory only**. The token is never put in localStorage, sessionStorage or cookies, and it is never logged. The token is sent only as `Authorization: Bearer …` on same-origin requests to `/api/profile`.
+2. `public/google-sign-in.js` loads Google Identity Services only from `https://accounts.google.com/gsi/client`, and only when that meta tag is present. It receives an ID token and keeps it **in memory only**. The token is never put in localStorage, sessionStorage or cookies, and it is never logged. The token is sent only as `Authorization: Bearer …`. The adapter refuses, before any fetch, every URL that does not resolve to this page's origin with the path `/api/profile`. That covers absolute URLs, protocol-relative URLs, other paths, other schemes and user-info URLs. Redirects are refused (`redirect: 'error'`). Only one sign-in attempt runs at a time: concurrent callers share it and Google is prompted once. A Google callback that arrives when no attempt is waiting, for example after a timeout, is ignored and not stored.
 3. `app/api/profile/route.ts` → `lib/profile-route.mjs` → `lib/verified-owner.mjs` → `lib/google-id-token.mjs`. The server verifies the token:
    - RS256 signature against Google's JWKS;
    - exact `aud`;
@@ -12,7 +12,8 @@
    - `exp` and `iat` (60 s skew);
    - non-empty `sub`.
    It then checks `sub` against the server-side `OWNER_GOOGLE_SUBS` and stores data under `google:<sub>`. Client-supplied `oai-authenticated-*` headers are stripped and never used.
-4. If `GOOGLE_CLIENT_ID` or `OWNER_GOOGLE_SUBS` is missing, the API returns 503 before touching storage. The page shows "not set up" and local data is kept.
+4. If Google's signing keys cannot be fetched (with no usable cache), the API returns 503 rather than 401. The owner's sign-in is kept and storage is not touched.
+5. If `GOOGLE_CLIENT_ID` or `OWNER_GOOGLE_SUBS` is missing, the API returns 503 before touching storage. The page shows "not set up" and local data is kept.
 
 ## Known limits (explicit; accepted only as an interim gate)
 - **Replay window:** the bearer token is valid until its `exp`. Google issues ID tokens for about 1 hour. Anyone who obtains a copy of the token can call the API as the owner until then. Mitigations in place:

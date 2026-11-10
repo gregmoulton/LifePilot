@@ -20,7 +20,8 @@ export function createGoogleIdTokenVerifier({clientId,fetchJwks=fetchGoogleJwks,
  let cache={keys:new Map(),until:0};
  async function load(force){
   if(!force&&now()<cache.until)return cache.keys;
-  const {keys,maxAge=0}=await fetchJwks(),map=new Map();
+  let got;try{got=await fetchJwks();}catch{throw Object.assign(new Error('signing keys unavailable'),{unavailable:true});}
+  const {keys,maxAge=0}=got||{},map=new Map();
   for(const k of Array.isArray(keys)?keys:[])if(k&&k.kty==='RSA'&&typeof k.kid==='string'&&(!k.alg||k.alg==='RS256')&&(!k.use||k.use==='sig'))
    map.set(k.kid,await crypto.subtle.importKey('jwk',{kty:'RSA',n:k.n,e:k.e,alg:'RS256',ext:true},{name:'RSASSA-PKCS1-v1_5',hash:'SHA-256'},false,['verify']));
   cache={keys:map,until:now()+Math.max(0,Number(maxAge)||0)*1000};return map;

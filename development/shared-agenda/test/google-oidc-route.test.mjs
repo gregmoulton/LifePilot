@@ -48,12 +48,20 @@ test('JWKS is cached for max-age and refetched once for a rotated key',async()=>
  keys=[...jwks,await pub(rotated,'kid-2')];assert.equal((await v(await sign({},{key:rotated,kid:'kid-2'}))).sub,OWNER);assert.equal(calls,2);
  await assert.rejects(v(await sign({},{kid:'kid-3'})));assert.equal(calls,3);
 });
+test('JWKS outage: marked unavailable (not a bad token); cached keys keep working; unknown kid during outage is unavailable',async()=>{
+ let down=true,calls=0;const v=createGoogleIdTokenVerifier({clientId:CLIENT,fetchJwks:async()=>{calls++;if(down)throw new Error('network');return {keys:jwks,maxAge:3600};}});
+ await assert.rejects(v(await sign()),e=>e.unavailable===true);
+ down=false;assert.equal((await v(await sign())).sub,OWNER);down=true;
+ assert.equal((await v(await sign())).sub,OWNER);assert.equal(calls,2);
+ await assert.rejects(v(await sign({},{kid:'kid-7'})),e=>e.unavailable===true);
+ await assert.rejects(v(await sign({},{key:attacker})),e=>!e.unavailable);
+});
 test('no verifier exists without a configured client ID',()=>{for(const clientId of [undefined,'',7])assert.equal(createGoogleIdTokenVerifier({clientId}),undefined);});
 
 // ---- actual route over HTTP ----
 register('data:text/javascript,'+encodeURIComponent("export async function resolve(s,c,n){if(s==='cloudflare:workers')return {url:'data:text/javascript,export const env=globalThis.__LIFEPILOT_TEST_ENV__;',shortCircuit:true};return n(s,c);}"));
 const ENV=globalThis.__LIFEPILOT_TEST_ENV__={};let sql,ops,route,server,base,jwksFetches=0,n=0;const realFetch=globalThis.fetch;
-globalThis.fetch=async(u,i)=>{if(String(u)===GOOGLE_JWKS_URL){jwksFetches++;return Response.json({keys:jwks},{headers:{'cache-control':'public, max-age=3600'}});}return realFetch(u,i);};
+let jwksDown=false;globalThis.fetch=async(u,i)=>{if(String(u)===GOOGLE_JWKS_URL){jwksFetches++;if(jwksDown)return new Response('unavailable',{status:500});return Response.json({keys:jwks},{headers:{'cache-control':'public, max-age=3600'}});}return realFetch(u,i);};
 async function load(cfg){
  sql=new DatabaseSync(':memory:');sql.exec(readFileSync(new URL('../drizzle/0000_friendly_hannibal_king.sql',import.meta.url),'utf8'));
  sql.prepare('INSERT INTO shared_profiles(owner_id,revision,payload,updated_at) VALUES(?,1,?,?)').run('forged-id','{"goals":[],"note":"header identity row"}','2026-01-01T00:00:00Z');
@@ -116,4 +124,12 @@ test('actual route: CSRF/CORS/origin — only a same-origin Authorization header
   for(const h of ['access-control-allow-origin','access-control-allow-credentials','access-control-allow-headers'])assert.equal(r.headers.get(h),null,name+' '+h);
   assert.equal(r.headers.get('cache-control'),'no-store',name);}
  assert.deepEqual(rows(),before);
+});
+test('actual route: Google JWKS unreachable => 503 (not 401), zero storage access, recovers when keys return',async()=>{
+ await load(CONFIGURED);const before=rows(),tok={...FORGED,authorization:'Bearer '+await sign()};jwksDown=true;
+ try{for(const m of ['GET','PUT']){const r=await call(m,tok,m==='PUT'?{revision:0,profile:prof(4)}:undefined);assert.equal(r.status,503,m);assert.match((await r.json()).error,/could not be checked/);}
+  assert.deepEqual(ops,[]);assert.deepEqual(rows(),before);
+  assert.equal((await call('GET',{...FORGED})).status,401);
+ }finally{jwksDown=false;}
+ assert.equal((await call('GET',tok)).status,200);
 });

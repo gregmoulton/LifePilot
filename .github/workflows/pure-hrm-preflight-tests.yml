@@ -1,0 +1,25 @@
+name: The Pure isolated HRM preflight checks
+on:
+  push:
+    branches:
+      - fix/pure-hrm-preflight-20261103
+    paths:
+      - 'prototypes/the-pure-hit-1-6-work-review/**'
+      - '.github/workflows/pure-hrm-preflight-tests.yml'
+  pull_request:
+    paths:
+      - 'prototypes/the-pure-hit-1-6-work-review/**'
+      - '.github/workflows/pure-hrm-preflight-tests.yml'
+permissions:
+  contents: read
+jobs:
+  pure-hrm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Execute HIT 1.6 regression suite
+        working-directory: prototypes/the-pure-hit-1-6-work-review
+        run: node --test tests/*.test.cjs

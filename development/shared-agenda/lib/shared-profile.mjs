@@ -1,9 +1,10 @@
-const OWNER='greg.moulton2@gmail.com',MAX=1048576;
-const response=(status,body)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
-export async function sharedProfile(request,db,validProfile){
- const identity=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');
- if(!identity||email?.toLowerCase()!==OWNER)return response(401,{error:'Owner sign-in required'});
- const owner=identity+(new URL(request.url).searchParams.get('sandbox')==='1'?':sandbox':'');
+const MAX=1048576;
+export const response=(status,body)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+// Profile storage. ownerId must come from an identity already verified by lib/verified-owner.mjs.
+// Nothing here reads identity headers.
+export async function profileForOwner(request,db,validProfile,ownerId){
+ if(typeof ownerId!=='string'||!ownerId)return response(401,{error:'Owner sign-in required'});
+ const owner=ownerId+(new URL(request.url).searchParams.get('sandbox')==='1'?':sandbox':'');
  if(!['GET','PUT'].includes(request.method))return response(405,{error:'Method not allowed'});
  if(request.method==='PUT'&&request.headers.get('origin')!==new URL(request.url).origin)return response(403,{error:'Request not allowed'});
  if(!db)return response(503,{error:'Shared storage unavailable; local data unchanged'});

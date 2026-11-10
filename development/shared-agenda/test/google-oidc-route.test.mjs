@@ -64,7 +64,7 @@ async function load(cfg){
 before(async()=>{server=createServer(async(req,res)=>{
  const chunks=[];for await(const c of req)chunks.push(c);const headers=new Headers();for(const [k,v] of Object.entries(req.headers))if(typeof v==='string')headers.set(k,v);
  const r=new Request(base+req.url,{method:req.method,headers,...(chunks.length?{body:Buffer.concat(chunks)}:{})});
- const out=await route[req.method==='PUT'?'PUT':'GET'](r);res.writeHead(out.status,Object.fromEntries(out.headers));res.end(Buffer.from(await out.arrayBuffer()));
+ const out=req.method==='GET'||req.method==='PUT'?await route[req.method](r):await route.GET(r);res.writeHead(out.status,Object.fromEntries(out.headers));res.end(Buffer.from(await out.arrayBuffer()));
 });await new Promise(r=>server.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+server.address().port;});
 after(()=>{server.close();globalThis.fetch=realFetch;});
 const call=(method,headers={},body)=>realFetch(base+'/api/profile',{method,headers:{origin:base,'content-type':'application/json',...headers},...(body?{body:JSON.stringify(body)}:{})});
@@ -99,4 +99,21 @@ test('actual route fails closed (503, zero storage access) when Google client ID
   for(const m of ['GET','PUT'])assert.equal((await call(m,tok,m==='PUT'?{revision:0,profile:prof(3)}:undefined)).status,503);
   assert.deepEqual(ops,[]);
  }
+});
+test('actual route: CSRF/CORS/origin — only a same-origin Authorization header authenticates; no CORS grant',async()=>{
+ await load(CONFIGURED);const token=await sign(),before=rows();
+ const raw=(method,headers,body)=>realFetch(base+'/api/profile'+(headers.query||''),{method,headers:Object.fromEntries(Object.entries(headers).filter(([k])=>k!=='query')),...(body?{body:JSON.stringify(body)}:{})});
+ const body={revision:0,profile:prof('csrf')};
+ for(const [method,headers,status,name] of [
+  ['PUT',{'content-type':'application/json',authorization:'Bearer '+token},403,'PUT without Origin'],
+  ['PUT',{'content-type':'application/json',authorization:'Bearer '+token,origin:'https://elsewhere.example.test'},403,'cross-origin PUT with a valid token'],
+  ['PUT',{'content-type':'text/plain',authorization:'Bearer '+token,origin:base},415,'simple-request content type'],
+  ['GET',{query:'?access_token='+token,origin:base},401,'token in query string'],
+  ['GET',{cookie:'id_token='+token+'; g_csrf_token=x',origin:base},401,'token in cookie'],
+  ['GET',{authorization:token,origin:base},401,'token without Bearer scheme'],
+  ['OPTIONS',{origin:'https://elsewhere.example.test','access-control-request-method':'PUT',authorization:'Bearer '+token},405,'preflight'],
+ ]){const r=await raw(method,headers,method==='PUT'?body:undefined);assert.equal(r.status,status,name);
+  for(const h of ['access-control-allow-origin','access-control-allow-credentials','access-control-allow-headers'])assert.equal(r.headers.get(h),null,name+' '+h);
+  assert.equal(r.headers.get('cache-control'),'no-store',name);}
+ assert.deepEqual(rows(),before);
 });

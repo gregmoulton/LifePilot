@@ -3,9 +3,14 @@
 let sharedRevision=null,sharedPending=null,sharedConflict=false,sharedSending=false,sharedApplying=false,sharedBaseline=null,sharedRemote=null;
 const sharedEndpoint=document.querySelector('meta[name=lifepilot-sandbox]')?.content==='1'?'/api/profile?sandbox=1':'/api/profile';
 const sharedNotice=document.createElement('section');sharedNotice.className='panel';sharedNotice.style='margin:12px auto;max-width:1068px;padding:14px';
-sharedNotice.innerHTML='<b>Shared agenda</b><p id="sharedStatus" role="status">Local copy · connect to share across devices.</p><div class="row"><button id="sharedConnect">Connect shared agenda</button><button id="sharedRetry" class="secondary" hidden>Retry sync</button></div><div id="sharedConflictReview" hidden></div><details><summary>Recovery copies</summary><button id="sharedArchiveExport" class="secondary">Download saved conflict copies</button></details>';
+sharedNotice.innerHTML='<b>Shared agenda</b><p id="sharedStatus" role="status">Local copy · connect to share across devices.</p><div class="row"><button id="sharedConnect">Connect shared agenda</button><button id="sharedRetry" class="secondary" hidden>Retry sync</button></div><div id="sharedSignIn" hidden></div><div id="sharedConflictReview" hidden></div><details><summary>Recovery copies</summary><button id="sharedArchiveExport" class="secondary">Download saved conflict copies</button></details>';
 (document.querySelector('main')||document.body).prepend(sharedNotice);
 const sharedJournalKey=KEY+':shared-sync';
+// Verified Google sign-in (google-sign-in.js) supplies the bearer token; without it the server refuses (fail closed).
+const sharedAuth=()=>globalThis.LifePilotAuth||null;
+const sharedFetch=(url,init)=>sharedAuth()?sharedAuth().fetch(url,init):fetch(url,init);
+const sharedSignInNeeded='Saved locally · sign in with Google to sync. Local changes are kept.';
+async function sharedSignIn(interactive){const auth=sharedAuth();if(auth&&!auth.signedIn())await auth.signIn({interactive});}
 function sharedStatus(message){$('sharedStatus').textContent=message;}
 function sharedRemember(value,revision){
  sharedBaseline=JSON.stringify(value);sharedRevision=revision;
@@ -49,7 +54,7 @@ async function sharedCheck(){
   if(data.revision===revision&&!sharedConflict&&(JSON.stringify(data.profile)===sharedBaseline||revision===0&&data.profile===null)){if(sharedPending)await sharedFlush();return;}
   if(sharedPending||sharedConflict||data.profile===null){sharedConflictView(data);return;}
   await sharedAdopt(data,expected);
- }catch{sharedStatus('Saved locally · shared connection unavailable. Changes will be checked again when online.');$('sharedRetry').hidden=false;}
+ }catch(e){sharedStatus(e?.authRequired?sharedSignInNeeded:'Saved locally · shared connection unavailable. Changes will be checked again when online.');$('sharedRetry').hidden=false;}
 }
 async function sharedResume(){
  try{
@@ -59,10 +64,12 @@ async function sharedResume(){
   if(!profile||profileStore.writable===false)return;
   sharedRevision=state.revision;sharedBaseline=state.baseline;
   sharedPending=state.revision===0||JSON.stringify(profile)!==sharedBaseline?JSON.parse(JSON.stringify(profile)):null;
-  sharedStatus('Reconnecting shared agenda…');await sharedCheck();
+  sharedStatus('Reconnecting shared agenda…');
+  try{await sharedSignIn(false);}catch(e){sharedStatus(e.authRequired?sharedSignInNeeded:'Saved locally · shared connection unavailable.');$('sharedRetry').hidden=false;return;}
+  await sharedCheck();
  }catch{sharedStatus('Reconnection record needs review. Local data is unchanged; Connect can establish a new reviewed connection.');}
 }
-async function sharedRead(){const r=await fetch(sharedEndpoint,{cache:'no-store'});if(!r.ok)throw Error(r.status===401?'Sign in to this private site with your owner account.':'Shared storage unavailable. Local data stays on this device.');const data=await r.json();if(data.profile!==null&&!LifePilotStorage.validProfile(data.profile))throw Error('Shared profile needs review. Local data unchanged.');return data;}
+async function sharedRead(){const r=await sharedFetch(sharedEndpoint,{cache:'no-store'});if(!r.ok)throw Error(r.status===401?'Sign in with Google to sync. Local data stays on this device.':'Shared storage unavailable. Local data stays on this device.');const data=await r.json();if(data.profile!==null&&!LifePilotStorage.validProfile(data.profile))throw Error('Shared profile needs review. Local data unchanged.');return data;}
 function sharedHasDraft(){return (typeof agendaEditDraft!=='undefined'&&!!agendaEditDraft)||(typeof captureCommandDraft!=='undefined'&&!!captureCommandDraft)||(typeof agendaBatchDraft!=='undefined'&&!!agendaBatchDraft)||['agendaName','captureRequest','agendaBatchText'].some(id=>!!$(id)?.value?.trim());}
 async function sharedAdopt(data,expected=JSON.stringify(profile),resolved=false){
  const run=async()=>{
@@ -74,6 +81,7 @@ async function sharedAdopt(data,expected=JSON.stringify(profile),resolved=false)
 }
 async function sharedConnect(){
  try{
+  await sharedSignIn(true);
   const expected=JSON.stringify(profile),data=await sharedRead();
   if(JSON.stringify(profile)!==expected||transactionRunning)throw Error('Local agenda changed. Connect again after the save finishes.');
   if(data.profile===null){if(!profile){sharedStatus('Create or import your profile first, then connect.');return;}if(!confirm('Use this device’s profile as your shared agenda? Other devices will be able to load it. Your local copy stays saved.'))return;sharedRemember(profile,0);sharedPending=JSON.parse(JSON.stringify(profile));sharedConflict=false;await sharedFlush();}
@@ -85,12 +93,12 @@ async function sharedFlush(){
  if(sharedSending||sharedConflict||sharedPending===null||sharedRevision===null)return;
  sharedSending=true;const snapshot=sharedPending,revision=sharedRevision;sharedStatus('Saved locally · syncing…');
  try{
-  const r=await fetch(sharedEndpoint,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,profile:snapshot})});
+  const r=await sharedFetch(sharedEndpoint,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,profile:snapshot})});
   if(r.status===409){sharedConflict=true;sharedStatus('Saved locally · another device changed the agenda.');try{sharedConflictView(await sharedRead());}catch{$('sharedRetry').hidden=false;}return;}
   if(!r.ok)throw Error();const receipt=await r.json();if(receipt.revision!==revision+1)throw Error();if(sharedRevision!==revision)return;const remembered=sharedRemember(snapshot,receipt.revision);
   if(sharedPending===snapshot)sharedPending=null;
   sharedStatus(sharedPending?'Saved locally · more changes waiting':(remembered?'Synced · revision '+sharedRevision:'Synced · reconnect setup could not be saved'));$('sharedRetry').hidden=sharedPending===null;
- }catch{sharedStatus('Saved locally · sync not confirmed. Keep this device’s copy; Retry sync checks for conflicts.');$('sharedRetry').hidden=false;}
+ }catch(e){sharedStatus(e?.authRequired?sharedSignInNeeded:'Saved locally · sync not confirmed. Keep this device’s copy; Retry sync checks for conflicts.');$('sharedRetry').hidden=false;}
  finally{sharedSending=false;}
  if(sharedPending&&!sharedConflict&&sharedRevision!==revision)await sharedFlush();
 }
@@ -99,7 +107,7 @@ profileStore.commit=async function(candidate){const result=await sharedOriginalC
 const sharedOriginalRestore=profileStore.restore;
 profileStore.restore=async function(...args){const result=await sharedOriginalRestore(...args);if(sharedRevision!==null){sharedPending=JSON.parse(JSON.stringify(result));queueMicrotask(sharedFlush);}return result;};
 $('sharedArchiveExport').onclick=()=>{try{downloadLocalData(localStorage.getItem(KEY+':shared-conflicts'),'LifePilot_Saved_Conflict_Copies.json');}catch{sharedStatus('Recovery storage is unavailable. Keep this page open.');}};
-$('sharedConnect').onclick=sharedConnect;$('sharedRetry').onclick=sharedCheck;
+$('sharedConnect').onclick=sharedConnect;$('sharedRetry').onclick=async()=>{try{await sharedSignIn(true);}catch(e){sharedStatus(e.message);return;}await sharedCheck();};
 setInterval(sharedCheck,20000);
 window.addEventListener('online',sharedCheck);
 queueMicrotask(sharedResume);

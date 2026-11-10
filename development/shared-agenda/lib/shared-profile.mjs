@@ -1,11 +1,7 @@
-const OWNER='greg.moulton2@gmail.com',MAX=1048576;
+const MAX=1048576;
 export const response=(status,body)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
-export async function sharedProfile(request,db,validProfile){
- const identity=request.headers.get('oai-authenticated-user-id'),email=request.headers.get('oai-authenticated-user-email');
- if(!identity||email?.toLowerCase()!==OWNER)return response(401,{error:'Owner sign-in required'});
- return profileForOwner(request,db,validProfile,identity);
-}
-// Storage half of the handler. ownerId must come from an identity the caller has already verified.
+// Profile storage. ownerId must come from an identity already verified by lib/verified-owner.mjs.
+// Nothing here reads identity headers.
 export async function profileForOwner(request,db,validProfile,ownerId){
  if(typeof ownerId!=='string'||!ownerId)return response(401,{error:'Owner sign-in required'});
  const owner=ownerId+(new URL(request.url).searchParams.get('sandbox')==='1'?':sandbox':'');

@@ -1,7 +1,8 @@
 import {env} from 'cloudflare:workers';
-import {validProfile} from '../../../lib/profile-validator.js';
-import {sharedProfile} from '../../../lib/shared-profile.mjs';
+import {createProfileHandler} from '../../../lib/profile-route.mjs';
 export const dynamic='force-dynamic';
-const handler=(request:Request)=>sharedProfile(request,env.DB,validProfile);
-export const GET=handler;
-export const PUT=handler;
+// Verified Google ID token only; never client-supplied identity headers. Unconfigured => 503.
+let handler:((request:Request)=>Promise<Response>)|undefined;
+const handle=(request:Request)=>(handler??=createProfileHandler(env as Record<string,any>))(request);
+export const GET=handle;
+export const PUT=handle;

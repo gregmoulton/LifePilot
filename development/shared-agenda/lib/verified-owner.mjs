@@ -1,7 +1,7 @@
-// Verified-owner boundary for the shared profile API (security slice, not wired into the live route).
+// Verified-owner boundary for the shared profile API. The public route uses it exclusively (lib/profile-route.mjs).
 // Identity comes only from a bearer ID token checked by an injected verifier. Client-supplied
-// oai-authenticated-* headers are never used for authorization. The real Google OIDC verifier
-// (signature against Google's JWKS, exact audience, issuer, expiry, nonce) is a separate release gate.
+// oai-authenticated-* headers are never used for authorization. The token itself is checked by the
+// injected verifier (lib/google-id-token.mjs in production; see lib/profile-route.mjs).
 import {profileForOwner,response} from './shared-profile.mjs';
 
 const IDENTITY_HEADER=/^oai-authenticated-/i;

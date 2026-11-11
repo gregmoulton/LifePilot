@@ -54,13 +54,17 @@ body.workout-mode #useWithoutHrm{order:3}
 .ready-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 .ready-stats div:first-child{display:none}
 .ready-stats div:nth-child(2){border-left:0!important}
-/* Owner idea (Nov 11): "Workout Ready" glows in and out slowly, like an OPEN sign, to show the app
-   is ready to begin. "Two rounds" is not repeated under it (the Rounds tile already says 2). */
+/* Owner idea (Nov 11): "Workout Ready" glows in and out like a lit OPEN sign, with a brief neon
+   flicker, using the app's existing cyan. "Two rounds" is not repeated under it (the Rounds tile
+   shows 2); that line is reserved for rotating tongue-in-cheek taglines. */
 .ready-banner p{display:none}
-.ready-banner h2{line-height:52px}
-.ready-banner h2{animation:pure-ready-glow 3.2s ease-in-out infinite}
+.ready-banner h2{animation:pure-ready-glow 3.6s ease-in-out infinite}
 @keyframes pure-ready-glow{
- 0%,100%{opacity:1;text-shadow:0 0 6px rgba(53,219,255,.85),0 0 18px rgba(53,219,255,.55)}
- 50%{opacity:.55;text-shadow:none}
+ 0%,100%{opacity:1;color:#eafaff;text-shadow:0 0 6px rgba(53,219,255,.9),0 0 18px rgba(53,219,255,.6),0 0 30px rgba(53,219,255,.3)}
+ 4%{opacity:.35;text-shadow:none}
+ 7%{opacity:1;text-shadow:0 0 6px rgba(53,219,255,.9),0 0 18px rgba(53,219,255,.6)}
+ 50%{opacity:.55;color:#cfe3f2;text-shadow:none}
 }
-@media (prefers-reduced-motion:reduce){.ready-banner h2{animation:none}}
+.pure-tagline{display:block;min-height:16px;margin:2px 0 0;font-size:12px;font-style:italic;letter-spacing:.02em;color:#b8d9f6;transition:opacity .6s ease}
+.pure-tagline.fading{opacity:0}
+@media (prefers-reduced-motion:reduce){.ready-banner h2{animation:none}.pure-tagline{transition:none}}

@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - fix/pure-hrm-preflight-20261103
+      - pure/hit16-stabilization-20261111
     paths:
       - 'prototypes/the-pure-hit-1-6-work-review/**'
       - '.github/workflows/pure-hrm-preflight-tests.yml'

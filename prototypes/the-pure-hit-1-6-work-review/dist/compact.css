@@ -29,4 +29,15 @@
  body.workout-mode #start{order:3;margin:6px 0}
  body.workout-mode #practiceOption{order:4;margin:4px 0}
  body.workout-mode #workoutPlan{order:5}
+ /* Owner follow-up (Nov 11): Connect HRM smaller and on the right, HRM options under it. */
+ body.workout-mode .workout-monitor{flex-direction:column!important;align-items:flex-end!important;gap:0!important}
+ body.workout-mode #connectHr{position:relative;min-height:38px;height:38px;padding:2px 14px;font-size:12px;border-radius:10px}
+ /* 38px visual height, 46px touch area. */
+ body.workout-mode #connectHr::after{content:"";position:absolute;inset:-4px 0}
+ body.workout-mode #monitorDetails{margin:2px 0 0!important}
+ body.workout-mode #monitorDetails:not([open]) summary{padding:2px 2px 0;min-height:0;font-size:11px}
+ body.workout-mode #monitorDetails[open]{align-self:stretch}
 }
+/* Ready screen: drop the redundant "HIT 1.6 · REVIEW" and green "Ready" labels (owner, Nov 11).
+   They still appear once a workout is running. */
+.workout-panel[data-stage="ready"] .focus-meta,.workout-panel[data-stage="ready"] #status{display:none}

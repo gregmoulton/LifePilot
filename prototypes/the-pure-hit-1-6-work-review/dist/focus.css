@@ -81,3 +81,46 @@
  .workout-panel[data-stage="exercise"] #controls>.btn{padding:6px 8px;min-height:44px}
  .workout-panel[data-stage="exercise"] #record{min-height:44px}
 }
+
+/* Workout-ready treatment from the approved neon reference. */
+.milestone-wordmark,.ready-banner,.ready-stats,.ready-sequence,.ready-tip{display:none}
+.workout-mode [data-view="workout"] .focus-header{padding:8px 0 2px}
+.workout-mode [data-view="workout"] .focus-brand{justify-content:center;width:100%;flex-direction:column;gap:3px}
+.workout-mode [data-view="workout"] .focus-brand :is(.pure-mark,.pure-wordmark){display:none}
+.workout-mode [data-view="workout"] .focus-brand .milestone-wordmark{display:block;width:min(67%,270px);height:auto}
+.workout-mode [data-view="workout"] .focus-brand small{font-size:0}
+.workout-mode [data-view="workout"] .focus-brand small::after{content:"MAXIMUM EFFICIENCY TRAINING";font-size:9px;letter-spacing:.16em;color:#d5e8ff}
+.workout-panel[data-stage="ready"]{background:linear-gradient(130deg,#06192c,#030c19 62%);border-color:#10466c;color:#f7faff}
+.workout-panel[data-stage="ready"] .ready-banner{display:block;order:-9;min-height:62px;padding:7px 0 5px 62px;background:url('ready-athlete.webp') left center/56px auto no-repeat}
+.ready-banner h2{font-size:clamp(18px,5vw,26px);font-style:italic;text-transform:uppercase;margin:0}
+.ready-banner p{margin:2px 0;color:#35dbff;font-size:11px;font-weight:800;text-transform:uppercase}
+.ready-banner p span{color:#b8d9f6}
+.workout-panel[data-stage="ready"] .ready-stats{display:grid;order:0;grid-template-columns:repeat(4,minmax(0,1fr));padding:5px 0;text-align:center;border:1px solid #2180b7;border-radius:12px;background:#07192b}
+.ready-stats div+div{border-left:1px solid #194568}
+.ready-stats :is(b,small,strong){display:block}.ready-stats b{color:#28d3ff}.ready-stats div:nth-child(2) b{color:#ff5b69}.ready-stats div:nth-child(3) b{color:#ed6bff}.ready-stats div:nth-child(4) b{color:#42e78f}.ready-stats small{font-size:9px;color:#b3d9ff;text-transform:uppercase}.ready-stats strong{font-size:13px}
+.workout-panel[data-stage="ready"] .ready-sequence{display:flex;justify-content:space-between;gap:6px;order:1;padding:7px 0 2px;font-size:10px;text-transform:uppercase;font-weight:800;color:#c9edff}
+.workout-panel[data-stage="ready"] .ready-tip{display:block;order:2;font-size:11px;margin:5px 0;color:#c4e4ff}
+.workout-panel[data-stage="ready"] .station-row{min-height:57px;border-color:#255879;background:#0a192b;box-shadow:inset 3px 0 var(--move)}
+.workout-panel[data-stage="ready"] .station-row:nth-child(1){--move:#ff5863}.workout-panel[data-stage="ready"] .station-row:nth-child(2){--move:#35ed7a}.workout-panel[data-stage="ready"] .station-row:nth-child(3){--move:#da61ff}
+.workout-panel[data-stage="ready"] .station-label strong{color:#f4faff}
+.workout-panel[data-stage="ready"] #start{background:linear-gradient(108deg,#00a7eb,#1043ef);border:1px solid #51dbff;box-shadow:inset 0 0 12px #64d5ff;border-radius:24px;min-height:48px;color:#fff}
+.workout-panel:has(#liveCooldownSummary:not(.hidden)) #liveCooldownSummary{order:1}
+.workout-panel:has(#liveCooldownSummary:not(.hidden)) #recovery{order:0}
+.workout-mode .workout-panel .focus-meta #liveBpm,.workout-mode .workout-panel #hrPreflight{display:none}
+.workout-mode .workout-panel .workout-monitor{display:flex;align-items:center;flex-wrap:wrap;gap:5px;padding:0;margin:0 0 5px;background:none;border:0}
+.workout-mode #connectHr{font-size:12px;min-height:44px;padding:5px 9px}
+.workout-mode #monitorDetails:not([open]){background:none;border:0;padding:0}
+.workout-mode #monitorDetails:not([open]) summary{font-size:11px;padding:5px}
+.workout-mode #monitorDetails[open]{order:5;width:100%}
+.workout-mode #hrLiveCard{min-height:36px;padding:3px 8px;margin:0 0 0 auto;width:auto;gap:6px}
+.workout-mode #hrLiveCard:not([data-signal="live"]){display:none}
+.workout-mode #hrSignalAge{display:none}
+.workout-mode #hrLiveValue{font-size:21px}
+.workout-panel .station-row[data-move]{position:relative;gap:7px}
+.workout-panel .station-row[data-move]::before{content:"";width:clamp(34px,12vw,54px);align-self:stretch;flex:none;background:var(--move-image) center/contain no-repeat}
+.workout-panel .station-row[data-move="Push"]{--move-image:url('ready-push.webp')}
+.workout-panel .station-row[data-move="Squat"]{--move-image:url('ready-squat.webp')}
+.workout-panel .station-row[data-move="Pull"]{--move-image:url('ready-pull.webp')}
+@media(max-width:360px){.workout-panel .station-row:has(.station-field:not(.hidden)~.station-field:not(.hidden))::before{display:none}}
+
+body[data-default-squat="jump"] #chooseSplit{display:none!important}

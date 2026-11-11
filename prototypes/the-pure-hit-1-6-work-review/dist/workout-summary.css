@@ -17,3 +17,21 @@ body.workout-mode:has(#savedReceipt:not(.hidden)){background:#030e1e}
 .summary-details{font-size:11px;color:#aac8e2;margin:5px 0}.summary-details pre{white-space:pre-wrap}
 #savedReceipt #newWorkout{display:block;background:linear-gradient(110deg,#008de8,#086de5);border:1px solid #319cf4;color:white;min-height:46px;margin-top:7px}
 #savedReceipt #summaryExport{min-height:40px;margin-top:2px;background:transparent;border:0;color:#52d2ff}
+
+.workout-panel:has(#liveCooldownSummary:not(.hidden)) :is(#stationRows,#workoutPlan,#voicePanel){display:none}
+.results-hero{text-align:center;margin:8px 0 10px}
+.results-hero h2{font-size:clamp(24px,7vw,36px);font-weight:900;font-style:italic;margin:4px 0;color:#fff}
+.results-check{display:grid;place-items:center;margin:auto;width:58px;height:58px;border-radius:50%;border:3px solid #95ff45;color:#d7ffbf;font-size:37px;font-weight:900;background:radial-gradient(#26781e,#08251b);box-shadow:0 0 22px #65f32a77}
+.results-stats{border:1px solid #2180b7;border-radius:12px;background:#06172b;text-align:center;padding:8px 3px}
+.results-stats div+div{border-left:1px solid #235477}
+.results-stats span{display:block;font-size:11px;color:#c2e4ff}
+.results-stats strong{font-size:clamp(17px,5vw,24px);color:#fff}
+.results-stats small,.results-graph li{font-size:11px;color:#c6e0f9}
+.results-overview h3{color:#36e1ff;font-size:17px}
+.results-graph{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:6px;align-items:center}
+.results-graph ul{list-style:none;border-left:1px solid #235477;padding:0 0 0 7px;margin:0}
+.results-graph li{padding:3px 0}
+.workout-panel:has(#liveCooldownSummary:not(.hidden)) :is(#status,#repReceipt,#sessionTimer,.focus-meta){display:none}
+.workout-panel:has(#liveCooldownSummary:not(.hidden)) #liveCooldownSummary{order:-3}
+.workout-panel:has(#liveCooldownSummary:not(.hidden)) #recovery{order:1}
+.workout-panel:has(#liveCooldownSummary:not(.hidden)) #saveNow{display:none}

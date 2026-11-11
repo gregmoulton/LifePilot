@@ -17,11 +17,11 @@ Use **Practice mode** for steps 1–9, so nothing goes into your real history.
 | 7 | Rest. | When your HR stays at or below 110 for about 5 seconds: **READY** plus a tone. Conditioning does **not** start by itself. | ☐ |
 | 8 | Tap **Pause**, wait 30 s, tap **Resume**. | The timer did not count the paused time. | ☐ |
 | 9 | Tap **Start conditioning**, do Round 2, then **Finish cooldown & save**. | "Practice complete, excluded from history." | ☐ |
-| 10 | **No-monitor test:** tap **Disconnect**, untick Practice session, tap Start Workout, tap **Continue without HRM**, finish Round 1. | A **No monitor? Use 2:00 timed recovery** button. | ☐ |
-| 11 | Tap it. Try **−15 s** and **+15 s**. | The countdown changes. At 0: **READY**. Conditioning waits for your tap. | ☐ |
+| 10 | **No-monitor test:** tap **Disconnect**, untick Practice session, tap Start Workout, tap **Continue without HRM**, finish Round 1. | Recovery shows a **2:00 timed recovery** counting down. | ☐ |
+| 11 | Wait for it to finish. | **Start conditioning** becomes available. Conditioning waits for your tap. | ☐ |
 | 12 | Mid-Round 2, switch to another app for 20 s, then come back. | "Paused when Chrome went out of view." Your reps are still there. Tap Resume. | ☐ |
 | 13 | Pull down to reload the page. | "Saved session restored." Same round, same reps. | ☐ |
-| 14 | Tap **End workout**, then **Finish cooldown & save**. | "Partial workout, saved on this device." It appears under **History**. | ☐ |
+| 14 | Tap **End workout**, then **Finish cooldown & save**. | The workout is saved on this device and appears under **History**. | ☐ |
 | 15 | **History** tab. | The workout from step 14 is listed and the practice one is not. | ☐ |
 | 16 | **Backup**, then **Save backup**. | A file `the-pure-local-history.json` in Downloads. | ☐ |
 | 17 | Start another workout, then tap **Discard session**. | "Test discarded." History is unchanged. | ☐ |

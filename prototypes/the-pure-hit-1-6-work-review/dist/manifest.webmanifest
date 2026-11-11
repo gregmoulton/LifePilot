@@ -1,18 +1,37 @@
 {
-  "id": "./?app=the-pure",
-  "name": "The Pure",
-  "short_name": "PURE",
-  "description": "The Pure HIT workout",
-  "start_url": "./index.html?source=pwa#workout",
+  "name": "The Pure — Maximum Efficiency Training",
+  "short_name": "The Pure",
+  "description": "Private workout journal and HIT training",
+  "start_url": "./#workout",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#000000",
-  "theme_color": "#0b1728",
+  "background_color": "#07111e",
+  "theme_color": "#07111e",
   "icons": [
-    { "src": "icons/pure-v1-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/pure-v1-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/pure-v1-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "icons/pure-v1-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ]
+    {
+      "src": "icons/pure-v1-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/pure-v1-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/pure-v1-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/pure-v1-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/"
 }

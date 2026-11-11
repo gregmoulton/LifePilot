@@ -1,0 +1,47 @@
+name: Life Pilot release gate watch
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '15 15 * * *'
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: read
+  actions: read
+
+concurrency:
+  group: release-gate-watch
+  cancel-in-progress: true
+
+jobs:
+  check-release-candidates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Gather current draft release gates (read only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '# Life Pilot — release candidate inspection' >> "$GITHUB_STEP_SUMMARY"
+          echo "Generated (UTC): $(date -u '+%Y-%m-%d %H:%M')" >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '| PR | Head | Status | Checks |' >> "$GITHUB_STEP_SUMMARY"
+          echo '|---|---|---|---|' >> "$GITHUB_STEP_SUMMARY"
+          gh pr list --state open --limit 100 --json number,title,isDraft,headRefOid,url \
+            --jq '.[] | select((.title | ascii_downcase | contains("agenda")) or (.title | ascii_downcase | contains("today")) or (.title | ascii_downcase | contains("release"))) | [.number,.headRefOid,.isDraft,.url] | @tsv' > /tmp/release-prs.tsv
+          if [ ! -s /tmp/release-prs.tsv ]; then
+            echo '| — | — | No matching open PRs | — |' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          while IFS=$'\t' read -r number sha draft url; do
+            [ -n "$number" ] || continue
+            status=$(gh api "repos/$GH_REPO/commits/$sha/status" --jq '.state' 2>/dev/null || echo unavailable)
+            checks=$(gh api "repos/$GH_REPO/commits/$sha/check-runs" --jq '[.check_runs[] | select(.status != "completed" or .conclusion != "success")] | length' 2>/dev/null || echo unavailable)
+            echo "| [#$number]($url) | \`${sha:0:12}\` | draft=$draft; commit=$status | incomplete/non-success=$checks |" >> "$GITHUB_STEP_SUMMARY"
+          done < /tmp/release-prs.tsv
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Read-only inspection; this job does not code, approve, merge, deploy, mutate profiles, or invoke external AI sessions.' >> "$GITHUB_STEP_SUMMARY"

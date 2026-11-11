@@ -1,0 +1,32 @@
+/* Owner UX refinement (Nov 11, 2026): same approved design, tighter phone layout so the three
+   exercises and Start Workout fit one typical Android screen. Spacing and sizing only: colors,
+   artwork, wordmark and controls are unchanged. Touch targets stay at least 44px tall. */
+@media (max-width:480px){
+ /* Anything scrolled into view (focus, find, automation) clears the fixed bottom tab bar. */
+ html{scroll-padding-bottom:84px}
+ body.workout-mode main#main{padding-left:12px;padding-right:12px;padding-top:6px}
+ body.workout-mode .workout-panel{padding:4px 0!important}
+ /* Header and banner: less vertical whitespace. */
+ body.workout-mode .focus-header{padding:4px 0 0}
+ body.workout-mode .ready-banner{min-height:52px;padding:3px 0 3px 56px;background-size:50px auto}
+ body.workout-mode .focus-meta{margin:0 0 2px}
+ /* Connect HRM: shorter and narrower, still a 44px touch target. */
+ body.workout-mode .workout-monitor{margin:0 0 2px!important}
+ body.workout-mode #connectHr{flex:0 0 auto;min-height:44px;padding:4px 16px;font-size:13px}
+ body.workout-mode #status.eyebrow{margin:0 0 4px}
+ body.workout-mode .ready-stats{padding:3px 0}
+ body.workout-mode .ready-stats b{font-size:14px;line-height:1.1}
+ body.workout-mode .ready-sequence{padding:5px 0 2px}
+ /* Exercise cards: tighter padding, one-line names, full-width labels. */
+ body.workout-mode #stationRows{display:grid;gap:6px}
+ body.workout-mode .station-row{min-height:0;padding:6px 8px;gap:6px}
+ body.workout-mode .station-label strong{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ body.workout-mode .station-label small{margin-top:1px;line-height:1.2}
+ body.workout-mode .station-field button{width:40px;height:44px}
+ body.workout-mode .station-field input{width:38px!important}
+ body.workout-mode .ready-tip{margin:4px 0}
+ /* Start Workout directly after the exercises, as in the approved reference; setup below it. */
+ body.workout-mode #start{order:3;margin:6px 0}
+ body.workout-mode #practiceOption{order:4;margin:4px 0}
+ body.workout-mode #workoutPlan{order:5}
+}

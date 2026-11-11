@@ -8,15 +8,31 @@ const PureJournal=(()=>{
  else{if(!/^\d{1,3}:[0-5]\d$/.test(value.trim()))throw Error('Enter mile time as minutes:seconds, for example 9:35.');const [m,s]=value.split(':').map(Number);if(m*60+s<1)throw Error('Enter a positive run time.');result={distanceMiles:1,timeSeconds:m*60+s}}
  return {id,timestamp:new Date(date).toISOString(),kind,stage,...result,notes:notes.trim(),source:'manual-performance-test'};
  }
+ // Phone V2 (storage key the-pure-phone-approved-v2) export: {app:'The Pure — approved phone test V2',version:2,...state,history:[...]}.
+ // Its records are kept verbatim as original records; they never enter HIT history or calibration.
+ const PHONE_V2_APP='The Pure — approved phone test V2';
+ const count=n=>n===null||n===undefined||Number.isSafeInteger(n)&&n>=0&&n<=10000;
+ const validPhoneV2=w=>w&&typeof w==='object'&&Number.isFinite(w.startedAt)&&w.startedAt>0&&(w.finishedAt==null||Number.isFinite(w.finishedAt))&&Array.isArray(w.counts)&&w.counts.length<=3&&w.counts.every(c=>c===null||c&&typeof c==='object'&&!Array.isArray(c)&&Object.keys(c).length<=10&&Object.values(c).every(count));
+ function phoneV2Date(w){return new Date(w.startedAt).toISOString()}
+ function parsePhoneV2(b){
+  if(!Array.isArray(b.history)||b.history.length>1000)throw Error('Invalid phone V2 history list.');
+  for(const w of b.history)if(!validPhoneV2(w))throw Error('Invalid phone V2 workout record. Nothing was imported.');
+  const rows=b.history.map(w=>({id:'phone-v2:'+w.startedAt,source:'the-pure-phone-v2',originalWorkout:JSON.parse(JSON.stringify(w))}));
+  // A session still open in the phone app at export time is preserved and labelled; it is never resumed here.
+  if(b.phase!=='ready'&&Number.isFinite(b.startedAt)&&!b.history.some(w=>w.startedAt===b.startedAt)){const open={startedAt:b.startedAt,finishedAt:null,outcome:'unfinished-at-export',counts:b.counts,roundOrders:b.roundOrders??null,recoveries:b.recoveries??null,roundEnds:b.roundEnds??null};if(!validPhoneV2(open))throw Error('Invalid unfinished phone V2 session. Nothing was imported.');rows.push({id:'phone-v2-unfinished:'+b.startedAt,source:'the-pure-phone-v2',unfinishedAtExport:true,originalWorkout:JSON.parse(JSON.stringify(open))})}
+  if(new Set(rows.map(r=>r.id)).size!==rows.length)throw Error('Duplicate phone V2 workout start times. Nothing was imported.');
+  return {history:[],measurements:[],assessments:[],legacyHistory:rows,active:null};
+ }
+ function legacyDate(r){return r?.source==='the-pure-phone-v2'?phoneV2Date(r.originalWorkout):r?.originalWorkout?.date}
  function validateExtras(b){
  const validLegacy=w=>w&&typeof w.id==='string'&&Number.isFinite(Date.parse(w.date))&&Array.isArray(w.results)&&w.results.length>0&&w.results.every(r=>r&&typeof r.name==='string'&&Array.isArray(r.reps)&&r.reps.every(n=>n===null||Number.isInteger(n)&&n>=0));
  for(const key of ['measurements','assessments','legacyHistory'])if(b[key]!==undefined&&(!Array.isArray(b[key])||b[key].length>20000||b[key].some(r=>!r||typeof r.id!=='string'||!r.id)))throw Error('Invalid '+key+' records.');
  if((b.measurements||[]).some(r=>!Number.isFinite(r.weightKg)||r.weightKg<=0||r.weightKg>180||!Number.isFinite(r.weight)||r.weight<=0||!['lb','kg'].includes(r.unit)||typeof r.device!=='string'||!Number.isFinite(Date.parse(r.timestamp))||(r.bodyFatPercent!==null&&(!Number.isFinite(r.bodyFatPercent)||r.bodyFatPercent<=0||r.bodyFatPercent>80))))throw Error('Invalid body measurements.');
  if((b.assessments||[]).some(r=>!['one-mile-run','one-rep-max'].includes(r.kind)||!['baseline','follow-up'].includes(r.stage)||!Number.isFinite(Date.parse(r.timestamp))||(r.kind==='one-mile-run'?!(r.timeSeconds>0):!(r.load>0)||!['lb','kg'].includes(r.unit)||typeof r.exercise!=='string'||!r.exercise)))throw Error('Invalid performance tests.');
- if((b.legacyHistory||[]).some(r=>!validLegacy(r.originalWorkout)))throw Error('Invalid original Pure records.');
+ if((b.legacyHistory||[]).some(r=>r.source==='the-pure-phone-v2'?!validPhoneV2(r.originalWorkout):!validLegacy(r.originalWorkout)))throw Error('Invalid original Pure records.');
  return b;
  }
- function parseBackup(text){if(text.length>5000000)throw Error('Backup exceeds the 5 MB import limit.');const b=JSON.parse(text);if(b.schema==='the-pure-v1'&&b.version===1){if(!Array.isArray(b.workouts))throw Error('Invalid original Pure workout list.');for(const w of b.workouts){if(!w||typeof w.id!=='string'||!Number.isFinite(Date.parse(w.date))||!Array.isArray(w.results)||!w.results.length||w.results.some(r=>!r||typeof r.name!=='string'||!Array.isArray(r.reps)||r.reps.some(n=>n!==null&&(!Number.isInteger(n)||n<0))))throw Error('Invalid original Pure workout.')}return {history:[],measurements:[],assessments:[],legacyHistory:b.workouts.map(w=>({id:'original-pure:'+w.id,source:'the-pure-v1',originalWorkout:w})),active:null}}
+ function parseBackup(text){if(text.length>5000000)throw Error('Backup exceeds the 5 MB import limit.');const b=JSON.parse(text);if(b&&b.app===PHONE_V2_APP){if(b.version!==2)throw Error('Unsupported phone app export version.');return parsePhoneV2(b)}if(b.schema==='the-pure-v1'&&b.version===1){if(!Array.isArray(b.workouts))throw Error('Invalid original Pure workout list.');for(const w of b.workouts){if(!w||typeof w.id!=='string'||!Number.isFinite(Date.parse(w.date))||!Array.isArray(w.results)||!w.results.length||w.results.some(r=>!r||typeof r.name!=='string'||!Array.isArray(r.reps)||r.reps.some(n=>n!==null&&(!Number.isInteger(n)||n<0))))throw Error('Invalid original Pure workout.')}return {history:[],measurements:[],assessments:[],legacyHistory:b.workouts.map(w=>({id:'original-pure:'+w.id,source:'the-pure-v1',originalWorkout:w})),active:null}}
  if(b.schema!=='the-pure-backup-v2'||!Array.isArray(b.history)||b.history.some(w=>!w||typeof w.id!=='string'||!Number.isFinite(Date.parse(w.started))||!['complete','partial'].includes(w.status)||!Array.isArray(w.records)||w.records.some(r=>typeof r.exercise!=='string'||!Number.isInteger(r.reps)||r.reps<0)))throw Error('Choose a complete Pure history backup.');
  const arrays={history:b.history,measurements:b.measurements||[],assessments:b.assessments||[],legacyHistory:b.legacyHistory||[]};
  for(const [key,rows] of Object.entries(arrays)){if(!Array.isArray(rows)||rows.length>20000||rows.some(r=>!r||typeof r.id!=='string'||!r.id)||new Set(rows.map(r=>r.id)).size!==rows.length)throw Error('Invalid or duplicate '+key+' records.');}
@@ -24,6 +40,6 @@ const PureJournal=(()=>{
  return {...arrays,active:b.active||null};
  }
  function merge(db,b){if(db.active&&b.history.some(w=>w.id===db.active.id))throw Error('Imported history conflicts with the active session. Save the current session first.');const next=JSON.parse(JSON.stringify(db));for(const key of ['history','measurements','assessments','legacyHistory']){next[key]??=[];for(const r of b[key]){const old=next[key].find(x=>x.id===r.id);if(old&&JSON.stringify(old)!==JSON.stringify(r))throw Error('Conflicting record ID. Current records were not changed.');if(!old)next[key].push(r)}}return next}
- return {WHITE,BLACK,weight,assessment,parseBackup,merge,validateExtras};
+ return {WHITE,BLACK,PHONE_V2_APP,legacyDate,weight,assessment,parseBackup,merge,validateExtras};
 })();
 if(typeof module!=='undefined')module.exports=PureJournal;

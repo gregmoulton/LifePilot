@@ -54,3 +54,13 @@ body.workout-mode #useWithoutHrm{order:3}
 .ready-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 .ready-stats div:first-child{display:none}
 .ready-stats div:nth-child(2){border-left:0!important}
+/* Owner idea (Nov 11): "Workout Ready" glows in and out slowly, like an OPEN sign, to show the app
+   is ready to begin. "Two rounds" is not repeated under it (the Rounds tile already says 2). */
+.ready-banner p{display:none}
+.ready-banner h2{line-height:52px}
+.ready-banner h2{animation:pure-ready-glow 3.2s ease-in-out infinite}
+@keyframes pure-ready-glow{
+ 0%,100%{opacity:1;text-shadow:0 0 6px rgba(53,219,255,.85),0 0 18px rgba(53,219,255,.55)}
+ 50%{opacity:.55;text-shadow:none}
+}
+@media (prefers-reduced-motion:reduce){.ready-banner h2{animation:none}}

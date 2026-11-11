@@ -8,7 +8,7 @@ const root=path.resolve(__dirname,'../../dist');
 const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.json':'application/json','.webmanifest':'application/manifest+json'};
 const server=http.createServer((q,s)=>{let f=path.join(root,decodeURIComponent(new URL(q.url,'http://x').pathname));if(f.endsWith(path.sep))f=path.join(f,'index.html');if(!f.startsWith(root)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){s.writeHead(404);s.end();return}s.writeHead(200,{'content-type':types[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(s)});
 const KEY='the-pure-hit-field-test-v2';
-const step=async(name,fn)=>{try{await fn();console.log('ok   '+name)}catch(e){console.log('FAIL '+name+': '+e.message.split('\n')[0]);process.exitCode=1}};
+const step=async(name,fn)=>{try{await fn();console.log('ok   '+name)}catch(e){console.log('FAIL '+name+': '+e.message.slice(0,1200));process.exitCode=1}};
 const shotDir=process.env.PURE_SCREENSHOTS||null;
 (async()=>{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port+'/';

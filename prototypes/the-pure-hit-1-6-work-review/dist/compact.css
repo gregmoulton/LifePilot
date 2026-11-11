@@ -2,6 +2,8 @@
    exercises and Start Workout fit one typical Android screen. Spacing and sizing only: colors,
    artwork, wordmark and controls are unchanged. Touch targets stay at least 44px tall. */
 @media (max-width:480px){
+ /* Anything scrolled into view (focus, find, automation) clears the fixed bottom tab bar. */
+ html{scroll-padding-bottom:84px}
  body.workout-mode main#main{padding-left:12px;padding-right:12px;padding-top:6px}
  body.workout-mode .workout-panel{padding:4px 0!important}
  /* Header and banner: less vertical whitespace. */

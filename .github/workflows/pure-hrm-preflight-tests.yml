@@ -24,3 +24,16 @@ jobs:
       - name: Execute HIT 1.6 regression suite
         working-directory: prototypes/the-pure-hit-1-6-work-review
         run: node --test tests/*.test.cjs
+  pure-browser-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Playwright Chromium (CI only, not committed)
+        working-directory: prototypes/the-pure-hit-1-6-work-review
+        run: npm install --no-save --no-package-lock playwright@1.63.0 && npx playwright install --with-deps chromium
+      - name: Real-Chromium Android-size end-to-end (fictional data)
+        working-directory: prototypes/the-pure-hit-1-6-work-review
+        run: node tests/browser/e2e.browser.cjs

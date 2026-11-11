@@ -5,7 +5,7 @@
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium,devices}=require('playwright');
 const root=path.resolve(__dirname,'../../dist');
-const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.webp':'image/webp','.png':'image/png','.json':'application/json'};
+const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.webp':'image/webp','.png':'image/png','.json':'application/json','.webmanifest':'application/manifest+json'};
 const server=http.createServer((q,s)=>{const f=path.join(root,decodeURIComponent(new URL(q.url,'http://x').pathname));if(!f.startsWith(root)||!fs.existsSync(f)||fs.statSync(f).isDirectory()){s.writeHead(404);s.end();return}s.writeHead(200,{'content-type':types[path.extname(f)]||'application/octet-stream'});fs.createReadStream(f).pipe(s)});
 const step=async(name,fn)=>{try{await fn();console.log('ok   '+name)}catch(e){console.log('FAIL '+name+': '+e.message);process.exitCode=1}};
 (async()=>{
@@ -37,6 +37,7 @@ const step=async(name,fn)=>{try{await fn();console.log('ok   '+name)}catch(e){co
   for(const [i,n] of [[0,6],[1,7],[2,3]])await enter(i,n);
   await q.waitForFunction(()=>JSON.parse(localStorage.getItem('the-pure-hit-field-test-v2')).active?.finalRecovery===true,null,{timeout:8000});
   const a=await q.evaluate(()=>JSON.parse(localStorage.getItem('the-pure-hit-field-test-v2')).active);assert.deepEqual(a.records.map(r=>r.reps),[7,10,4,6,7,3]);assert.deepEqual(a.records.slice(3).map(r=>r.metFloor),[false,true,true]);assert.equal(a.finishers,undefined);assert.match(await q.textContent('#stationPrevious0'),/floor missed/);await c2.close()});
+ await step('Chrome reports the app installable with the PURE manifest icons and stable id',async()=>{const q=await ctx.newPage();await q.goto(url.replace('#workout','?source=pwa#workout'));await q.waitForFunction(()=>navigator.serviceWorker?.controller||navigator.serviceWorker?.ready,null,{timeout:10000});await q.evaluate(()=>navigator.serviceWorker.ready);const cdp=await ctx.newCDPSession(q);const {installabilityErrors}=await cdp.send('Page.getInstallabilityErrors');assert.deepEqual(installabilityErrors,[]);const m=await cdp.send('Page.getAppManifest');assert.deepEqual(m.errors,[]);const man=JSON.parse(m.data);assert.equal(man.id,'./?app=the-pure');assert.equal(new URL(man.icons.find(i=>i.purpose==='maskable'&&i.sizes==='512x512').src,m.url).pathname,'/icons/pure-v1-maskable-512.png');const id=await cdp.send('Page.getAppId').catch(()=>null);if(id?.appId)assert.match(id.appId,/\/\?app=the-pure$/);await q.close()});
  await step('no page errors',async()=>{assert.deepEqual(errors,[])});
  await browser.close();server.close();
 })().catch(e=>{console.error(e);process.exitCode=1;server.close()});

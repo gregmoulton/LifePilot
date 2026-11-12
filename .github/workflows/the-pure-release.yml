@@ -28,5 +28,7 @@ jobs:
       - run: node release/pwa-preflight.cjs
       - run: npm install --prefix "$RUNNER_TEMP/pure-browser" --no-audit --no-fund --save-exact playwright@1.58.2
       - run: '"$RUNNER_TEMP/pure-browser/node_modules/.bin/playwright" install --with-deps chromium'
+        id: chromium
       - run: NODE_PATH="$RUNNER_TEMP/pure-browser/node_modules" node tests/browser/e2e.browser.cjs
       - run: NODE_PATH="$RUNNER_TEMP/pure-browser/node_modules" node release/pwa-update.browser.cjs
+        if: ${{ !cancelled() && steps.chromium.outcome == 'success' }}

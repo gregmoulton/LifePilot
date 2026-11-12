@@ -1,0 +1,30 @@
+{
+  "product": "Life Pilot",
+  "version": "0.4",
+  "profile_label": "Fictional Pilot (test data)",
+  "goals": [
+    {"id": "fx-goal-1", "name": "Fictional goal: run a 10K", "status": "active", "known_context": ["Fictional context A"], "next_actions": ["Fictional action A"]},
+    {"id": "fx-goal-2", "name": "Fictional goal: learn watercolor", "status": "active", "known_context": [], "next_actions": []},
+    {"id": "fx-goal-3", "name": "Fictional goal: organize garage", "status": "paused", "known_context": [], "next_actions": ["Fictional action C"]}
+  ],
+  "decision_register": [
+    {"id": "LP-001", "decision": "Fictional decision one", "status": "approved", "date": "2026-10-01"},
+    {"id": "LP-002", "decision": "Fictional decision two", "status": "proposed", "date": "2026-10-15"},
+    {"id": "LP-003", "decision": "Fictional decision three", "status": "rejected", "date": "2026-11-01"}
+  ],
+  "execution": {
+    "programs": [],
+    "milestones": [],
+    "tasks": [
+      {"id": "fx-task-today", "goal_id": "fx-goal-1", "name": "Fictional Today task", "status": "open", "due": "2026-11-12", "history": []},
+      {"id": "fx-task-hold", "goal_id": "fx-goal-2", "name": "Fictional HOLD task", "status": "open", "hold": true, "history": []},
+      {"id": "fx-task-carry", "goal_id": "fx-goal-3", "name": "Fictional carryover task", "status": "open", "due": "2026-11-10", "history": [{"at": "2026-11-10T18:00:00Z", "event": "carried_over"}]},
+      {"id": "fx-task-done", "goal_id": "fx-goal-1", "name": "Fictional completed task", "status": "done", "due": "2026-11-09", "result": {"actual_minutes": 30, "evidence": "Fictional evidence"}, "history": [{"at": "2026-11-09T19:00:00Z", "event": "completed"}]}
+    ],
+    "observations": [],
+    "experiments": [],
+    "reviews": []
+  },
+  "agenda": {"version": 1, "events": [{"id": "fx-evt-1", "type": "task_completed", "task_id": "fx-task-done", "at": "2026-11-09T19:00:00Z"}], "proposals": [], "rejections": []},
+  "system_improvement_log": [{"id": "fx-imp-1", "note": "Fictional improvement note", "date": "2026-11-02"}]
+}

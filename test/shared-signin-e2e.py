@@ -275,6 +275,107 @@ class SignedInSharedSync(unittest.TestCase):
             self.mode("owner")
 
 
+FIXTURE = ROOT / "development" / "shared-agenda" / "test" / "fixtures" / "fictional-legacy-v04.json"
+OWNER = "google:fictional-owner-sub-1001"
+
+
+class SignedInImportRetention(unittest.TestCase):
+    """A synced, populated fictional profile: destructive imports leave local bytes and the shared row untouched
+    and send no PUT; an additive import syncs with every goal/decision/history ID and record intact."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.harness = Harness()  # fresh in-memory server: no shared row yet
+        cls.harness.control("/__test/mode?mode=owner")
+        cls.playwright = sync_playwright().start()
+        engine = os.getenv("LIFEPILOT_BROWSER", "chromium")
+        cls.browser = getattr(cls.playwright, engine).launch(**({"args": ["--no-sandbox"]} if engine == "chromium" else {}))
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.browser.close()
+        cls.playwright.stop()
+        cls.harness.stop()
+
+    def puts(self):
+        return sum(1 for e in json.loads(self.harness.call("/__test/api-log")[2]) if e["method"] == "PUT")
+
+    def owner_row(self):
+        return {r["owner_id"]: r for r in json.loads(self.harness.call("/__test/rows")[2])}.get(OWNER)
+
+    def import_file(self, page, dialogs, text):
+        n = len(dialogs)
+        page.evaluate("showTab('profile')")
+        page.locator('input[type=file][onchange^="importFile"]').set_input_files(
+            files=[{"name": "fictional-import.json", "mimeType": "application/json", "buffer": text.encode()}])
+        for _ in range(200):
+            if len(dialogs) > n:
+                break
+            page.wait_for_timeout(100)
+        page.wait_for_function("!transactionRunning")
+        return dialogs[n:]
+
+    def test_populated_profile_destructive_imports_are_refused_without_put(self):
+        case = SignedInSharedSync("test_1_owner_journey_two_devices_sync_reload_conflict_recovery")
+        case.browser, case.harness = self.browser, self.harness
+        page, _ = case.device(self.harness)
+        dialogs = []
+        page.on("dialog", lambda d: dialogs.append(d.type + ": " + d.message))
+        fixture = json.loads(FIXTURE.read_text())
+        page.evaluate("([k, v]) => localStorage.setItem(k, v)", [KEY, json.dumps(fixture)])
+        page.reload()
+        page.wait_for_function("profile?.goals?.length === 3 && !transactionRunning")
+
+        page.locator("#sharedConnect").click()
+        case.status(page, "Synced · revision 1")
+        row = self.owner_row()
+        synced = json.loads(row["payload"])
+        self.assertEqual([g["id"] for g in synced["goals"]], ["fx-goal-1", "fx-goal-2", "fx-goal-3"])
+        self.assertEqual([d["id"] for d in synced["decision_register"]], ["LP-001", "LP-002", "LP-003"])
+        self.assertEqual(synced["execution"]["tasks"], fixture["execution"]["tasks"])
+
+        local_before = page.evaluate("k => localStorage.getItem(k)", KEY)
+        puts_before = self.puts()
+
+        def variant(mutate):
+            d = json.loads(FIXTURE.read_text())
+            mutate(d)
+            return json.dumps(d)
+
+        destructive = {
+            "empty profile": json.dumps({"goals": []}),
+            "malformed JSON": "{\"goals\": [",
+            "missing goal ID": variant(lambda d: d["goals"][0].pop("id")),
+            "duplicate goal ID": variant(lambda d: d["goals"].append({**d["goals"][0], "name": "Fictional twin"})),
+            "goal removed": variant(lambda d: d["goals"].pop()),
+            "decision removed": variant(lambda d: d["decision_register"].pop(0)),
+            "decisions dropped": variant(lambda d: d.pop("decision_register")),
+            "task history removed": variant(lambda d: d["execution"].update(tasks=d["execution"]["tasks"][:2])),
+            "agenda event removed": variant(lambda d: d["agenda"].update(events=[])),
+        }
+        for name, text in destructive.items():
+            with self.subTest(name):
+                shown = self.import_file(page, dialogs, text)
+                self.assertTrue(any("Could not import" in m for m in shown), (name, shown))
+                self.assertEqual(page.evaluate("k => localStorage.getItem(k)", KEY), local_before, name + ": local bytes changed")
+                self.assertEqual(self.puts(), puts_before, name + ": a synchronization PUT was sent")
+                self.assertEqual(self.owner_row(), row, name + ": shared row changed")
+                self.assertEqual(page.evaluate("profile.goals.map(g => g.id)"), ["fx-goal-1", "fx-goal-2", "fx-goal-3"])
+
+        # Additive import still works and syncs, with every existing ID and record carried over unchanged.
+        additive = json.loads(FIXTURE.read_text())
+        additive["goals"].append({"id": "fx-goal-4", "name": "Fictional added goal", "status": "active", "known_context": [], "next_actions": []})
+        self.import_file(page, dialogs, json.dumps(additive))
+        case.status(page, "Synced · revision 2")
+        self.assertEqual(self.puts(), puts_before + 1)
+        after = json.loads(self.owner_row()["payload"])
+        self.assertEqual([g["id"] for g in after["goals"]], ["fx-goal-1", "fx-goal-2", "fx-goal-3", "fx-goal-4"])
+        self.assertEqual(after["decision_register"], fixture["decision_register"])
+        self.assertEqual(after["execution"]["tasks"], fixture["execution"]["tasks"])
+        self.assertEqual(after["agenda"]["events"], fixture["agenda"]["events"])
+        self.assertEqual(after["system_improvement_log"], fixture["system_improvement_log"])
+
+
 class UnconfiguredHost(unittest.TestCase):
     def test_absent_config_fails_closed_without_loading_google(self):
         harness = Harness("--unconfigured")

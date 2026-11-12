@@ -37,3 +37,29 @@ This is mandatory for every current and future development project, not just Pri
 7. Protect the existing working release and user data; do not deploy consequential changes without explicit approval.
 
 This requirement applies to Life Pilot, Prime Workout, Refresh, CoPilot, Prime Life Recovery software, and subsequent software projects unless the owner explicitly changes it.
+
+## Build and handoff provenance
+
+For Life Pilot and The Pure, package a `build-info.json` beside the app entry point with
+`node scripts/write-build-provenance.cjs CONFIG OUTPUT`. Run against the exact Git
+commit that supplies the app files. Each app's Build details panel displays the
+manifest and provides a copyable Work handoff.
+
+The config supplies `project`, `version`, `repository`, `review`, `issue`,
+`branch`, `environment`, `origin`, `status`, `storage`, and `nextStep`.
+Supply `createdAt` as UTC ISO-8601 with milliseconds from the source of record, or
+leave it unknown. The generator records the source commit and commit time and
+stamps the build separately. Use a dedicated origin for Android review. Include
+`?build=FULL_SHA` in each review link to catch a stale URL or incorrect deployment.
+
+Record automated test, deployment, physical Android test, and owner acceptance
+separately in `automatedTest`, `deployed`, `androidTest`, and `ownerAccepted`.
+Use null until evidence exists. Each receipt needs `at`, `commit`, and a
+`reference` to the underlying record. Deployment, Android, and acceptance
+receipts also need the exact `origin`. Keep receipts with the published handoff
+and reuse the original `builtAt` when attaching post-build evidence for that build.
+
+Handoff and status records must carry their actual created, updated and last
+verified UTC timestamps and current status. Display dates in America/Phoenix
+(MST). Keep unknown fields empty in stored data and label them in the display.
+An automated result alone cannot mark an app owner-verified.

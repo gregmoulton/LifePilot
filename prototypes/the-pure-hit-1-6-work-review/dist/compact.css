@@ -1,0 +1,73 @@
+/* Owner UX refinement (Nov 11, 2026): same approved design, tighter phone layout so the three
+   exercises and Start Workout fit one typical Android screen. Spacing and sizing only: colors,
+   artwork, wordmark and controls are unchanged. Touch targets stay at least 44px tall. */
+@media (max-width:480px){
+ /* Anything scrolled into view (focus, find, automation) clears the fixed bottom tab bar. */
+ html{scroll-padding-bottom:84px}
+ body.workout-mode main#main{padding-left:12px;padding-right:12px;padding-top:6px}
+ body.workout-mode .workout-panel{padding:4px 0!important}
+ /* Header and banner: less vertical whitespace. */
+ body.workout-mode .focus-header{padding:4px 0 0}
+ body.workout-mode .ready-banner{min-height:52px;padding:3px 0 3px 56px;background-size:50px auto}
+ body.workout-mode .focus-meta{margin:0 0 2px}
+ /* Connect HRM: shorter and narrower, still a 44px touch target. */
+ body.workout-mode .workout-monitor{margin:0 0 2px!important}
+ body.workout-mode #connectHr{flex:0 0 auto;min-height:44px;padding:4px 16px;font-size:13px}
+ body.workout-mode #status.eyebrow{margin:0 0 4px}
+ body.workout-mode .ready-stats{padding:3px 0}
+ body.workout-mode .ready-stats b{font-size:14px;line-height:1.1}
+ body.workout-mode .ready-sequence{padding:5px 0 2px}
+ /* Exercise cards: tighter padding, one-line names, full-width labels. */
+ body.workout-mode #stationRows{display:grid;gap:6px}
+ body.workout-mode .station-row{min-height:0;padding:6px 8px;gap:6px}
+ body.workout-mode .station-label strong{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ body.workout-mode .station-label small{margin-top:1px;line-height:1.2}
+ body.workout-mode .station-field button{width:40px;height:44px}
+ body.workout-mode .station-field input{width:38px!important}
+ body.workout-mode .ready-tip{margin:4px 0}
+ /* Start Workout directly after the exercises, as in the approved reference; setup below it. */
+ body.workout-mode #start{order:3;margin:6px 0}
+ body.workout-mode #practiceOption{order:3;margin:4px 0}
+ body.workout-mode #workoutPlan{order:5}
+ /* Owner follow-up (Nov 11): Connect HRM smaller and on the right, HRM options under it. */
+ body.workout-mode .workout-monitor{flex-direction:column!important;align-items:flex-end!important;gap:0!important}
+ body.workout-mode #connectHr{position:relative;min-height:38px;height:38px;padding:2px 14px;font-size:12px;border-radius:10px}
+ /* 38px visual height, 46px touch area. */
+ body.workout-mode #connectHr::after{content:"";position:absolute;inset:-4px 0}
+ body.workout-mode #monitorDetails{margin:2px 0 0!important}
+ body.workout-mode #monitorDetails:not([open]) summary{padding:2px 2px 0;min-height:0;font-size:11px}
+ body.workout-mode #monitorDetails[open]{align-self:stretch}
+}
+/* Ready screen: drop the redundant "HIT 1.6 · REVIEW" and green "Ready" labels (owner, Nov 11).
+   They still appear once a workout is running. */
+.workout-panel[data-stage="ready"] .focus-meta,.workout-panel[data-stage="ready"] #status{display:none}
+/* Owner requirement (Nov 11): the no-HRM confirmation offers exactly Use 2-Minute Recovery / Cancel.
+   Connecting stays on the main screen's Connect HRM button. */
+#hrStartGate #hrGateConnect,#hrStartGate .hr-advanced{display:none}
+#hrStartGate .hr-primary-actions{grid-template-columns:1fr}
+/* Secondary exception button under Start Workout (existing secondary button style). */
+#useWithoutHrm{display:block;margin:2px auto 6px;min-height:44px;padding:6px 16px;font-size:13px}
+body.workout-mode #useWithoutHrm{order:3}
+#useWithoutHrm.hidden{display:none}
+/* Owner decision (Nov 11): the internal protocol version ("HIT 1.6") is not shown to the user.
+   Hide the Format tile; the other tiles keep their own icon colors. */
+.ready-stats{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+.ready-stats div:first-child{display:none}
+.ready-stats div:nth-child(2){border-left:0!important}
+/* Owner idea (Nov 11): "Workout Ready" glows in and out like a lit OPEN sign, with a brief neon
+   flicker, using the app's existing cyan. "Two rounds" is not repeated under it (the Rounds tile
+   shows 2); that line is reserved for rotating tongue-in-cheek taglines. */
+.ready-banner p{display:none}
+.ready-banner h2{animation:pure-ready-glow 3.6s ease-in-out infinite}
+@keyframes pure-ready-glow{
+ 0%,100%{opacity:1;color:#eafaff;text-shadow:0 0 6px rgba(53,219,255,.9),0 0 18px rgba(53,219,255,.6),0 0 30px rgba(53,219,255,.3)}
+ 4%{opacity:.35;text-shadow:none}
+ 7%{opacity:1;text-shadow:0 0 6px rgba(53,219,255,.9),0 0 18px rgba(53,219,255,.6)}
+ 50%{opacity:.55;color:#cfe3f2;text-shadow:none}
+}
+.pure-tagline{display:block;min-height:16px;margin:2px 0 0;font-size:12px;font-style:italic;letter-spacing:.02em;color:#b8d9f6;transition:opacity .6s ease}
+.pure-tagline.fading{opacity:0}
+@media (prefers-reduced-motion:reduce){.ready-banner h2{animation:none}.pure-tagline{transition:none}}
+/* Owner directive (Nov 12): Practice/Test is a clear choice before each workout. */
+#practiceOption{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 12px;border:1px dashed #35516c;border-radius:10px;font-size:13px}
+#practiceOption input{width:22px;height:22px;margin:0}

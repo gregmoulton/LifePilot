@@ -27,7 +27,7 @@
  body.workout-mode .ready-tip{margin:4px 0}
  /* Start Workout directly after the exercises, as in the approved reference; setup below it. */
  body.workout-mode #start{order:3;margin:6px 0}
- body.workout-mode #practiceOption{order:4;margin:4px 0}
+ body.workout-mode #practiceOption{order:3;margin:4px 0}
  body.workout-mode #workoutPlan{order:5}
  /* Owner follow-up (Nov 11): Connect HRM smaller and on the right, HRM options under it. */
  body.workout-mode .workout-monitor{flex-direction:column!important;align-items:flex-end!important;gap:0!important}
@@ -68,3 +68,6 @@ body.workout-mode #useWithoutHrm{order:3}
 .pure-tagline{display:block;min-height:16px;margin:2px 0 0;font-size:12px;font-style:italic;letter-spacing:.02em;color:#b8d9f6;transition:opacity .6s ease}
 .pure-tagline.fading{opacity:0}
 @media (prefers-reduced-motion:reduce){.ready-banner h2{animation:none}.pure-tagline{transition:none}}
+/* Owner directive (Nov 12): Practice/Test is a clear choice before each workout. */
+#practiceOption{display:flex;align-items:center;gap:10px;min-height:44px;padding:4px 12px;border:1px dashed #35516c;border-radius:10px;font-size:13px}
+#practiceOption input{width:22px;height:22px;margin:0}

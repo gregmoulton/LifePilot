@@ -187,6 +187,11 @@ if(typeof document!=='undefined'){
  function savedCue(){tone('rep')}
  function repEntryOpen(a=db.active){return !!a&&!a.awaitingFinish&&!a.paused&&a.phase==='exercise'&&!a.countdownKind}
  const release=document.body.dataset?.defaultSquat==='jump';
+ // Owner directive (Nov 12): short spoken confirmation of saved or corrected reps, with exercise
+ // name and count. It never says "reps", so the rep grammar cannot match it, and recognized
+ // speech is ignored while it plays.
+ let confirmSpeakingUntil=0;
+ function confirmReps(name,count,corrected=false){try{if(document.hidden||typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined')return;const prompt=new SpeechSynthesisUtterance(name+(corrected?' corrected: ':': ')+count);prompt.lang='en-US';prompt.rate=1.05;confirmSpeakingUntil=now()+4000;prompt.onend=prompt.onerror=()=>{confirmSpeakingUntil=now()+600};speechSynthesis.speak(prompt)}catch{ /* Visual receipt remains authoritative. */ }}
  function announce(text,queue=false){if(release||localVoiceSelected)return;try{if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined')return;const serial=++speechSerial;if(!queue)speechSynthesis.cancel();const prompt=new SpeechSynthesisUtterance(text);prompt.lang='en-US';prompt.rate=1;prompt.onend=()=>{if(serial===speechSerial)speechHooks.resume?.()};prompt.onerror=prompt.onend;speechSynthesis.speak(prompt)}catch{ /* Visual state remains authoritative if device audio is unavailable. */ }}
  // Compare the exact previous verified bytes, not just a revision number. An
  // unverified write must never be presented as a saved workout or overwrite
@@ -257,7 +262,7 @@ if(typeof document!=='undefined'){
   $('resumeNotice').textContent=!a?.paused?'':pauseEvent?.reason==='page-hidden'?
    'Paused when the app went out of view. Resume this workout or discard this unfinished session.':pauseEvent?.event==='interrupted-restored'?
    'An unfinished workout was recovered from this device. Resume it or discard it to start fresh.':'Session: '+new Date(a.started).toLocaleString();
-  $('discardPaused')?.classList.toggle('hidden',!a?.paused||!!a.cooldownDeadline);
+  $('discardPaused')?.classList.toggle('hidden',!a||!!a.cooldownDeadline);
   $('exercise').textContent=active&&a.phase==='exercise'?'Exercise: '+Pure.EX[a.ex]:'';
   if(a){$('reps').value=a.draft.reps;$('hr').value=a.draft.hr;$('sessionNotes').value=a.userNotes||''}else $('sessionNotes').value='';
   $('sessionNotes').disabled=!active||blocked||dirty;
@@ -282,7 +287,7 @@ if(typeof document!=='undefined'){
  }
  function change(fn){if(blocked||dirty)return;try{const activeId=db.active?.id;fn();const saved=persist();if(!saved&&db.active?.flowVersion===3)Pure.pause(db.active,now(),'save-failed');render();if(release&&saved&&activeId&&!db.active&&(db.history.at(-1)?.id===activeId||db.practiceReceipt?.id===activeId))savedCue()}catch(e){message=e.message;render()}}
  function end(){if(!db.active)return;if(db.active.flowVersion===3){change(()=>db.active.liveCooldown?Pure.saveAndMonitor(db,now()):Pure.endWorkout(db.active,now()));if(!dirty&&!blocked&&db.active?.cooldownDeadline){message='Workout saved on this device. Cooldown recording continues.';render()}announce('Workout finished. Cooldown recording continues.')}else{Pure.archive(db,now());persist();render()}}
- $('start').onclick=()=>change(()=>{if(db.active)return;delete db.practiceReceipt;db.active=Pure.startHandsFree(now(),Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join(''),{...db.settings,exercisePlan:plan()});if(release){db.active.stableRecovery=true;db.active.liveCooldown=true;db.active.thresholdBpm=110;}db.active.practice=!!$('practiceMode').checked;Object.assign(db.active,Pure.floorRuleFor(db.history,db.active));Pure.countdown(db.active,now())});
+ $('start').onclick=()=>change(()=>{if(db.active)return;delete db.practiceReceipt;db.active=Pure.startHandsFree(now(),Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join(''),{...db.settings,exercisePlan:plan()});if(release){db.active.stableRecovery=true;db.active.liveCooldown=true;db.active.thresholdBpm=110;}db.active.practice=!!$('practiceMode').checked;$('practiceMode').checked=false;Object.assign(db.active,Pure.floorRuleFor(db.history,db.active));Pure.countdown(db.active,now())});
 
   const startWorkout=$('start').onclick;
   const closeHrGate=()=>{$('hrStartGate').classList.add('hidden')};
@@ -325,7 +330,7 @@ if(typeof document!=='undefined'){
  }
 
  $('record').onclick=()=>change(()=>{const done=Pure.reps(db.active,$('reps').value,now());if(done)Pure.archive(db,now())});
- const recordReps=$('record').onclick;$('record').onclick=()=>{const before=db.active?.records.length,side=!!db.active?.pendingSide;recordReps();if(db.active&&(db.active.records.length>before||!side&&db.active.pendingSide)){if(dirty||blocked){announce('Save failed. Workout paused. Keep this page open.');return}if(release)savedCue();if(db.active.pendingSide)announce('Right leg next.');cueCountdown()}};
+ const recordReps=$('record').onclick;$('record').onclick=()=>{const before=db.active?.records.length,side=!!db.active?.pendingSide;recordReps();if(db.active&&(db.active.records.length>before||!side&&db.active.pendingSide)){if(dirty||blocked){announce('Save failed. Workout paused. Keep this page open.');return}if(release)savedCue();const a=db.active,saved=a.records.length>before?a.records.at(-1):null;if(saved)confirmReps(saved.exerciseName||saved.exercise,saved.sideReps?'left '+saved.sideReps.left+', right '+saved.sideReps.right:saved.reps);else if(a.pendingSide)confirmReps((Pure.current(a).name||'')+' left',a.pendingSide.reps);if(db.active.pendingSide)announce('Right leg next.');cueCountdown()}};
 
  $('loghr').onclick=()=>{let archived=false;change(()=>{Pure.hr(db.active,$('hr').value,now());archived=finishRecoveryIfReady()});if(archived&&!dirty&&!blocked)announce('Cooldown complete. Workout saved.')};
  function finishRecoveryIfReady(){const a=db.active;if(a?.cooldownDeadline)return Pure.finishMonitoredCooldown(db,now());if(a?.flowVersion>=2&&a.finalRecovery&&!a.paused&&!Pure.recoveryInfo(a,now()).override){Pure.recover(a,now());Pure.archive(db,now());return true}}
@@ -338,7 +343,7 @@ if(typeof document!=='undefined'){
  $('finishCooldown').onclick=()=>{if(!db.active?.finalRecovery||dirty||blocked)return;if(db.active.cooldownDeadline){change(()=>Pure.finishMonitoredCooldown(db,now(),true));return}const info=Pure.recoveryInfo(db.active,now());if(info.override){finishAndSave();return}change(()=>{Pure.recover(db.active,now());Pure.archive(db,now())})};
  function finishAndSave(ask=true){if(!db.active||blocked||dirty)return;if(ask&&!confirm('Finish and save this session now? All recorded reps and HR are kept. Recovery may be incomplete.'))return;change(()=>{const a=db.active;Pure.endWorkout(a,now());a.events.push({event:'cooldown-ended-by-user',timestamp:new Date(now()).toISOString(),reason:'save-now'});if(a.paused)Pure.resume(a,now());Pure.recover(a,now(),{override:true,reason:'user-finished-cooldown'});Pure.archive(db,now())});if(!dirty)announce('Workout saved.')}
  $('saveNow').onclick=()=>finishAndSave();
- function discardUnfinished(confirmed=false){if(blocked||dirty||!db.active||db.active.cooldownDeadline)return;if(confirmed!==true&&!confirm('Discard only this unfinished workout? Saved workout history will stay on this device.'))return;change(()=>{db.active=null})}
+ function discardUnfinished(confirmed=false){if(blocked||dirty||!db.active||db.active.cooldownDeadline)return;if(confirmed!==true&&!confirm('Discard this workout without saving? Nothing from this workout will be kept. Your saved workout history stays on this device.'))return;change(()=>{db.active=null});if(!dirty&&!blocked){message='Workout discarded. Nothing was saved.';render()}}
  $('discard').onclick=discardUnfinished;
  const discardPaused=$('discardPaused');if(discardPaused)discardPaused.onclick=discardUnfinished;
  for(const [id,field] of [['reps','reps'],['hr','hr']])$(id).addEventListener('input',()=>{if(db.active&&!blocked&&!dirty){db.active.draft[field]=$(id).value;Pure.advance(db.active,now());persist();$('notice').textContent=message;$('retry').classList.toggle('hidden',!dirty)}});
@@ -390,7 +395,7 @@ if(typeof document!=='undefined'){
   let handsFree=false,micOptOut=false,proposal=null,lastMonitorLog=0,connecting=false,monitorSignalSeen=false,monitorLossAnnounced=false;
   const context=()=>JSON.stringify([db.active?.id,db.active?.records.length,db.active?.phase,db.active?.paused,!!db.active?.countdownKind]);
   const sayStatus=s=>{voiceActive=voice.listening;voiceWanted=voice.wanted;$('stopTalk').classList.toggle('hidden',!voice.wanted);$('voiceStatus').classList.toggle('muted-voice',s.startsWith('Listening —'));$('voiceStatus').textContent=s;$('talk').textContent=voice.listening?'Listening':voice.wanted?'Connecting voice…':'Enable voice'};
-  const voiceCallbacks={onState:sayStatus,onError:sayStatus,onText:text=>{
+  const voiceCallbacks={onState:sayStatus,onError:sayStatus,onText:text=>{if(now()<confirmSpeakingUntil||typeof speechSynthesis!=='undefined'&&speechSynthesis.speaking)return;
    const parsed=PureDevices.command(text);if(parsed?.type==='confirm'){$('voiceApply').click();return}if(parsed?.type==='cancel'){$('voiceCancel').click();return}if(!parsed){sayStatus('Heard: “'+text+'”. Command not recognized; nothing changed.');return}
    if(parsed.type==='reps'){const a=db.active;if(!a||a.paused||a.countdownKind||a.phase!=='exercise'||dirty||blocked){sayStatus('Not accepting reps during transition or recovery.');return}$('reps').value=String(parsed.value);a.draft.reps=String(parsed.value);$('record').click();return}
    if(parsed.type==='correct'){const a=db.active,r=a?.records.at(-1);if(!r||dirty||blocked||a.paused){sayStatus('No recent reps to correct.');return}if(r.sideReps){sayStatus('Use the left or right field to correct split squat reps.');return}correctRecord(a.records.length-1,parsed.value);return}
@@ -516,9 +521,22 @@ if(typeof document!=='undefined'){
  function splitSquatPlan(moves){return moves.map(move=>move.category==='Squat'?{...move,name:'Split squat',variant:'Bodyweight',unilateral:true}:move)}
  const reviewPlan=release?defaultPlan.map(m=>m.category==='Squat'?{...m,name:'Jump Squats',variant:'Bodyweight'}:m):document.body.dataset?.defaultSquat==='split'?splitSquatPlan(defaultPlan):defaultPlan;
  function plan(){return db.active?(db.active.exercisePlan||defaultPlan):db.settings?.exercisePlan||reviewPlan}
- function correctRecord(index,value,side){if(!/^\d+$/.test(String(value))||+value>10000)return;change(()=>{const a=db.active,r=a.records[index],old=Pure.copy(r);if(side){r.sideReps[side]=+value;r.reps=Math.min(r.sideReps.left,r.sideReps.right)}else r.reps=+value;a.events.push({event:'rep-correction',timestamp:new Date(now()).toISOString(),recordIndex:index,before:old,after:Pure.copy(r)})});announce(String(value)+' corrected.')}
- function renderStationRows(){const a=db.active,moves=plan();$('stationRows').classList.toggle('hidden',false);$('workoutPlan').classList.toggle('hidden',!!a);$('practiceOption').classList.toggle('hidden',!!a);for(let i=0;i<3;i++){const m=moves[i];$('station'+i).setAttribute?.('data-move',m.category);const r=a?.records.find(x=>x.round===(a.round===0?'maximum':'conditioning')&&x.exercise===m.category),current=!!a&&a.ex===i&&a.phase==='exercise',ready=current&&!a.paused&&!a.countdownKind,unilateral=!!m.unilateral;
- $('station'+i).classList.toggle('current',current);$('station'+i).classList.toggle('completed',!!r);$('stationName'+i).textContent=m.name;const floor=a?.round===1?a.floors?.find(x=>x.exercise===m.category):null;$('stationPrevious'+i).textContent=Pure.workoutReference(db.history,m,a?(a.round===0?'maximum':'conditioning'):null)+(floor?(Number.isInteger(floor.floor)?' · Max\u00a0'+floor.maximumReps+(floor.raisedToday?'\u00a0(new)':'')+' · Floor\u00a0'+floor.floor+(r&&Number.isInteger(r.floor)?(r.metFloor?' · floor met':' · floor missed'):''):' · No floor yet (new exercise)'):'');$('stationVariant'+i).textContent=(a?.round===1?'Conditioning ': 'Max ')+m.category+(m.variant?' · '+m.variant:'');$('stationState'+i).textContent=r?'Saved':current?(a.paused?'Paused':a.countdownKind?'Get ready · '+Math.max(1,Math.ceil((a.countdownUntil-now())/1000))+'s':unilateral?(a.pendingSide?'Right leg':'Left leg'):'Your turn'):!a?'Not started':'Up next';
+ function correctRecord(index,value,side){if(!/^\d+$/.test(String(value))||+value>10000)return;change(()=>{const a=db.active,r=a.records[index],old=Pure.copy(r);if(side){r.sideReps[side]=+value;r.reps=Math.min(r.sideReps.left,r.sideReps.right)}else r.reps=+value;a.events.push({event:'rep-correction',timestamp:new Date(now()).toISOString(),recordIndex:index,before:old,after:Pure.copy(r)})});const r=db.active?.records[index];if(r&&!dirty&&!blocked)confirmReps((r.exerciseName||r.exercise)+(side?' '+side:''),side?r.sideReps[side]:r.reps,true)}
+ // Owner directive (Nov 12): each exercise shows its previous established max from saved history
+ // (or "No previous result"). Round 2 adds the 70% floor after the three calibration workouts;
+ // during calibration it shows progress and never invents a floor.
+ function maxLine(a,m,r){
+  const ref=Pure.workoutReference(db.history,m,a?(a.round===0?'maximum':'conditioning'):null);
+  const hist=a?.floorRule?a.floorRule.historicalMaxima?.find(x=>x.exercise===m.category)?.maximumReps??null:Pure.historicalMaximum(db.history,m)?.maximumReps??null;
+  const base=Number.isInteger(hist)?'Max\u00a0'+hist:/^NEW/.test(ref)?ref:'No previous result';
+  if(a?.round!==1)return base;
+  if(a.floorRule?.calibration)return base+' · Calibration '+a.floorRule.calibrationNumber+'\u00a0of\u00a03';
+  const floor=a.floors?.find(x=>x.exercise===m.category);
+  if(!floor||!Number.isInteger(floor.floor))return base+' · No floor yet';
+  return 'Max\u00a0'+floor.maximumReps+(floor.raisedToday?'\u00a0(new)':'')+' · Floor\u00a0'+floor.floor+(r&&Number.isInteger(r.floor)?(r.metFloor?' · floor met':' · floor missed'):'');
+ }
+ function renderStationRows(){const a=db.active,moves=plan();if(!a){const c=Pure.calibrationFor(db.history,{id:''});$('readySequence').textContent='Exercise sequence'+(c.calibration?' · Calibration '+c.calibrationNumber+'\u00a0of\u00a03':'')}$('stationRows').classList.toggle('hidden',false);$('workoutPlan').classList.toggle('hidden',!!a);$('practiceOption').classList.toggle('hidden',!!a);for(let i=0;i<3;i++){const m=moves[i];$('station'+i).setAttribute?.('data-move',m.category);const r=a?.records.find(x=>x.round===(a.round===0?'maximum':'conditioning')&&x.exercise===m.category),current=!!a&&a.ex===i&&a.phase==='exercise',ready=current&&!a.paused&&!a.countdownKind,unilateral=!!m.unilateral;
+ $('station'+i).classList.toggle('current',current);$('station'+i).classList.toggle('completed',!!r);$('stationName'+i).textContent=m.name;$('stationPrevious'+i).textContent=maxLine(a,m,r);$('stationVariant'+i).textContent=(a?.round===1?'Conditioning ': 'Max ')+m.category+(m.variant?' · '+m.variant:'');$('stationState'+i).textContent=r?'Saved':current?(a.paused?'Paused':a.countdownKind?'Get ready · '+Math.max(1,Math.ceil((a.countdownUntil-now())/1000))+'s':unilateral?(a.pendingSide?'Right leg':'Left leg'):'Your turn'):!a?'Not started':'Up next';
  for(const side of ['main','left','right']){const id='stationValue'+i+side,el=$(id),show=unilateral?side!=='main':side==='main';$('stationField'+i+side).classList.toggle('hidden',!show);const val=r?(side==='main'?r.reps:r.sideReps?.[side]??''):current?(side==='main'?a.draft.reps:side==='left'?(a.pendingSide?.reps??a.draft.reps):a.pendingSide?a.draft.reps:''):'';if(el.value!==String(val))el.value=String(val);el.disabled=blocked||dirty||!a||a.paused||(!r&&(!ready||unilateral&&side==='right'&&!a.pendingSide));for(const d of ['Minus','Plus'])$('station'+d+i+side).disabled=el.disabled;}
  }
  $('record').classList.toggle('hidden',!a||a.draft.reps==='');$('record').textContent=a&&Pure.current(a).unilateral?'Save '+(a.pendingSide?'right':'left')+' reps':'Save reps';$('record').disabled=blocked||dirty||!a||a.paused||a.phase!=='exercise'||!!a.countdownKind;$('focusTitle').textContent=!a?(db.history.length&&showSaved()?'Session saved':'THE PURE'):a.paused?'Paused':a.phase==='recovery'?(a.finalRecovery?'Workout complete':'Round complete'):a.countdownKind?'Get ready: '+Pure.current(a).name:'Keep nothing back.';

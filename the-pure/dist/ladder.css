@@ -1,0 +1,33 @@
+/* Ladder v1.0 (Nov 12, 2026): uses the app's existing palette and panel style. */
+.ladder-banner{display:flex;flex-direction:column;gap:2px;margin:6px 0;padding:10px 12px;border:1px solid var(--yellow);border-radius:13px;background:linear-gradient(90deg,rgba(239,202,122,.16),rgba(100,184,255,.10))}
+.ladder-banner strong{color:var(--yellow);letter-spacing:.12em;font-size:12px}
+.ladder-banner span{font-size:14px}
+.ladder-banner button{align-self:flex-start;margin-top:4px;min-height:44px}
+.ladder-block h2{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0 0 8px}
+.ladder-block h2 small{color:var(--muted);font-size:13px;font-weight:500}
+.ladder-list{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px}
+.ladder-list li{display:grid;grid-template-columns:34px 1fr;gap:2px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:11px;background:var(--panel2)}
+.ladder-list .rung{grid-row:span 2;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:15px;border:1px solid var(--line);font-weight:700;font-size:13px}
+.ladder-list .name{font-weight:700}
+.ladder-list .meta{color:var(--muted);font-size:13px}
+.ladder-list li.done .rung{border-color:var(--green);color:var(--green)}
+.ladder-list li.current{border:2px solid var(--blue);box-shadow:0 0 18px rgba(100,184,255,.22)}
+.ladder-list li.current .rung{background:var(--blue);color:#06121f;border-color:var(--blue)}
+.ladder-list li.locked{opacity:.62}
+.ladder-list li.elite{border-color:#8a5cc2;background:linear-gradient(90deg,rgba(200,139,255,.12),transparent)}
+.ladder-list li.elite .rung{font-size:9px;letter-spacing:.04em;color:#e3c9ff;border-color:#8a5cc2}
+.ladder-bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:4px 0 2px}
+.ladder-bar span{display:block;height:8px;border-radius:4px;background:var(--blue)}
+.ladder-tag{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid var(--line);border-radius:6px;color:var(--muted);font-size:11px;font-weight:600;vertical-align:middle}
+.ladder-controls{display:grid;gap:8px;margin-top:8px}
+.ladder-controls button{min-height:44px}
+.exercise-history{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.exercise-history li{padding:8px 10px;border:1px solid var(--line);border-radius:11px;background:var(--panel2)}
+.exercise-history .meta{display:block;color:var(--muted);font-size:13px}
+/* Ladder cards: text wraps (never truncated) and the text column may shrink, so nothing overflows sideways. */
+.station-row[data-exercise]{min-width:0;max-width:100%}
+.station-row[data-exercise] .station-label{flex:1 1 0;min-width:0}
+.station-row[data-exercise] .station-label strong,.station-row[data-exercise] .previous-max,.station-row[data-exercise] [id^=stationVariant]{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+/* Narrow phones (under 370px wide): one step smaller text on ladder cards so each line fits. */
+@media (max-width:370px){.workout-panel .station-row[data-exercise] .station-label strong{font-size:15px}}
+@media (max-width:480px){.workout-panel[data-stage="ready"] .station-row[data-exercise],.workout-panel[data-stage="saved"] .station-row[data-exercise]{padding-top:7px;padding-bottom:7px}}

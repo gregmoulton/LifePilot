@@ -37,9 +37,10 @@ const PureJournal=(()=>{
  const arrays={history:b.history,measurements:b.measurements||[],assessments:b.assessments||[],legacyHistory:b.legacyHistory||[]};
  for(const [key,rows] of Object.entries(arrays)){if(!Array.isArray(rows)||rows.length>20000||rows.some(r=>!r||typeof r.id!=='string'||!r.id)||new Set(rows.map(r=>r.id)).size!==rows.length)throw Error('Invalid or duplicate '+key+' records.');}
  validateExtras(arrays);
- return {...arrays,active:b.active||null};
+ // Ladder progress travels with a backup; merge adopts it only when this device has none (never overwrites).
+ return {...arrays,active:b.active||null,...(b.settings&&typeof b.settings.ladder==='object'&&b.settings.ladder?{ladder:JSON.parse(JSON.stringify(b.settings.ladder))}:{})};
  }
- function merge(db,b){if(db.active&&b.history.some(w=>w.id===db.active.id))throw Error('Imported history conflicts with the active session. Save the current session first.');const next=JSON.parse(JSON.stringify(db));for(const key of ['history','measurements','assessments','legacyHistory']){next[key]??=[];for(const r of b[key]){const old=next[key].find(x=>x.id===r.id);if(old&&JSON.stringify(old)!==JSON.stringify(r))throw Error('Conflicting record ID. Current records were not changed.');if(!old)next[key].push(r)}}return next}
+ function merge(db,b){if(db.active&&b.history.some(w=>w.id===db.active.id))throw Error('Imported history conflicts with the active session. Save the current session first.');const next=JSON.parse(JSON.stringify(db));for(const key of ['history','measurements','assessments','legacyHistory']){next[key]??=[];for(const r of b[key]){const old=next[key].find(x=>x.id===r.id);if(old&&JSON.stringify(old)!==JSON.stringify(r))throw Error('Conflicting record ID. Current records were not changed.');if(!old)next[key].push(r)}}if(b.ladder&&typeof PureLadder!=='undefined'&&PureLadder.valid(b.ladder)&&!PureLadder.valid(next.settings?.ladder))next.settings={...(next.settings||{}),ladder:JSON.parse(JSON.stringify(b.ladder))};return next}
  return {WHITE,BLACK,PHONE_V2_APP,legacyDate,weight,assessment,parseBackup,merge,validateExtras};
 })();
 if(typeof module!=='undefined')module.exports=PureJournal;

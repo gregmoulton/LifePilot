@@ -1,0 +1,28 @@
+# The Pure release gate
+
+Delivery engineering for [#118](https://github.com/gregmoulton/LifePilot/issues/118), following [#119](https://github.com/gregmoulton/LifePilot/issues/119). The [coordination issue](https://github.com/gregmoulton/LifePilot/issues/115) records approvals and the release candidate.
+
+## Candidate and recommendation
+
+**NO-GO for cutover.** Audited feature SHA: `d8788503264d7c8bd1d7cd65c07cd1e4b2ddb6fd`. [Synthetic preview](https://the-pure-ladder-test.onrender.com) · [Build identity](https://the-pure-ladder-test.onrender.com/build-info.json)
+
+- Outstanding: stale conditioning floor after a Round 1 correction, final audio/device checks, rung art or an accepted fallback, signed-in launcher origin and same-icon update rehearsal. Reconcile non-ladder settings and test the final production URL before cutover.
+- Existing Sites deployment: [The Pure](https://the-pure-android.greg-moulton2.chatgpt.site). Work verified owner-role access in Sites and a successful deployment. Verify the physical icon's origin and profile on the device. The current fit and ladder Render deployments are previews.
+- Recommended permanent target: a dedicated Render static site from protected `pure/live`, serving `the-pure/dist` at the root with auto-deploy disabled initially and exact Git SHA shown in-app. [Proposed URL](https://the-pure.onrender.com) is provisional until Render assigns and verifies it. Confirm operators, workspace bandwidth/build limits, billing and zero-overage controls before provisioning. Use a manual deploy of the approved commit. Keep manifest path, resolved ID, scope, start URL and worker URL stable. [Render static sites](https://render.com/docs/static-sites)
+- A move from Sites to Render creates a new origin and storage boundary. The new origin needs a one-time installation. Same-origin Sites remains an option if the owner selects it and a commit-pinned update and rollback can be rehearsed on that project.
+
+## Evidence required for GO
+
+1. From `the-pure/`, run `node --test tests/*.test.cjs release/*.test.cjs` and `node release/pwa-preflight.cjs`. Run `node tests/browser/e2e.browser.cjs` with Playwright Chromium installed. Check the resulting GitHub Actions job SHA against the reviewed commit or record the tested merge SHA and parents.
+2. Rehearse baseline → candidate → baseline on an isolated HTTPS origin with synthetic data. Confirm old and new builds agree on workout IDs, record counts, timestamps, per-side reps, HR/recovery, exercise/configuration and achievement data. Check full and partial saves, active resume, Phone V2 archive, repeated import, conflict rejection, and current settings/backup differences. Confirm that the rollback shell can read newer data and that future re-upgrade still sees it.
+3. **Android, synthetic preview:** verify three cards and Start with Chrome's address bar visible, no clipping during both rounds, the three-second cue and rep-save/correction cues with music, MOOFIT/manual HR at 110 BPM, no-HRM fallback, a corrected 10→11 maximum showing 8, and background/resume with exactly one saved workout. Exercise graduation per movement, asymmetric reps, and independent ELITE unlocks. Verify archived exercises keep their results. Check all 18 rung assets or record the explicitly accepted fallback.
+4. **Chromebook, synthetic preview:** exercise keyboard navigation and narrow/wide layouts, confirm the exact SHA, run a full and partial save, import/export a synthetic backup, compare records, and reopen offline after the worker controls the page.
+5. **Android, installed rehearsal:** on an approved isolated origin, install from Chrome's **⋮ → Install app** or **Add to Home screen → Install**. Open the icon, verify standalone and offline reopening. While a synthetic session is open, make a second approved build available on that origin, verify the worker waits, finish/save, close all same-origin tabs/windows, reopen the same icon, and verify the new SHA and unchanged history. Check for one launcher for that identity.
+6. Present one owner action when ready: approve the named SHA, exact HTTPS origin, verified backup/migration plan and known-good rollback artifact. This checklist does not authorize a production merge, release, real-data migration, or spending.
+
+## Authorized cutover and rollback
+
+- **Android, before cutover:** launch the old icon in the regular Chrome profile. Use the app menu's **Open in Chrome** where available and record the full origin. Finish any active session, then **Backup → Save backup**. Verify the download and store a second copy privately. Keep the old shortcut and storage. Compare exact records and counts on import, reopen and re-export, then install the verified permanent URL once if the origin changes.
+- **Rollback trigger:** changed counts, repeated sessions, incorrect goals, failed audio, missing history, or broken launcher/update. Stop new workouts/deploys, export the destination separately if it has new records, and preserve both stores. For cross-origin cutover, reopen the original icon using its original profile and reconcile destination-only records by stable ID through a rehearsed importer. For same-origin release, roll back to the recorded retained host artifact, verify the worker updates, close same-origin tabs, and reopen the same icon. Verify the expected SHA, counts and offline launch before resuming. Never clear storage to force activation. [Render rollback](https://render.com/docs/rollbacks)
+
+The synthetic rollback test covers a baseline loader reading newer stored rows, including ladder metadata. It does not prove that the older UI preserves all newer settings when it exports and reimports a backup, or that an installed Android app updates correctly.

@@ -46,3 +46,7 @@
 .sound-levels output{color:var(--muted);font-size:13px}
 .sound-levels input{grid-column:1/-1;width:100%;min-height:32px}
 .sound-levels select{grid-column:1/-1;width:100%;min-height:44px;font-size:15px}
+.mode-banner{margin:4px 0 6px;padding:8px 10px;border-radius:10px;font-weight:800;letter-spacing:.06em;font-size:14px;text-align:center}
+.mode-banner.practice{background:rgba(239,202,122,.18);border:2px solid var(--yellow);color:var(--yellow)}
+.mode-banner.live{background:rgba(80,200,120,.12);border:2px solid var(--green);color:var(--green)}
+#controls #discardLive{background:#5a1620;border:1px solid #e0485a;color:#ffd6db}

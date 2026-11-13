@@ -223,6 +223,7 @@ if(typeof document!=='undefined'){
  function sound(){const s=db?.settings?.sound||{},n=(v,d)=>Number.isFinite(v)&&v>=0&&v<=1?v:d;return {chime:n(s.chime,SOUND_DEFAULT.chime),voice:n(s.voice,SOUND_DEFAULT.voice),voiceName:typeof s.voiceName==='string'?s.voiceName.slice(0,200):''}}
  function setSound(key,value){change(()=>{db.settings={...(db.settings||{}),sound:{...sound(),[key]:value}}})}
  function nextName(a){if(!a||a.phase!=='exercise')return '';const cat=Pure.EX?.[a.ex],m=(a.exercisePlan||[]).find(x=>x.category===cat);return m?.name||cat||''}
+ function modeQuestion(){return $('practiceMode')?.checked?'Start a PRACTICE session?\n\nNothing will be recorded: no history, maximums, 70% goals, ladder progress or grades.':'Start a LIVE workout?\n\nYour reps will be saved to your real workout history. To test instead, tap Cancel and tick Practice session.'}
  function buzz(pattern){try{navigator.vibrate?.(pattern)}catch{ /* vibration is optional */ }}
  // Owner device test Nov 12: cues were faint at arm's length. A compressor raises perceived loudness without clipping.
  function loud(){try{if(!audio.__loud){const c=audio.createDynamicsCompressor();c.threshold.value=-24;c.knee.value=6;c.ratio.value=12;c.attack.value=.002;c.release.value=.12;const m=audio.createGain();m.gain.value=1.6;c.connect(m);m.connect(audio.destination);audio.__loud=c}return audio.__loud}catch{return audio.destination}}
@@ -311,7 +312,10 @@ if(typeof document!=='undefined'){
   $('resumeNotice').textContent=!a?.paused?'':pauseEvent?.reason==='page-hidden'?
    'Paused when the app went out of view. Resume this workout or discard this unfinished session.':pauseEvent?.event==='interrupted-restored'?
    'An unfinished workout was recovered from this device. Resume it or discard it to start fresh.':'Session: '+new Date(a.started).toLocaleString();
-  $('discardPaused')?.classList.toggle('hidden',!a?.paused||!!a.cooldownDeadline);
+  $('discardPaused')?.classList.toggle('hidden',!a?.paused||!!a.cooldownDeadline||release);
+  if(release){const mb=$('modeBanner');if(mb){mb.classList.toggle('hidden',!a);mb.classList.toggle('practice',!!a?.practice);mb.classList.toggle('live',!!a&&!a.practice);mb.textContent=a?.practice?'PRACTICE — NOT RECORDED':'LIVE WORKOUT — RECORDED'}
+   $('end').textContent=a?.practice?'End Practice':'Finish & Save Workout';$('saveNow').textContent=a?.practice?'End practice now':'Finish & save now';
+   $('discardLive')?.classList.toggle('hidden',!a||!!a.cooldownDeadline);if($('discardLive'))$('discardLive').textContent=a?.practice?'Discard Practice':'Discard Workout'}
   $('exercise').textContent=active&&a.phase==='exercise'?'Exercise: '+Pure.EX[a.ex]:'';
   if(a){$('reps').value=a.draft.reps;$('hr').value=a.draft.hr;$('sessionNotes').value=a.userNotes||''}else $('sessionNotes').value='';
   $('sessionNotes').disabled=!active||blocked||dirty;
@@ -338,18 +342,21 @@ if(typeof document!=='undefined'){
  function end(){if(!db.active)return;if(db.active.flowVersion===3){change(()=>db.active.liveCooldown?Pure.saveAndMonitor(db,now()):Pure.endWorkout(db.active,now()));if(!dirty&&!blocked&&db.active?.cooldownDeadline){message='Workout saved on this device. Cooldown recording continues.';render()}announce('Workout finished. Cooldown recording continues.')}else{Pure.archive(db,now());persist();render()}}
  $('start').onclick=()=>change(()=>{if(db.active)return;delete db.practiceReceipt;db.active=Pure.startHandsFree(now(),Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join(''),{...db.settings,exercisePlan:plan(),...(release?{startSeconds:3}:{})});if(ladderOn&&db.settings?.ladder?.celebration)db.settings={...db.settings,ladder:PureLadder.dismissCelebration(db.settings.ladder)};if(release){db.active.stableRecovery=true;db.active.liveCooldown=true;db.active.thresholdBpm=110;}db.active.practice=!!$('practiceMode').checked;Object.assign(db.active,Pure.floorRuleFor(db.history,db.active));Pure.countdown(db.active,now())});
 
-  const startWorkout=$('start').onclick;
+  const startWorkout=$('start').onclick;let modeChosen=false;
   const closeHrGate=()=>{$('hrStartGate').classList.add('hidden')};
   const startWithHrDecision=(reading,explicitWithoutHr=false)=>{
    if(db.active||dirty||blocked||(!reading&&!explicitWithoutHr))return;
+   if(release&&!modeChosen)return;modeChosen=false;
    unlockAudio();closeHrGate();startWorkout();
    if(db.active&&!dirty){
-    change(()=>db.active.events.push({event:reading?'started-with-live-hr':'started-without-hr-confirmed',timestamp:new Date(now()).toISOString(),...(reading?{bpm:reading.bpm}:{}),confirmation:reading?'live-monitor':'explicit-user-override'}));
+    change(()=>db.active.events.push({event:reading?'started-with-live-hr':'started-without-hr-confirmed',timestamp:new Date(now()).toISOString(),...(reading?{bpm:reading.bpm}:{}),confirmation:reading?'live-monitor':'explicit-user-override',mode:db.active.practice?'practice':'live'}));
     speechHooks.arm?.();cueCountdown();
    }
   };
   $('start').onclick=()=>{
    if(db.active||dirty||blocked)return;
+   // Owner #115 practice guardrails: an explicit Practice vs Live choice before every start.
+   modeChosen=false;if(release&&!confirm(modeQuestion()))return;modeChosen=true;
    const reading=monitorReading();
    if(!reading){
     $('hrStartGate').classList.remove('hidden');
@@ -383,15 +390,15 @@ if(typeof document!=='undefined'){
  $('recover').onclick=()=>{change(()=>{const a=db.active;if(!a||a.paused||a.finalRecovery)return;unlockAudio();if(Pure.recover(a,now()))Pure.archive(db,now())});cueCountdown()};
  $('overrideRecovery').onclick=()=>{const a=db.active;if(!a||a.paused||dirty||blocked)return;const reason=$('overrideReason').value;if(!reason){$('exceptionNotice').textContent='Choose why you are ending recovery early.';return}if(!confirm((a.finalRecovery?'End post-workout recovery and save?':'Start conditioning before the recorded recovery target?')+' This records an exception; it does not switch off the monitor.'))return;unlockAudio();change(()=>{if(Pure.recover(a,now(),{override:true,reason}))Pure.archive(db,now())});cueCountdown()};
  $('pause').onclick=()=>{if(!db.active||blocked||dirty||db.active.paused&&!db.active.countdownUntil)return;change(()=>{if(db.active.flowVersion!==3)delete db.active.countdownUntil;Pure.pause(db.active,now())});if(release&&!dirty&&!blocked)tone('pause')};$('resume').onclick=()=>{if(!db.active||!db.active.paused||blocked||dirty)return;unlockAudio();change(()=>Pure.resume(db.active,now()));speechHooks.continue?.();if(release&&!dirty&&!blocked)tone('resume');cueCountdown()};
- $('end').onclick=()=>{if(!blocked&&!dirty&&db.active&&(db.active.awaitingFinish||confirm('End workout and start cooldown? Reps are kept, the workout timer stops, and heart-rate recording continues.')))end()};
+ $('end').onclick=()=>{if(blocked||dirty||!db.active)return;const q=release?(db.active.practice?'End this PRACTICE session? Nothing is recorded.':'Save this as a REAL workout in your history and start cooldown?\n\nTo throw it away instead, tap Cancel and use Discard Workout.'):'End workout and start cooldown? Reps are kept, the workout timer stops, and heart-rate recording continues.';if((!release&&db.active.awaitingFinish)||confirm(q))end()};
  const saveResults=$('saveResults');
  if(saveResults)saveResults.onclick=()=>{if(!db.active?.liveCooldown||!db.active.finalRecovery||dirty||blocked)return;change(()=>Pure.archive(db,now(),{keepMonitoring:true}));if(!dirty&&!blocked){message='Results saved. Cooldown monitoring continues.';render()}};
  $('finishCooldown').onclick=()=>{if(!db.active?.finalRecovery||dirty||blocked)return;if(db.active.cooldownDeadline){change(()=>Pure.finishMonitoredCooldown(db,now(),true));return}const info=Pure.recoveryInfo(db.active,now());if(info.override){finishAndSave();return}change(()=>{Pure.recover(db.active,now());Pure.archive(db,now())})};
- function finishAndSave(ask=true){if(!db.active||blocked||dirty)return;if(ask&&!confirm('Finish and save this session now? All recorded reps and HR are kept. Recovery may be incomplete.'))return;change(()=>{const a=db.active;Pure.endWorkout(a,now());a.events.push({event:'cooldown-ended-by-user',timestamp:new Date(now()).toISOString(),reason:'save-now'});if(a.paused)Pure.resume(a,now());Pure.recover(a,now(),{override:true,reason:'user-finished-cooldown'});Pure.archive(db,now())});if(!dirty)announce('Workout saved.')}
+ function finishAndSave(ask=true){if(!db.active||blocked||dirty)return;if(ask&&!confirm(release&&db.active.practice?'End this PRACTICE session now? Nothing is recorded.':'Finish and save this session now as a REAL workout? All recorded reps and HR are kept. Recovery may be incomplete.'))return;change(()=>{const a=db.active;Pure.endWorkout(a,now());a.events.push({event:'cooldown-ended-by-user',timestamp:new Date(now()).toISOString(),reason:'save-now'});if(a.paused)Pure.resume(a,now());Pure.recover(a,now(),{override:true,reason:'user-finished-cooldown'});Pure.archive(db,now())});if(!dirty)announce('Workout saved.')}
  $('saveNow').onclick=()=>finishAndSave();
- function discardUnfinished(confirmed=false){if(blocked||dirty||!db.active||db.active.cooldownDeadline)return;if(confirmed!==true&&!confirm('Discard only this unfinished workout? Saved workout history will stay on this device.'))return;change(()=>{db.active=null})}
+ function discardUnfinished(confirmed=false){if(blocked||dirty||!db.active||db.active.cooldownDeadline)return;if(confirmed!==true&&!confirm(db.active.practice?'Discard this practice session? Nothing is recorded.':'Discard this workout? Nothing from it is saved: no history, maximums, 70% goals, ladder progress or grades. Earlier saved workouts are not touched.'))return;change(()=>{db.active=null})}
  $('discard').onclick=discardUnfinished;
- const discardPaused=$('discardPaused');if(discardPaused)discardPaused.onclick=discardUnfinished;
+ const discardPaused=$('discardPaused');if(discardPaused)discardPaused.onclick=discardUnfinished;const discardLive=$('discardLive');if(discardLive)discardLive.onclick=()=>discardUnfinished();
  for(const [id,field] of [['reps','reps'],['hr','hr']])$(id).addEventListener('input',()=>{if(db.active&&!blocked&&!dirty){db.active.draft[field]=$(id).value;Pure.advance(db.active,now());persist();$('notice').textContent=message;$('retry').classList.toggle('hidden',!dirty)}});
  $('sessionNotes').addEventListener('input',()=>{if(db.active&&!blocked&&!dirty){db.active.userNotes=$('sessionNotes').value.slice(0,2000);persist();$('notice').textContent=message}});
  $('retry').onclick=()=>{persist();render()};

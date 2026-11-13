@@ -397,7 +397,7 @@ test('Android release flow saves both rounds without export and discards only an
  r.click('start');
  rep(r,10);r.hidden(true);r.hidden(false);
  assert.equal(r.read('db.active.paused'),true);
- assert.equal(r.node('discardPaused').classList.contains('hidden'),false);
+ assert.equal(r.node('discardLive').classList.contains('hidden'),false,'Discard Workout stays available while paused');
  r.click('resume');rep(r,9);rep(r,8);
  assert.equal(r.read('db.active.round'),0);
  assert.equal(r.node('recover').disabled,true);
@@ -472,4 +472,31 @@ test('owner Nov 12: male voice preferred when the phone offers one',()=>{
  const r=runtime({release:true});
  r.context.speechSynthesis.getVoices=()=>[{name:'en-us-x-sfg-network',lang:'en-US',localService:false},{name:'en-us-x-iom-network',lang:'en-US',localService:false},{name:'en-us-x-tpf-local',lang:'en-US',localService:true},{name:'en-us-x-iol-local',lang:'en-US',localService:true}];
  r.read('(coachVoice=null,pickVoice(),1)');assert.equal(r.read('coachVoice.name'),'en-us-x-iom-network');assert.equal(r.read('offlineVoice().name'),'en-us-x-iol-local');
+});
+test('owner #115 practice guardrails: explicit Practice/Live choice, clear labels, practice never touches real data, mode survives reload',()=>{
+ const r=runtime({release:true});
+ r.confirm(false);r.click('start');assert.equal(r.read('!!db.active'),false,'cancelling the Live question starts nothing');
+ r.confirm(true);r.node('practiceMode').checked=true;r.click('start');
+ assert.equal(r.read('db.active.practice'),true);assert.equal(r.read('db.active.events.find(e=>/^started/.test(e.event)).mode'),'practice');
+ assert.equal(r.node('modeBanner').textContent,'PRACTICE — NOT RECORDED');assert.equal(r.node('end').textContent,'End Practice');assert.equal(r.node('discardLive').textContent,'Discard Practice');
+ assert.notEqual(r.node('end').textContent,'End Workout & Save');
+ const again=runtime({release:true,data:r.data});assert.equal(again.read('db.active.practice'),true,'mode is fixed across reload');
+ again.node('practiceMode').checked=false;again.read('(render(),1)');assert.equal(again.read('db.active.practice'),true,'unticking the box mid-session cannot switch to live');
+ for(const n of [12,25,9])again.input('reps',String(n)),again.click('record');
+ again.time(120000);again.tick();again.click('recover');for(const n of [8,17,6])again.input('reps',String(n)),again.click('record');
+ again.click('end');again.click('saveNow');
+ assert.equal(again.read('db.history.length'),0,'practice never writes history');assert.equal(again.read('db.active'),null);
+ assert.equal(again.read('JSON.stringify(db.settings?.ladder?.events||[]).includes("graduated")'),false,'25 jump squats in practice never graduates the ladder');
+});
+test('owner #115 Discard Workout: live session shows it beside Finish & Save; discard writes nothing and keeps earlier history',()=>{
+ const r=runtime({release:true});
+ r.click('start');for(const n of [10,20,8])r.input('reps',String(n)),r.click('record');r.time(120000);r.tick();r.click('recover');for(const n of [7,14,6])r.input('reps',String(n)),r.click('record');r.click('end');r.click('saveNow');
+ assert.equal(r.read('db.history.length'),1);const saved=JSON.stringify(r.read('db.history'));
+ r.click('start');assert.equal(r.node('modeBanner').textContent,'LIVE WORKOUT — RECORDED');assert.equal(r.node('end').textContent,'Finish & Save Workout');
+ assert.equal(r.node('discardLive').classList.contains('hidden'),false);
+ r.input('reps','30');r.click('record');
+ r.confirm(false);r.node('discardLive').onclick();assert.equal(r.read('!!db.active'),true,'cancel keeps the session');
+ r.confirm(true);r.node('discardLive').onclick();
+ assert.equal(r.read('db.active'),null);assert.equal(JSON.stringify(r.read('db.history')),saved,'earlier workout untouched, nothing new saved');
+ assert.equal(runtime({release:true,data:r.data}).read('db.history.length'),1,'no ghost write after reload');
 });

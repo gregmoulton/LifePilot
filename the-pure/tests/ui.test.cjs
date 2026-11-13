@@ -442,6 +442,7 @@ test('owner #115 audio: chimes default to half, coach voice adjustable and silen
  assert.deepEqual(r.read('sound()'),{chime:.5,voice:0,voiceName:''},'owner Nov 12: coach voice off by default, chimes carry the workout');
  r.read("(setSound('voice',0),1)");r.read("(setSound('chime',.3),1)");
  assert.deepEqual(runtime({release:true,data:r.data}).read('sound()'),{chime:.3,voice:0,voiceName:''},'levels survive reload');
+ r.read("(db.settings.sound={chime:.5,voice:1},1)");assert.equal(r.read('sound().voice'),0,'a voice level saved before the Off default is reset once');r.read("(setSound('voice',.8),1)");assert.equal(r.read('sound().voice'),.8,'turning it on again sticks');r.read("(setSound('voice',0),1)");
  r.click('start');r.input('reps','10');r.click('record');
  assert.equal(r.read('db.active.records[0].reps'),10);assert.deepEqual(r.spoken,[],'voice at 0 means no coach speech');
  r.read("(setSound('voice',2),1)");assert.equal(r.read('sound().voice'),0,'out-of-range level falls back to the default (off)');
@@ -508,7 +509,7 @@ test('owner #115 transitions: green check + saved reps, CURRENT highlight, 3-sec
  r.input('reps','12');r.click('record');
  assert.equal(r.node('stationState0').textContent,'✓ 12 reps saved');assert.equal(r.node('station0').classList.contains('completed'),true);
  assert.equal(r.node('stationState1').textContent,'CURRENT · Get set');assert.equal(r.read('db.active.transitionSeconds'),3);
- assert.match(r.node('status').textContent,/^Next: .* · get set$/);assert.doesNotMatch(r.node('status').textContent,/\d/,'no visible countdown number');assert.equal(r.node('focusCount').classList.contains('hidden'),true,'no big countdown number');
+ assert.match(r.node('status').textContent,/^Next: .* in 3$/,'owner Nov 12 11:10 PM: visible 3-2-1 countdown restored');assert.equal(r.node('focusCount').classList.contains('hidden'),false);
  assert.throws(()=>r.read('Pure.reps(db.active,"9",Date.now())'),/Resume the exercise first/,'no rep capture during the transition');
  assert.equal(r.node('readyNow').classList.contains('hidden'),false);
  const go=r.tones.filter(n=>n===1047).length;r.node('readyNow').onclick();

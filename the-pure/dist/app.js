@@ -466,7 +466,12 @@ if(typeof document!=='undefined'){
  // Device adapters use the same guarded model mutations and atomic save path.
  if(typeof PureDevices!=='undefined'){
   // Owner #115: every accepted voice entry gets a short spoken confirmation after the save is verified (default assumed by Claude; ding still plays).
-  const voiceRecord=(value,a)=>{const before=a.records.length,ex=Pure.EX[a.ex];$('reps').value=String(value);a.draft.reps=String(value);$('record').click();if(!dirty&&!blocked&&(db.active?db.active.records.length:before+1)>before)announce(ex+', '+value+'.',false,true)};
+  // Owner Nov 13: the coach stays QUIET on normal saves (ding only) and speaks only for exceptions the user must notice:
+  // a missing/skipped count, an already-recorded exercise, or an implausible number (e.g. "80" heard instead of "8").
+  const plausibleLimit=a=>{const m=(a.exercisePlan||[]).find(x=>x.category===Pure.EX[a.ex]),best=m?Pure.historicalMaximum(db.history,m)?.maximumReps:null,today=a.records.findLast(r=>r.exercise===Pure.EX[a.ex])?.reps,base=Math.max(best||0,today||0),ceiling=m?.exerciseId&&typeof PureLadder!=='undefined'?PureLadder.byId(m.exerciseId)?.graduate:null;return Math.max(base*2,(ceiling||(Pure.EX[a.ex]==='Squat'?30:15))+10)};
+  const voiceRecord=(value,a,checked=false)=>{const ex=Pure.EX[a.ex];
+   if(!checked&&value>plausibleLimit(a)){proposal={type:'reps',value,context:context()};$('heard').textContent='Heard '+value+' for '+ex+' — that looks high. Say “confirm” to keep it, or say the right number.';$('voiceProposal').classList.remove('hidden');if(release)errorCue();announce('Heard '+value+' for '+ex+'. That looks high. Say confirm, or say the right number.',false,true);sayStatus('Check: '+value+' '+ex+'? Nothing saved yet.');return}
+   proposal=null;$('voiceProposal').classList.add('hidden');$('reps').value=String(value);a.draft.reps=String(value);$('record').click()};
   let pendingVoice=[];const hold=p=>{pendingVoice=pendingVoice.filter(x=>x.exercise!==p.exercise||x.round!==p.round).concat(p)};
   // Read back the current round (owner #115). An explicit request speaks even when the coach voice is off.
   const readBack=()=>{const a=db.active;if(!a){sayStatus('No active workout.');return}const round=a.round===0?'maximum':'conditioning',parts=Pure.EX.map(c=>{const r=a.records.findLast(x=>x.round===round&&x.exercise===c);return c+' '+(r?r.reps:'not recorded')});const t=(a.round===0?'Round one: ':'Round two: ')+parts.join(', ')+'.';sayStatus(t);announce(t,false,true)};

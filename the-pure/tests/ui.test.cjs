@@ -579,7 +579,7 @@ test('owner #115 blocker: exercise-qualified voice — a skipped squat never swa
  r.hears('pull done eight reps');
  assert.equal(r.read('db.active.records.length'),1,'pull is NOT recorded as squat');
  assert.match(r.node('voiceStatus').textContent,/Squat reps not recorded yet/);assert.match(r.node('voiceStatus').textContent,/Pull 8 is held/);
- r.hears('squat complete twenty reps');assert.equal(r.read('db.active.records[1].exercise'),'Squat');assert.ok(r.spoken.includes('Squat, 20.'),'spoken confirmation after the verified save');assert.equal(r.read('db.active.records[1].reps'),20);
+ r.hears('squat complete twenty reps');assert.equal(r.read('db.active.records[1].exercise'),'Squat');assert.ok(!r.spoken.some(t=>/Squat, 20/.test(t)),'owner: quiet on normal saves');assert.ok(r.spoken.some(t=>/Squat reps not recorded/.test(t)),'exception IS spoken even with the coach voice off');assert.equal(r.read('db.active.records[1].reps'),20);
  r.time(6000);r.tick();
  assert.equal(r.read('db.active.records.length'),3,'held pull saved once Pull starts');assert.equal(r.read('db.active.records[2].exercise'),'Pull');assert.equal(r.read('db.active.records[2].reps'),8);
  r.tick();assert.equal(r.read('db.active.records.length'),3,'no duplicate');
@@ -594,4 +594,12 @@ test('owner #115 blocker: exercise-specific corrections, already-recorded guard,
  say('change squats to eighteen');assert.equal(r.read('db.active.records[1].reps'),18);
  say('correct pull to five');assert.match(r.node('voiceStatus').textContent,/Pull has no reps recorded yet/);assert.equal(r.read('db.active.records.length'),2);
  say('read back my round');assert.match(r.node('voiceStatus').textContent,/Round one: Push 12, Squat 18, Pull not recorded/);
+});
+test('owner Nov 13: an implausible count ("80" heard for 8) is held for confirmation and spoken; the right number replaces it',()=>{
+ const r=runtime({devices:true,autoCountdown:false});r.click('start');r.time(6000);r.tick();r.click('talk');
+ r.hears('push done eighty reps');assert.equal(r.read('db.active.records.length'),0,'not saved');assert.match(r.node('heard').textContent,/Heard 80 for Push — that looks high/);
+ assert.ok(r.spoken.some(t=>/Heard 80 for Push/.test(t)));
+ r.hears('push done eight reps');assert.equal(r.read('db.active.records.length'),1);assert.equal(r.read('db.active.records[0].reps'),8);
+ r.time(6000);r.tick();r.tick();r.hears('confirm');assert.equal(r.read('db.active.records.length'),1,'stale 80 cannot be confirmed later');
+ r.hears('squat done twenty two reps');assert.equal(r.read('db.active.records[1].reps'),22,'a normal count saves without a prompt');
 });

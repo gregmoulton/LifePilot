@@ -62,3 +62,4 @@
 @media (prefers-reduced-motion:reduce){.pure-tagline{transition:none}}
 .pure-tagline.fading{opacity:0}
 .workout-panel .ready-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+#status:empty{display:none}

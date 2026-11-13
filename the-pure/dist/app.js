@@ -207,7 +207,16 @@ if(typeof document!=='undefined'){
    oscillator.stop(at+duration);
   }catch{ /* The visual countdown remains available. */ }
  }
- function savedCue(){melody([[880,.14],[1320,.2]]);buzz([200,80,200])}
+ // Owner Nov 12: reps-recorded sound = sample "A — Ding" (single bright bell, E6), replacing the square-wave two-note beep.
+ function bellWav(f,dur,tau,lead){const rate=22050,pre=Math.round(rate*lead),n=Math.round(rate*dur),buf=new ArrayBuffer(44+(pre+n)*2),v=new DataView(buf),w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+(pre+n)*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,(pre+n)*2,true);
+  for(let i=0;i<n;i++){const t=i/rate,env=Math.min(1,t/.003)*Math.exp(-t/tau),x=.62*env*(Math.sin(2*Math.PI*f*t)+.3*Math.sin(4*Math.PI*f*t)*Math.exp(-t/(tau*.5))+.12*Math.sin(2*Math.PI*2.76*f*t)*Math.exp(-t/(tau*.35)));v.setInt16(44+(pre+i)*2,Math.max(-1,Math.min(1,x))*32767,true)}
+  return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}))}
+ function ding(){const lv=sound().chime;if(lv<=0)return;
+  if(release&&typeof Audio!=='undefined'&&typeof URL?.createObjectURL==='function'&&!document.hidden){try{let el=cueClips.get('ding');if(!el){el=new Audio(bellWav(1319,.8,.28,.25));el.preload='auto';cueClips.set('ding',el)}el.volume=lv;el.currentTime=0;const p=el.play();if(p?.catch)p.catch(()=>{});return}catch{ /* fall back below */ }}
+  wakeAudio();if(audio?.state!=='running'||document.hidden)return;
+  try{const at=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=1320;g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(Math.max(.001,.8*lv),at+.004);g.gain.exponentialRampToValueAtTime(.0001,at+.7);o.connect(g);g.connect(release?loud():audio.destination);o.start(at);o.stop(at+.72)}catch{ /* visual state remains authoritative */ }}
+ function savedCue(){ding();buzz([200,80,200])}
  function repEntryOpen(a=db.active){return !!a&&!a.awaitingFinish&&!a.paused&&a.phase==='exercise'&&!a.countdownKind}
  const release=document.body.dataset?.defaultSquat==='jump';
  // Ladder v1.0 drives the exercise names in the phone build (owner-approved Nov 12, 2026, #115).
@@ -219,7 +228,8 @@ if(typeof document!=='undefined'){
  function ladder(){return PureLadder.ensure(db?.settings?.ladder,now())}
  function syncLadder(){const r=PureLadder.sync(db.settings?.ladder,db.history,now());if(r.changed)db.settings={...(db.settings||{}),ladder:r.state};if(r.graduations.length)celebrate=true}
  // Owner pocket test Nov 12 (#115): chimes too loud, coach voice not heard. Separate levels, saved on this device.
- const SOUND_DEFAULT={chime:.5,voice:1};
+ // Owner Nov 12 device test: chimes clear; phone voice hard to understand over music -> coach voice OFF by default.
+ const SOUND_DEFAULT={chime:.5,voice:0};
  function sound(){const s=db?.settings?.sound||{},n=(v,d)=>Number.isFinite(v)&&v>=0&&v<=1?v:d;return {chime:n(s.chime,SOUND_DEFAULT.chime),voice:n(s.voice,SOUND_DEFAULT.voice),voiceName:typeof s.voiceName==='string'?s.voiceName.slice(0,200):''}}
  function setSound(key,value){change(()=>{db.settings={...(db.settings||{}),sound:{...sound(),[key]:value}}})}
  function nextName(a){if(!a||a.phase!=='exercise')return '';const cat=Pure.EX?.[a.ex],m=(a.exercisePlan||[]).find(x=>x.category===cat);return m?.name||cat||''}
@@ -640,7 +650,7 @@ if(typeof document!=='undefined'){
  showPlan();
  if(ladderOn)bindLadder();
  if(release){setInterval(()=>{if(showReceipt&&db&&!db.active)render()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&showReceipt&&db&&!db.active)render()})}
- if(release){let speechPrimed=false;addEventListener('pointerdown',()=>{if(audio)wakeAudio();if(!speechPrimed){speechPrimed=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch{ /* optional */ }}},{capture:true,passive:true});try{speechSynthesis.addEventListener?.('voiceschanged',pickVoice)}catch{ /* optional */ }pickVoice();const vc=$('voiceChoice');if(vc)vc.onchange=()=>{unlockAudio();setSound('voiceName',vc.value);coachVoice=null;pickVoice();announce('Repetitions recorded. Ten. Next: Jump squats.')};const showLevels=()=>{const v=sound();for(const k of ['chime','voice']){const i=$(k+'Level'),o=$(k+'LevelOut');if(i)i.value=String(Math.round(v[k]*100));if(o)o.textContent=Math.round(v[k]*100)+'%'}};showLevels();for(const k of ['chime','voice']){const i=$(k+'Level');if(i)i.onchange=()=>{unlockAudio();setSound(k,Math.max(0,Math.min(100,+i.value))/100);showLevels();if(k==='chime')savedCue();else announce('Repetitions recorded. Ten.')}}const tb=$('testSound');if(tb)tb.onclick=()=>{unlockAudio();setTimeout(()=>{savedCue();setTimeout(()=>announce('Coach voice check. Repetitions recorded. Ten.'),700);$('testSoundState').textContent='Sound: '+(audio?.state||'unavailable')+(audio?.state==='running'?' · you should hear two notes and feel a buzz':' · tap again')},120)}}
+ if(release){let speechPrimed=false;addEventListener('pointerdown',()=>{if(audio)wakeAudio();if(!speechPrimed){speechPrimed=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch{ /* optional */ }}},{capture:true,passive:true});try{speechSynthesis.addEventListener?.('voiceschanged',pickVoice)}catch{ /* optional */ }pickVoice();const vc=$('voiceChoice');if(vc)vc.onchange=()=>{unlockAudio();setSound('voiceName',vc.value);coachVoice=null;pickVoice();announce('Repetitions recorded. Ten. Next: Jump squats.')};const showLevels=()=>{const v=sound();for(const k of ['chime','voice']){const i=$(k+'Level'),o=$(k+'LevelOut');if(i)i.value=String(Math.round(v[k]*100));if(o)o.textContent=v[k]>0?Math.round(v[k]*100)+'%':'Off'}};showLevels();for(const k of ['chime','voice']){const i=$(k+'Level');if(i)i.onchange=()=>{unlockAudio();setSound(k,Math.max(0,Math.min(100,+i.value))/100);showLevels();if(k==='chime')savedCue();else announce('Repetitions recorded. Ten.')}}const tb=$('testSound');if(tb)tb.onclick=()=>{unlockAudio();setTimeout(()=>{savedCue();setTimeout(()=>announce('Coach voice check. Repetitions recorded. Ten.'),700);$('testSoundState').textContent='Sound: '+(audio?.state||'unavailable')+(audio?.state==='running'?' · you should hear two notes and feel a buzz':' · tap again')},120)}}
 
  render();
 }

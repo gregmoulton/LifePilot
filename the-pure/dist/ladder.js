@@ -42,7 +42,8 @@ const PureLadder=(()=>{
  const ACHIEVEMENTS=Object.freeze({'first-clean-muscle-up':'First clean bar muscle-up'});
  const BOX=[12,14,16];
  // Filled in when approved rung art is committed to dist/exercises/. Missing art = movement fallback.
- const ART=new Set([]);
+ // Temporary Purist art (owner Nov 13): cropped from the owner-approved Purist concept sheet; only panels that match the exact rung.
+ const ART=new Set(["push-1-knee-incline", "push-2-standard", "push-3-decline", "push-5-bar-dips", "squat-2-bodyweight", "squat-3-jump", "squat-4-step-up", "squat-5-bulgarian", "squat-6-pistol", "pull-1-inverted-bent","pull-2-inverted-straight", "pull-4-pullup"]);
  const copy=x=>JSON.parse(JSON.stringify(x));
  const stamp=n=>new Date(n).toISOString();
 

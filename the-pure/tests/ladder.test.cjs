@@ -106,3 +106,8 @@ test('backup carries ladder progress; restore adopts it only when the device has
  a.equal(kept.settings.ladder.current.Push,'push-2-standard','existing ladder on this device is never overwritten');
  a.equal(J.merge(empty,J.parseBackup(JSON.stringify({...backup,settings:{}}))).settings,undefined,'old backups without a ladder change nothing');
 });
+test('temporary Purist art exists only for exact rung matches, and every listed file is precached',()=>{
+ const fs=require('fs'),sw=fs.readFileSync(__dirname+'/../dist/sw.js','utf8');
+ for(const x of L.EXERCISES){const a=L.art(x.id);if(!a)continue;a.length;require('node:assert').ok(fs.existsSync(__dirname+'/../dist/'+a),a);require('node:assert').ok(sw.includes("'./"+a+"'"),a+' precached')}
+ a.equal(L.art('pull-1-inverted-bent'),'exercises/pull-1-inverted-bent.webp','bent-knee row from Chat\'s Nov 13 Purist set');a.equal(L.art('push-4-ring'),null,'no exact panel: silhouette stays');a.equal(L.art('push-3-decline'),'exercises/push-3-decline.webp');
+});

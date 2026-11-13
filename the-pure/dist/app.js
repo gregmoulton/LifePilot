@@ -337,7 +337,9 @@ if(typeof document!=='undefined'){
   $('discardPaused')?.classList.toggle('hidden',!a?.paused||!!a.cooldownDeadline||release);
   if(release){const mb=$('modeBanner');if(mb){mb.classList.toggle('hidden',!a);mb.classList.toggle('practice',!!a?.practice);mb.classList.toggle('live',!!a&&!a.practice);mb.textContent=a?.practice?'PRACTICE — NOT RECORDED':'LIVE WORKOUT — RECORDED'}
    $('end').textContent=a?.practice?'End Practice':'Finish & Save Workout';$('saveNow').textContent=a?.practice?'End practice now':'Finish & save now';
-   $('discardLive')?.classList.toggle('hidden',!a||!!a.cooldownDeadline);$('readyNow')?.classList.add('hidden');if($('discardLive'))$('discardLive').textContent=a?.practice?'Discard Practice':'Discard Workout'}
+   $('discardLive')?.classList.toggle('hidden',!a||!!a.cooldownDeadline);$('readyNow')?.classList.add('hidden');if($('discardLive'))$('discardLive').textContent=a?.practice?'Abort Practice':'Abort Workout'}
+   // Owner-approved 3-screen UX: no bottom navigation during a workout or its cooldown.
+   document.body?.classList?.toggle('session-active',!!a)
   $('exercise').textContent=active&&a.phase==='exercise'?'Exercise: '+Pure.EX[a.ex]:'';
   if(a){$('reps').value=a.draft.reps;$('hr').value=a.draft.hr;$('sessionNotes').value=a.userNotes||''}else $('sessionNotes').value='';
   $('sessionNotes').disabled=!active||blocked||dirty;
@@ -356,7 +358,7 @@ if(typeof document!=='undefined'){
   if(a?.phase==='recovery'&&!a.finalRecovery&&!a.paused&&!dirty&&!blocked&&
      !Pure.recoveryInfo(a,now()).override&&lastRecoveryCue!==a.recoveryStarted){
    lastRecoveryCue=a.recoveryStarted;
-   tone('ready');if(release)announce('Recovery threshold reached. Prepare for the next round.');
+   tone('ready');if(release){buzz([500,150,500,150,500]);announce('Recovery threshold reached. Prepare for the next round.')}
   }
   renderStationRows();if(typeof PureJournal!=='undefined')renderJournal();
  }

@@ -63,3 +63,5 @@
 .pure-tagline.fading{opacity:0}
 .workout-panel .ready-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
 #status:empty{display:none}
+body.session-active #phoneTabs{display:none!important}
+body.session-active main{padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}

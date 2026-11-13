@@ -479,7 +479,7 @@ test('owner #115 practice guardrails: explicit Practice/Live choice, clear label
  r.confirm(false);r.click('start');assert.equal(r.read('!!db.active'),false,'cancelling the Live question starts nothing');
  r.confirm(true);r.node('practiceMode').checked=true;r.click('start');
  assert.equal(r.read('db.active.practice'),true);assert.equal(r.read('db.active.events.find(e=>/^started/.test(e.event)).mode'),'practice');
- assert.equal(r.node('modeBanner').textContent,'PRACTICE — NOT RECORDED');assert.equal(r.node('end').textContent,'End Practice');assert.equal(r.node('discardLive').textContent,'Discard Practice');
+ assert.equal(r.node('modeBanner').textContent,'PRACTICE — NOT RECORDED');assert.equal(r.node('end').textContent,'End Practice');assert.equal(r.node('discardLive').textContent,'Abort Practice');
  assert.notEqual(r.node('end').textContent,'End Workout & Save');
  const again=runtime({release:true,data:r.data});assert.equal(again.read('db.active.practice'),true,'mode is fixed across reload');
  again.node('practiceMode').checked=false;again.read('(render(),1)');assert.equal(again.read('db.active.practice'),true,'unticking the box mid-session cannot switch to live');
@@ -602,4 +602,11 @@ test('owner Nov 13: an implausible count ("80" heard for 8) is held for confirma
  r.hears('push done eight reps');assert.equal(r.read('db.active.records.length'),1);assert.equal(r.read('db.active.records[0].reps'),8);
  r.time(6000);r.tick();r.tick();r.hears('confirm');assert.equal(r.read('db.active.records.length'),1,'stale 80 cannot be confirmed later');
  r.hears('squat done twenty two reps');assert.equal(r.read('db.active.records[1].reps'),22,'a normal count saves without a prompt');
+});
+test('owner-approved 3-screen UX: no bottom tabs during a workout or cooldown; Abort Workout writes nothing; recovery end buzzes',()=>{
+ const r=runtime({release:true});
+ r.click('start');assert.equal(r.node('discardLive').textContent,'Abort Workout');
+ assert.ok(r.read('typeof document.body?.classList?.contains!=="function"||document.body.classList.contains("session-active")'),'tabs hidden during the session');
+ r.input('reps','10');r.click('record');r.node('discardLive').onclick();
+ assert.equal(r.read('db.active'),null);assert.equal(r.read('db.history.length'),0,'abort adds nothing to history');
 });

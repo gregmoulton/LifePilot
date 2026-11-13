@@ -33,7 +33,7 @@ const PureLocalVoiceEngine = (() => {
    try{
     s.context=new AudioContext({sampleRate:16000});
     // Request capture synchronously from Start, even if the model is still loading.
-    const microphone=navigator.mediaDevices.getUserMedia({audio:true});
+    const microphone=navigator.mediaDevices./* Call-mode processing off: on Android it switches app sound to quiet 'phone call' audio and mutes cues (owner test Nov 12). */getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}});
     const stream=await microphone;
     if(this.session!==s){stream.getTracks().forEach(t=>t.stop());return;}
     s.stream=stream;

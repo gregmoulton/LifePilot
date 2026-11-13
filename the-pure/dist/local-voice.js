@@ -78,7 +78,7 @@ const PureLocalVoice = (() => {
         this.session = session;
         this.running = this.wanted = true;
         this.onState('Opening local microphone…');
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices./* Call-mode processing off: on Android it switches app sound to quiet 'phone call' audio and mutes cues (owner test Nov 12). */getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1}});
         if (this.session !== session) {
           stream.getTracks().forEach(track => track.stop());
           return;

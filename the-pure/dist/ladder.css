@@ -31,3 +31,6 @@
 /* Narrow phones (under 370px wide): one step smaller text on ladder cards so each line fits. */
 @media (max-width:370px){.workout-panel .station-row[data-exercise] .station-label strong{font-size:15px}}
 @media (max-width:480px){.workout-panel[data-stage="ready"] .station-row[data-exercise],.workout-panel[data-stage="saved"] .station-row[data-exercise]{padding-top:7px;padding-bottom:7px}}
+.sound-test{display:flex;align-items:center;gap:10px;margin:6px 0}
+.sound-test button{min-height:44px;flex:0 0 auto}
+.sound-test span{color:var(--muted);font-size:13px}

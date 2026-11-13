@@ -379,7 +379,7 @@ test('release go cue, single verified rep/final-save cues, and the calm AI Coach
  r.input('reps','10');r.click('record');
  assert.equal(r.tones.filter(n=>n===1320).length,1);
  r.click('saveNow');
- assert.equal(r.tones.filter(n=>n===1320).length,2);
+ assert.equal(r.tones.filter(n=>n===1320).length,1);assert.equal(r.tones.filter(n=>n===2637).length,1,'owner Nov 12: workout saved = cha-ching (C)');
  const resumed=runtime({release:true,data:r.data});
  assert.equal(resumed.read('db.history[0].records[0].reps'),10);
  assert.deepEqual(r.spoken,['Repetitions recorded. 10. Next: Jump Squats.','Workout saved.']);
@@ -515,4 +515,10 @@ test('owner #115 transitions: green check + saved reps, CURRENT highlight, 3-sec
  assert.equal(r.read('!!db.active.countdownUntil'),false);assert.equal(r.tones.filter(n=>n===1047).length,go+1,'distinct start cue on early Ready');
  assert.equal(r.read('db.active.events.some(e=>e.event==="ready-early")'),true);assert.equal(r.node('stationState1').textContent,'CURRENT · Go');
  const again=runtime({release:true,data:r.data,autoCountdown:false});assert.equal(again.node('stationState0').textContent,'✓ 12 reps saved','highlight survives reload');
+});
+test('owner Nov 12 sounds: ding (A) for each save, cha-ching (C) for a new personal best; practice never earns a best',()=>{
+ const r=runtime({release:true});r.click('start');for(const n of [10,20,8])r.input('reps',String(n)),r.click('record');r.time(120000);r.tick();r.click('recover');for(const n of [7,14,6])r.input('reps',String(n)),r.click('record');r.click('end');r.click('saveNow');
+ r.click('start');const t0=r.tones.length;r.input('reps','11');r.click('record');
+ assert.deepEqual(r.tones.slice(t0).filter(n=>[1320,2637].includes(n)),[2637],'11 beats the best of 10: cha-ching');
+ const t1=r.tones.length;r.input('reps','19');r.click('record');assert.deepEqual(r.tones.slice(t1).filter(n=>[1320,2637].includes(n)),[1320],'19 under 20: ding');
 });

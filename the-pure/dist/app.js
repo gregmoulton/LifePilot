@@ -208,15 +208,23 @@ if(typeof document!=='undefined'){
   }catch{ /* The visual countdown remains available. */ }
  }
  // Owner Nov 12: reps-recorded sound = sample "A — Ding" (single bright bell, E6), replacing the square-wave two-note beep.
- function bellWav(f,dur,tau,lead){const rate=22050,pre=Math.round(rate*lead),n=Math.round(rate*dur),buf=new ArrayBuffer(44+(pre+n)*2),v=new DataView(buf),w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
-  w(0,'RIFF');v.setUint32(4,36+(pre+n)*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,(pre+n)*2,true);
-  for(let i=0;i<n;i++){const t=i/rate,env=Math.min(1,t/.003)*Math.exp(-t/tau),x=.62*env*(Math.sin(2*Math.PI*f*t)+.3*Math.sin(4*Math.PI*f*t)*Math.exp(-t/(tau*.5))+.12*Math.sin(2*Math.PI*2.76*f*t)*Math.exp(-t/(tau*.35)));v.setInt16(44+(pre+i)*2,Math.max(-1,Math.min(1,x))*32767,true)}
-  return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}))}
+ function wavOf(seconds,fn){const rate=22050,n=Math.round(rate*seconds),buf=new ArrayBuffer(44+n*2),v=new DataView(buf),w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++)v.setInt16(44+i*2,Math.max(-1,Math.min(1,fn(i/rate)))*32767,true);return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}))}
+ const bellAt=(t,f,tau)=>t<0?0:Math.min(1,t/.003)*Math.exp(-t/tau)*(Math.sin(2*Math.PI*f*t)+.3*Math.sin(4*Math.PI*f*t)*Math.exp(-t/(tau*.5))+.12*Math.sin(2*Math.PI*2.76*f*t)*Math.exp(-t/(tau*.35)));
+ function bellWav(f,dur,tau,lead){return wavOf(lead+dur,t=>.62*bellAt(t-lead,f,tau))}
+ // Owner Nov 12: sample "C — Cha-ching" for big moments (new personal best, workout saved, new exercise unlocked).
+ function chaChingWav(lead){let seed=7,prev=0;const noise=[];for(let i=0;i<Math.round(22050*.05);i++){seed=(seed*16807)%2147483647;const x=seed/1073741823.5-1;noise.push(x-prev);prev=x}
+  return wavOf(lead+.95,t=>{const u=t-lead;if(u<0)return 0;const ni=Math.round(u*22050),hit=ni<noise.length?noise[ni]*Math.exp(-u/.012)*.5:0;return .42*(hit+.7*bellAt(u-.06,2093,.2)+.5*bellAt(u-.06,2637,.18)+.35*bellAt(u-.14,3136,.15))})}
+ function playWav(key,make){const lv=sound().chime;if(lv<=0)return true;if(!release||typeof Audio==='undefined'||typeof URL?.createObjectURL!=='function'||document.hidden)return false;try{let el=cueClips.get(key);if(!el){el=new Audio(make());el.preload='auto';cueClips.set(key,el)}el.volume=lv;el.currentTime=0;const p=el.play();if(p?.catch)p.catch(()=>{});return true}catch{return false}}
  function ding(){const lv=sound().chime;if(lv<=0)return;
-  if(release&&typeof Audio!=='undefined'&&typeof URL?.createObjectURL==='function'&&!document.hidden){try{let el=cueClips.get('ding');if(!el){el=new Audio(bellWav(1319,.8,.28,.25));el.preload='auto';cueClips.set('ding',el)}el.volume=lv;el.currentTime=0;const p=el.play();if(p?.catch)p.catch(()=>{});return}catch{ /* fall back below */ }}
+  if(playWav('ding',()=>bellWav(1319,.8,.28,.25)))return;
   wakeAudio();if(audio?.state!=='running'||document.hidden)return;
   try{const at=audio.currentTime,o=audio.createOscillator(),g=audio.createGain();o.type='sine';o.frequency.value=1320;g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(Math.max(.001,.8*lv),at+.004);g.gain.exponentialRampToValueAtTime(.0001,at+.7);o.connect(g);g.connect(release?loud():audio.destination);o.start(at);o.stop(at+.72)}catch{ /* visual state remains authoritative */ }}
  function savedCue(){ding();buzz([200,80,200])}
+ function chaChing(){if(playWav('chaching',()=>chaChingWav(.25)))return;melody([[2093,.08],[2637,.25]])}
+ function bigCue(){chaChing();buzz([150,80,150,80,300])}
+ function isNewBest(a){const r=a?.records.at(-1);if(!r||a.practice||r.round!=='maximum')return false;const m=(a.exercisePlan||[]).find(x=>x.category===r.exercise),best=m?Pure.historicalMaximum(db.history,m)?.maximumReps:null;return Number.isInteger(best)&&r.reps>best}
  function repEntryOpen(a=db.active){return !!a&&!a.awaitingFinish&&!a.paused&&a.phase==='exercise'&&!a.countdownKind}
  const release=document.body.dataset?.defaultSquat==='jump';
  // Ladder v1.0 drives the exercise names in the phone build (owner-approved Nov 12, 2026, #115).
@@ -239,7 +247,7 @@ if(typeof document!=='undefined'){
  function loud(){try{if(!audio.__loud){const c=audio.createDynamicsCompressor();c.threshold.value=-24;c.knee.value=6;c.ratio.value=12;c.attack.value=.002;c.release.value=.12;const m=audio.createGain();m.gain.value=1.6;c.connect(m);m.connect(audio.destination);audio.__loud=c}return audio.__loud}catch{return audio.destination}}
  function melody(notes){if(clip(notes))return;wakeAudio();if(audio?.state!=='running'||document.hidden)return;try{let at=audio.currentTime;for(const [frequency,length] of notes){const o=audio.createOscillator(),g=audio.createGain();o.type='square';o.frequency.value=frequency;g.gain.setValueAtTime(.0001,at);const pk=Math.max(.001,.7*sound().chime);g.gain.exponentialRampToValueAtTime(pk,at+.01);g.gain.setValueAtTime(pk,at+length*.6);g.gain.exponentialRampToValueAtTime(.0001,at+length);o.connect(g);g.connect(loud());o.start(at);o.stop(at+length);at+=length+.03}}catch{ /* visual state remains authoritative */ }}
  function errorCue(){melody([[330,.25],[220,.4]]);buzz([400,120,400])}
- function trophyCue(){melody([[784,.14],[988,.14],[1175,.14],[1568,.4]]);buzz([150,80,150,80,400])}
+ function trophyCue(){bigCue()}
  // AI Coach voice (owner direction #115): calm, measured, slightly synthetic. While the coach speaks (plus a short tail)
  // the microphone's results are ignored, so the coach can never be heard as a rep count.
  let coachQuietUntil=0,coachVoice=null;
@@ -348,7 +356,7 @@ if(typeof document!=='undefined'){
   }
   renderStationRows();if(typeof PureJournal!=='undefined')renderJournal();
  }
- function change(fn){if(blocked||dirty)return;try{const activeId=db.active?.id;fn();if(ladderOn)syncLadder();const saved=persist();if(saved&&celebrate){celebrate=false;trophyCue()}else celebrate=false;if(!saved&&db.active?.flowVersion===3)Pure.pause(db.active,now(),'save-failed');const ended=saved&&activeId&&!db.active&&(db.history.at(-1)?.id===activeId||db.practiceReceipt?.id===activeId);if(ended&&release)showReceipt=true;if(db.active)showReceipt=false;render();if(release&&ended)savedCue()}catch(e){message=e.message;render()}}
+ function change(fn){if(blocked||dirty)return;try{const activeId=db.active?.id;fn();if(ladderOn)syncLadder();const saved=persist();if(saved&&celebrate){celebrate=false;trophyCue()}else celebrate=false;if(!saved&&db.active?.flowVersion===3)Pure.pause(db.active,now(),'save-failed');const ended=saved&&activeId&&!db.active&&(db.history.at(-1)?.id===activeId||db.practiceReceipt?.id===activeId);if(ended&&release)showReceipt=true;if(db.active)showReceipt=false;render();if(release&&ended)bigCue()}catch(e){message=e.message;render()}}
  function end(){if(!db.active)return;if(db.active.flowVersion===3){change(()=>db.active.liveCooldown?Pure.saveAndMonitor(db,now()):Pure.endWorkout(db.active,now()));if(!dirty&&!blocked&&db.active?.cooldownDeadline){message='Workout saved on this device. Cooldown recording continues.';render()}announce('Workout finished. Cooldown recording continues.')}else{Pure.archive(db,now());persist();render()}}
  $('start').onclick=()=>change(()=>{if(db.active)return;delete db.practiceReceipt;db.active=Pure.startHandsFree(now(),Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join(''),{...db.settings,exercisePlan:plan(),...(release?{startSeconds:3,transitionSeconds:3}:{})});if(ladderOn&&db.settings?.ladder?.celebration)db.settings={...db.settings,ladder:PureLadder.dismissCelebration(db.settings.ladder)};if(release){db.active.stableRecovery=true;db.active.liveCooldown=true;db.active.thresholdBpm=110;}db.active.practice=!!$('practiceMode').checked;Object.assign(db.active,Pure.floorRuleFor(db.history,db.active));Pure.countdown(db.active,now())});
 
@@ -393,7 +401,7 @@ if(typeof document!=='undefined'){
  }
 
  $('record').onclick=()=>change(()=>{const done=Pure.reps(db.active,$('reps').value,now());if(done)Pure.archive(db,now())});
- const recordReps=$('record').onclick;$('record').onclick=()=>{const before=db.active?.records.length,side=!!db.active?.pendingSide;recordReps();if(db.active&&(db.active.records.length>before||!side&&db.active.pendingSide)){if(dirty||blocked){errorCue();announce('Save failed. Workout paused. Keep this page open.');return}if(release)savedCue();if(db.active.pendingSide)announce('Left leg recorded. Right leg next.');else if(release){const r=db.active.records.at(-1),nx=nextName(db.active);announce('Repetitions recorded. '+r.reps+'.'+(nx?' Next: '+nx+'.':''))}cueCountdown()}};
+ const recordReps=$('record').onclick;$('record').onclick=()=>{const before=db.active?.records.length,side=!!db.active?.pendingSide;recordReps();if(db.active&&(db.active.records.length>before||!side&&db.active.pendingSide)){if(dirty||blocked){errorCue();announce('Save failed. Workout paused. Keep this page open.');return}if(release)(isNewBest(db.active)?bigCue():savedCue());if(db.active.pendingSide)announce('Left leg recorded. Right leg next.');else if(release){const r=db.active.records.at(-1),nx=nextName(db.active);announce('Repetitions recorded. '+r.reps+'.'+(nx?' Next: '+nx+'.':''))}cueCountdown()}};
 
  $('loghr').onclick=()=>{let archived=false;change(()=>{Pure.hr(db.active,$('hr').value,now());archived=finishRecoveryIfReady()});if(archived&&!dirty&&!blocked)announce('Cooldown complete. Workout saved.')};
  function finishRecoveryIfReady(){const a=db.active;if(a?.cooldownDeadline)return Pure.finishMonitoredCooldown(db,now());if(a?.flowVersion>=2&&a.finalRecovery&&!a.paused&&!Pure.recoveryInfo(a,now()).override){Pure.recover(a,now());Pure.archive(db,now());return true}}

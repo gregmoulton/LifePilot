@@ -163,7 +163,7 @@ const Pure = (() => {
 })();
 if(typeof module!=='undefined')module.exports=Pure;
 if(typeof document!=='undefined'){
- const $=id=>document.getElementById(id);let monitorReading=()=>null,voiceActive=false,voiceWanted=false,speechHooks={},speechSerial=0,localVoiceSelected=false,lastCountdownCue='',lastRecoveryCue='',audio,db,blocked=false,dirty=false,message='',verifiedRaw=null;
+ const $=id=>document.getElementById(id);let monitorReading=()=>null,voiceActive=false,voiceWanted=false,speechHooks={},speechSerial=0,localVoiceSelected=false,lastCountdownCue='',lastRecoveryCue='',readyCueAt=0,audio,db,blocked=false,dirty=false,message='',verifiedRaw=null;
  const uid=()=>Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,'0')).join('');
  const duration=ms=>Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0');
  const now=()=>Date.now(), download=(obj,name)=>{const a=document.createElement('a'),u=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000)};
@@ -339,7 +339,9 @@ if(typeof document!=='undefined'){
    $('end').textContent=a?.practice?'End Practice':'Finish & Save Workout';$('saveNow').textContent=a?.practice?'End practice now':'Finish & save now';
    $('discardLive')?.classList.toggle('hidden',!a||!!a.cooldownDeadline);$('readyNow')?.classList.add('hidden');if($('discardLive'))$('discardLive').textContent=a?.practice?'Abort Practice':'Abort Workout'}
    // Owner-approved 3-screen UX: no bottom navigation during a workout or its cooldown.
-   document.body?.classList?.toggle('session-active',!!a)
+   document.body?.classList?.toggle('session-active',!!a);
+   // Step (b): the workout saves itself after the final Round 2 count; the cooldown is ended only by Finish Cooldown.
+   $('end').classList.add('hidden');const cooling=!!a?.workoutEndedAt;$('saveNow').classList.toggle('hidden',!a||cooling);$('pause').classList.toggle('hidden',!a||cooling)
   $('exercise').textContent=active&&a.phase==='exercise'?'Exercise: '+Pure.EX[a.ex]:'';
   if(a){$('reps').value=a.draft.reps;$('hr').value=a.draft.hr;$('sessionNotes').value=a.userNotes||''}else $('sessionNotes').value='';
   $('sessionNotes').disabled=!active||blocked||dirty;
@@ -357,9 +359,12 @@ if(typeof document!=='undefined'){
   $('hrPreflight').classList.toggle('hidden',active);
   if(a?.phase==='recovery'&&!a.finalRecovery&&!a.paused&&!dirty&&!blocked&&
      !Pure.recoveryInfo(a,now()).override&&lastRecoveryCue!==a.recoveryStarted){
-   lastRecoveryCue=a.recoveryStarted;
+   lastRecoveryCue=a.recoveryStarted;readyCueAt=now();
    tone('ready');if(release){buzz([500,150,500,150,500]);announce('Recovery threshold reached. Prepare for the next round.')}
   }
+  // Owner Nov 13: Round 2 starts automatically once HR has held at 110 or lower — the ready tone and long buzz are the
+  // eyes-free signal, then (after 2 s) the usual 3-2-1 and go. Stale HR can never get here (recovery is held instead).
+  else if(release&&a?.phase==='recovery'&&!a.finalRecovery&&!a.paused&&!dirty&&!blocked&&lastRecoveryCue===a.recoveryStarted&&readyCueAt&&now()-readyCueAt>=2000&&!Pure.recoveryInfo(a,now()).override){readyCueAt=0;$('recover').onclick()}
   renderStationRows();if(typeof PureJournal!=='undefined')renderJournal();
  }
  function change(fn){if(blocked||dirty)return;try{const activeId=db.active?.id;fn();if(ladderOn)syncLadder();const saved=persist();if(saved&&celebrate){celebrate=false;trophyCue()}else celebrate=false;if(!saved&&db.active?.flowVersion===3)Pure.pause(db.active,now(),'save-failed');const ended=saved&&activeId&&!db.active&&(db.history.at(-1)?.id===activeId||db.practiceReceipt?.id===activeId);if(ended&&release)showReceipt=true;if(db.active)showReceipt=false;render();if(release&&ended)bigCue()}catch(e){message=e.message;render()}}
@@ -407,7 +412,7 @@ if(typeof document!=='undefined'){
  }
 
  $('record').onclick=()=>change(()=>{const done=Pure.reps(db.active,$('reps').value,now());if(done)Pure.archive(db,now())});
- const recordReps=$('record').onclick;$('record').onclick=()=>{const before=db.active?.records.length,side=!!db.active?.pendingSide;recordReps();if(db.active&&(db.active.records.length>before||!side&&db.active.pendingSide)){if(dirty||blocked){errorCue();announce('Save failed. Workout paused. Keep this page open.');return}if(release)(isNewBest(db.active)?bigCue():savedCue());if(db.active.pendingSide)announce('Left leg recorded. Right leg next.');else if(release){const r=db.active.records.at(-1),nx=nextName(db.active);announce('Repetitions recorded. '+r.reps+'.'+(nx?' Next: '+nx+'.':''))}cueCountdown()}};
+ const recordReps=$('record').onclick;$('record').onclick=()=>{const before=db.active?.records.length,side=!!db.active?.pendingSide;recordReps();if(db.active&&(db.active.records.length>before||!side&&db.active.pendingSide)){if(dirty||blocked){errorCue();announce('Save failed. Workout paused. Keep this page open.');return}if(release)(isNewBest(db.active)?bigCue():savedCue());if(release&&db.active?.awaitingFinish&&!db.active.workoutEndedAt&&!dirty&&!blocked)end();if(db.active.pendingSide)announce('Left leg recorded. Right leg next.');else if(release){const r=db.active.records.at(-1),nx=nextName(db.active);announce('Repetitions recorded. '+r.reps+'.'+(nx?' Next: '+nx+'.':''))}cueCountdown()}};
 
  $('loghr').onclick=()=>{let archived=false;change(()=>{Pure.hr(db.active,$('hr').value,now());archived=finishRecoveryIfReady()});if(archived&&!dirty&&!blocked)announce('Cooldown complete. Workout saved.')};
  function finishRecoveryIfReady(){const a=db.active;if(a?.cooldownDeadline)return Pure.finishMonitoredCooldown(db,now());if(a?.flowVersion>=2&&a.finalRecovery&&!a.paused&&!Pure.recoveryInfo(a,now()).override){Pure.recover(a,now());Pure.archive(db,now());return true}}
@@ -430,7 +435,7 @@ if(typeof document!=='undefined'){
  $('exportLast').onclick=()=>{if(db.history.length)download(db.history.at(-1),'the-pure-latest-workout.json');else{message='No saved workout yet.';render()}};
  $('exportAll').onclick=()=>{download({schema:'the-pure-backup-v2',exportedAt:new Date().toISOString(),history:db.history,settings:db.settings||{},measurements:db.measurements||[],assessments:db.assessments||[],legacyHistory:db.legacyHistory||[],active:db.active,unsaved:dirty||blocked},'the-pure-local-history.json');$('backupNotice').textContent='Backup download requested. Check your device Downloads for the-pure-local-history.json. Your local records are unchanged.'};
  $('exportRaw').onclick=()=>{const raw={};for(const key of [Pure.KEY,Pure.LEGACY,Pure.LEGACY+'-active']){try{raw[key]=localStorage.getItem(key)}catch{raw[key]='Storage unavailable'}}download(raw,'the-pure-storage-recovery.json')};
- try{verifiedRaw=localStorage.getItem(Pure.KEY);db=Pure.load(localStorage,now());if(db.active){lastRecoveryCue=db.active.readyRecovery?.started||'';message='Interrupted workout recovered.';const notice=message;persist();if(!dirty)message=notice}}catch{db=Pure.fresh();blocked=true;message='Saved storage could not be read. Nothing was overwritten. Export storage recovery backup before repair.'}
+ try{verifiedRaw=localStorage.getItem(Pure.KEY);db=Pure.load(localStorage,now());if(db.active){lastRecoveryCue=db.active.readyRecovery?.started||'';if(db.active.readyRecovery?.started===db.active.recoveryStarted)readyCueAt=now();message='Interrupted workout recovered.';const notice=message;persist();if(!dirty)message=notice}}catch{db=Pure.fresh();blocked=true;message='Saved storage could not be read. Nothing was overwritten. Export storage recovery backup before repair.'}
  $('transitionSeconds').value=String(db.settings?.transitionSeconds||5);$('thresholdSetting').value=String(db.settings?.thresholdBpm||110);
  $('saveSettings').onclick=()=>{if(db.active){$('settingsNotice').textContent='Finish the current session before changing its timing settings.';return}const threshold=+$('thresholdSetting').value,seconds=+$('transitionSeconds').value;if(!Number.isInteger(threshold)||threshold<90||threshold>140||![3,5].includes(seconds)){$('settingsNotice').textContent='Choose 3 or 5 seconds and a threshold from 90 to 140 BPM.';return}change(()=>{db.settings={...db.settings,transitionSeconds:seconds,thresholdBpm:threshold}});$('settingsNotice').textContent=dirty?'Settings not saved.':'Settings saved for your next workout.'};
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&db.active&&!blocked&&!dirty){if(db.active.liveCooldown&&db.active.finalRecovery){delete db.active.recoveryWindow;persist();return}if(db.active.flowVersion!==3)delete db.active.countdownUntil;Pure.pause(db.active,now(),'page-hidden');persist();render()}});

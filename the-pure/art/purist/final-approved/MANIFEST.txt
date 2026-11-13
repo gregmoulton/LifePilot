@@ -1,0 +1,9 @@
+APPROVED ARTWORK — 2026-11-13
+Final app images: no shorts logos, shoe logos muted silver, single exercise-colored shorts stripe.
+Archive: original approved purple with shorts logo retained for future reference.
+
+SHA-256:
+13984f40f8af6ccb7cccae254c4ff35167ab7ce53c39c6e6acc487d290074987  push_decline_red_APPROVED.png
+b7c31612b81c3cbae9ffd34d91b7831b037de7f38ade3a3f25bd072e6c9c81f2  squat_jump_green_APPROVED.png
+5212f860c89acab0d73c4287c02a3146bd3c23c81be329a2d23b2f14ee2e176a  pull_inverted_row_purple_APPROVED.png
+2648158678d09ae5d00be2e45d0ea83b4d80b3d99a90cf76f21b1ece57452326  archive/pull_inverted_row_original_with_shorts_logo.png

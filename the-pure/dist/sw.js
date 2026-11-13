@@ -1,5 +1,5 @@
 /* The Pure review-only offline shell. Never skipWaiting or claim cloud backup. */
-const CACHE='the-pure-shell-canonical-ring-2-pure-icon-ladder-v1-ready';
+const CACHE='the-pure-shell-canonical-ring-2-pure-icon-ladder-v1-duck';
 const FILES=['./','./style.css','./hit.css','./focus.css','./workout-summary.css','./compact.css','./workout-summary.js','./summary-brand.webp','./ready-athlete.webp','./ready-push.webp','./ready-squat.webp','./ready-pull.webp','./ready-wordmark.webp','./local-voice.js','./provenance.js','./journal.js','./devices.js','./ladder.js','./ladder.css','./app.js','./navigation.js','./pwa.js','./voice-local.js','./voice-music-vosk.js','./voice-music-vosk-worker.js','./voice-music-worklet.js','./icon.svg','./icons/pure-v1-favicon-48.png','./icons/pure-v1-apple-touch-180.png','./icons/pure-v1-192.png','./icons/pure-v1-512.png','./icons/pure-v1-maskable-192.png','./icons/pure-v1-maskable-512.png','./manifest.webmanifest'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)));

@@ -174,11 +174,27 @@ if(typeof document!=='undefined'){
   }catch{ /* The visual countdown remains available. */ }
  }
  function wakeAudio(){try{if(audio&&audio.state!=='running'&&audio.state!=='closed')audio.resume().catch(()=>{})}catch{ /* optional */ }}
+ // Music ducking (owner/architect Nov 12, #115): Web Audio never requests Android audio focus, so music
+ // drowned the cues. In the phone build each cue is a short WAV clip played through a media element:
+ // Chrome on Android requests transient "may duck" focus for short clips, so Android lowers other apps'
+ // music and restores it afterwards. A short silent lead-in lets the duck engage before the tone.
+ // The exact duck level is decided by Android, not by the page. Web Audio remains the fallback.
+ const cueClips=new Map();
+ function cueWav(notes,lead){const rate=22050,samples=[];const push=(n,f)=>{for(let i=0;i<n;i++)samples.push(f(i))};
+  push(Math.round(rate*lead),()=>0);
+  for(const [frequency,length] of notes){const n=Math.round(rate*length),attack=Math.round(rate*.008),release=Math.round(rate*.03);push(n,i=>{const env=Math.min(1,i/attack,(n-i)/release);return (Math.sin(2*Math.PI*frequency*i/rate)>=0?1:-1)*.85*env});push(Math.round(rate*.03),()=>0)}
+  push(Math.round(rate*.05),()=>0);
+  const buf=new ArrayBuffer(44+samples.length*2),v=new DataView(buf),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+samples.length*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,samples.length*2,true);
+  samples.forEach((s,i)=>v.setInt16(44+i*2,Math.max(-1,Math.min(1,s))*32767,true));return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}))}
+ function clip(notes,lead=.25){if(!release||typeof Audio==='undefined'||typeof URL?.createObjectURL!=='function'||document.hidden)return false;try{const key=JSON.stringify([notes,lead]);let el=cueClips.get(key);if(!el){el=new Audio(cueWav(notes,lead));el.preload='auto';cueClips.set(key,el)}el.currentTime=0;const p=el.play();if(p?.catch)p.catch(()=>{});return true}catch{return false}}
  function tone(kind){
+  const spec=kind==='go'?[1047,.18]:kind==='rep'?[587,.10]:kind==='ready'?[784,.14]:kind==='pause'?[392,.075]:kind==='resume'?[659,.075]:[523,.075];
+  if(clip([spec],kind==='pause'||kind==='resume'?.12:.25))return;
   wakeAudio();
   if(audio?.state!=='running'||document.hidden)return;
   try{
-   const [frequency,duration]=kind==='go'?[1047,.18]:kind==='rep'?[587,.10]:kind==='ready'?[784,.14]:kind==='pause'?[392,.075]:kind==='resume'?[659,.075]:[523,.075];
+   const [frequency,duration]=spec;
    const at=audio.currentTime,oscillator=audio.createOscillator(),gain=audio.createGain();
    if(release)oscillator.type='square';
    oscillator.frequency.value=frequency;
@@ -205,7 +221,7 @@ if(typeof document!=='undefined'){
  function buzz(pattern){try{navigator.vibrate?.(pattern)}catch{ /* vibration is optional */ }}
  // Owner device test Nov 12: cues were faint at arm's length. A compressor raises perceived loudness without clipping.
  function loud(){try{if(!audio.__loud){const c=audio.createDynamicsCompressor();c.threshold.value=-24;c.knee.value=6;c.ratio.value=12;c.attack.value=.002;c.release.value=.12;const m=audio.createGain();m.gain.value=1.6;c.connect(m);m.connect(audio.destination);audio.__loud=c}return audio.__loud}catch{return audio.destination}}
- function melody(notes){wakeAudio();if(audio?.state!=='running'||document.hidden)return;try{let at=audio.currentTime;for(const [frequency,length] of notes){const o=audio.createOscillator(),g=audio.createGain();o.type='square';o.frequency.value=frequency;g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(.7,at+.01);g.gain.setValueAtTime(.7,at+length*.6);g.gain.exponentialRampToValueAtTime(.0001,at+length);o.connect(g);g.connect(loud());o.start(at);o.stop(at+length);at+=length+.03}}catch{ /* visual state remains authoritative */ }}
+ function melody(notes){if(clip(notes))return;wakeAudio();if(audio?.state!=='running'||document.hidden)return;try{let at=audio.currentTime;for(const [frequency,length] of notes){const o=audio.createOscillator(),g=audio.createGain();o.type='square';o.frequency.value=frequency;g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(.7,at+.01);g.gain.setValueAtTime(.7,at+length*.6);g.gain.exponentialRampToValueAtTime(.0001,at+length);o.connect(g);g.connect(loud());o.start(at);o.stop(at+length);at+=length+.03}}catch{ /* visual state remains authoritative */ }}
  function errorCue(){melody([[330,.25],[220,.4]]);buzz([400,120,400])}
  function trophyCue(){melody([[784,.14],[988,.14],[1175,.14],[1568,.4]]);buzz([150,80,150,80,400])}
  function announce(text,queue=false){if(release||localVoiceSelected)return;try{if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined')return;const serial=++speechSerial;if(!queue)speechSynthesis.cancel();const prompt=new SpeechSynthesisUtterance(text);prompt.lang='en-US';prompt.rate=1;prompt.onend=()=>{if(serial===speechSerial)speechHooks.resume?.()};prompt.onerror=prompt.onend;speechSynthesis.speak(prompt)}catch{ /* Visual state remains authoritative if device audio is unavailable. */ }}

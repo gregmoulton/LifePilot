@@ -4,13 +4,15 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const http = require('node:http');
 const path = require('node:path');
+const os = require('node:os');
+const { stampRelease } = require('./package.cjs');
 const { chromium } = require('playwright');
 const { KEY, fresh } = require('../dist/app.js');
 
 const previous = path.resolve(__dirname, '../../recovery/the-pure-android-chatgpt-site/source/dist');
 const candidate = path.resolve(__dirname, '../dist');
 const mime = {
-  '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
+  '.html': 'text/html', '.json': 'application/json', '.js': 'text/javascript', '.css': 'text/css',
   '.webmanifest': 'application/manifest+json', '.png': 'image/png',
   '.webp': 'image/webp', '.svg': 'image/svg+xml'
 };
@@ -39,7 +41,24 @@ async function main() {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const origin = 'http://127.0.0.1:' + server.address().port;
   let browser;
+  let scratch;
   try {
+    scratch = await fs.mkdtemp(path.join(os.tmpdir(), 'pure-update-'));
+    const stage = async commit => {
+      const dir = path.join(scratch, commit);
+      await fs.cp(candidate, dir, { recursive: true });
+      stampRelease(dir, {
+        project: 'The Pure', version: 'HIT', branch: 'pure/live', repository: 'gregmoulton/LifePilot',
+        review: 'Synthetic rehearsal', environment: 'Test', status: 'candidate', origin, commit,
+        nextStep: 'Test update', builtAt: stamp, updatedAt: stamp, createdAt: null,
+        automatedTest: null, deployed: null, androidTest: null, ownerAccepted: null
+      });
+      return dir;
+    };
+    const first = '1'.repeat(40);
+    const second = '2'.repeat(40);
+    const firstBuild = await stage(first);
+    const secondBuild = await stage(second);
     browser = await chromium.launch();
     const context = await browser.newContext();
     await context.route(/^https?:\/\/(?!127\.0\.0\.1)/, route => route.abort());
@@ -82,15 +101,26 @@ async function main() {
       await context.setOffline(false);
     };
 
-    await switchBuild(candidate);
-    assert.equal((await shell()).length, 1);
-    assert.notEqual((await shell())[0], originalCache);
+    const assertRelease = async commit => {
+      assert.deepEqual(await shell(), ['the-pure-shell-release-' + commit]);
+      await context.setOffline(true);
+      const build = await page.evaluate(() => fetch('build-info.json').then(res => res.json()));
+      assert.equal(build.commit, commit);
+      await context.setOffline(false);
+    };
+    await switchBuild(firstBuild);
+    await assertRelease(first);
+    await switchBuild(secondBuild);
+    await assertRelease(second);
+    await switchBuild(firstBuild);
+    await assertRelease(first);
     await switchBuild(previous);
     assert.deepEqual(await shell(), [originalCache]);
     console.log('Chromium: same-origin worker waited, updated, reopened offline and rolled back with identical history.');
   } finally {
     await browser?.close();
     server.close();
+    if (scratch) await fs.rm(scratch, { recursive: true, force: true });
   }
 }
 

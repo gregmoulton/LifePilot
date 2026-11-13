@@ -26,3 +26,13 @@ Delivery engineering for [#118](https://github.com/gregmoulton/LifePilot/issues/
 - **Rollback trigger:** changed counts, repeated sessions, incorrect goals, failed audio, missing history, or broken launcher/update. Stop new workouts/deploys, export the destination separately if it has new records, and preserve both stores. For cross-origin cutover, reopen the original icon using its original profile and reconcile destination-only records by stable ID through a rehearsed importer. For same-origin release, roll back to the recorded retained host artifact, verify the worker updates, close same-origin tabs, and reopen the same icon. Verify the expected SHA, counts and offline launch before resuming. Never clear storage to force activation. [Render rollback](https://render.com/docs/rollbacks)
 
 The synthetic rollback test covers a baseline loader reading newer stored rows, including ladder metadata. It does not prove that the older UI preserves all newer settings when it exports and reimports a backup, or that an installed Android app updates correctly.
+
+## Commit-pinned release packaging
+
+Run from the repository root with the approved commit checked out:
+
+```sh
+node the-pure/release/package.cjs pure-publish "$PURE_SHA" "$PURE_ORIGIN"
+```
+
+Set the static publish directory to `pure-publish`. The command requires a new output directory, reads committed files from Git, pins the service-worker cache to the commit and includes its build identity in the same offline shell. Run this for every new build, including JS-only updates. On rollback use the retained packaged artifact for the previous SHA. A direct upload of raw `dist` bypasses this protection. This command prepares files locally and does not deploy.

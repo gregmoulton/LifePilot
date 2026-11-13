@@ -377,9 +377,9 @@ test('release go cue and single verified rep/final-save cues play without narrat
  const r=runtime({release:true});r.click('start');
  assert.equal(r.tones.filter(n=>n===1047).length,1);
  r.input('reps','10');r.click('record');
- assert.equal(r.tones.filter(n=>n===587).length,1);
+ assert.equal(r.tones.filter(n=>n===1320).length,1);
  r.click('saveNow');
- assert.equal(r.tones.filter(n=>n===587).length,2);
+ assert.equal(r.tones.filter(n=>n===1320).length,2);
  const resumed=runtime({release:true,data:r.data});
  assert.equal(resumed.read('db.history[0].records[0].reps'),10);
  assert.deepEqual(r.spoken,[]);

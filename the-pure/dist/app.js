@@ -180,18 +180,18 @@ if(typeof document!=='undefined'){
   try{
    const [frequency,duration]=kind==='go'?[1047,.18]:kind==='rep'?[587,.10]:kind==='ready'?[784,.14]:kind==='pause'?[392,.075]:kind==='resume'?[659,.075]:[523,.075];
    const at=audio.currentTime,oscillator=audio.createOscillator(),gain=audio.createGain();
-   if(release&&(kind==='go'||kind==='rep'))oscillator.type='triangle';
+   if(release)oscillator.type='square';
    oscillator.frequency.value=frequency;
    gain.gain.setValueAtTime(.0001,at);
-   gain.gain.exponentialRampToValueAtTime(release?.3:.09,at+.012);
+   gain.gain.exponentialRampToValueAtTime(release?.6:.09,at+.012);
    gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
    oscillator.connect(gain);
-   gain.connect(audio.destination);
+   gain.connect(release?loud():audio.destination);
    oscillator.start(at);
    oscillator.stop(at+duration);
   }catch{ /* The visual countdown remains available. */ }
  }
- function savedCue(){melody([[587,.09],[880,.13]]);buzz(60)}
+ function savedCue(){melody([[880,.14],[1320,.2]]);buzz([200,80,200])}
  function repEntryOpen(a=db.active){return !!a&&!a.awaitingFinish&&!a.paused&&a.phase==='exercise'&&!a.countdownKind}
  const release=document.body.dataset?.defaultSquat==='jump';
  // Ladder v1.0 drives the exercise names in the phone build (owner-approved Nov 12, 2026, #115).
@@ -200,9 +200,11 @@ if(typeof document!=='undefined'){
  function ladder(){return PureLadder.ensure(db?.settings?.ladder,now())}
  function syncLadder(){const r=PureLadder.sync(db.settings?.ladder,db.history,now());if(r.changed)db.settings={...(db.settings||{}),ladder:r.state};if(r.graduations.length)celebrate=true}
  function buzz(pattern){try{navigator.vibrate?.(pattern)}catch{ /* vibration is optional */ }}
- function melody(notes){wakeAudio();if(audio?.state!=='running'||document.hidden)return;try{let at=audio.currentTime;for(const [frequency,length] of notes){const o=audio.createOscillator(),g=audio.createGain();o.type='triangle';o.frequency.value=frequency;g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(.32,at+.012);g.gain.exponentialRampToValueAtTime(.0001,at+length);o.connect(g);g.connect(audio.destination);o.start(at);o.stop(at+length);at+=length+.03}}catch{ /* visual state remains authoritative */ }}
- function errorCue(){melody([[220,.18],[175,.3]]);buzz([220,90,220])}
- function trophyCue(){melody([[523,.12],[659,.12],[784,.12],[1047,.34]]);buzz([80,60,80,60,260])}
+ // Owner device test Nov 12: cues were faint at arm's length. A compressor raises perceived loudness without clipping.
+ function loud(){try{if(!audio.__loud){const c=audio.createDynamicsCompressor();c.threshold.value=-24;c.knee.value=6;c.ratio.value=12;c.attack.value=.002;c.release.value=.12;const m=audio.createGain();m.gain.value=1.6;c.connect(m);m.connect(audio.destination);audio.__loud=c}return audio.__loud}catch{return audio.destination}}
+ function melody(notes){wakeAudio();if(audio?.state!=='running'||document.hidden)return;try{let at=audio.currentTime;for(const [frequency,length] of notes){const o=audio.createOscillator(),g=audio.createGain();o.type='square';o.frequency.value=frequency;g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(.7,at+.01);g.gain.setValueAtTime(.7,at+length*.6);g.gain.exponentialRampToValueAtTime(.0001,at+length);o.connect(g);g.connect(loud());o.start(at);o.stop(at+length);at+=length+.03}}catch{ /* visual state remains authoritative */ }}
+ function errorCue(){melody([[330,.25],[220,.4]]);buzz([400,120,400])}
+ function trophyCue(){melody([[784,.14],[988,.14],[1175,.14],[1568,.4]]);buzz([150,80,150,80,400])}
  function announce(text,queue=false){if(release||localVoiceSelected)return;try{if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined')return;const serial=++speechSerial;if(!queue)speechSynthesis.cancel();const prompt=new SpeechSynthesisUtterance(text);prompt.lang='en-US';prompt.rate=1;prompt.onend=()=>{if(serial===speechSerial)speechHooks.resume?.()};prompt.onerror=prompt.onend;speechSynthesis.speak(prompt)}catch{ /* Visual state remains authoritative if device audio is unavailable. */ }}
  // Compare the exact previous verified bytes, not just a revision number. An
  // unverified write must never be presented as a saved workout or overwrite

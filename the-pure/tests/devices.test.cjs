@@ -148,5 +148,6 @@ test('owner #115: exercise-qualified voice phrases parse to the right exercise',
  a.deepEqual(c('change push to 10'),{type:'correct',value:10,exercise:'Push'});
  a.deepEqual(c('read back my round'),{type:'readback'});a.deepEqual(c('undo last entry'),{type:'undo'});
  a.deepEqual(c('twelve reps'),{type:'reps',value:12},'unqualified entry unchanged');
+ a.deepEqual(c('squat complete twenty reps'),{type:'reps',value:20,exercise:'Squat'},'complete works like done');a.deepEqual(c('pull completed 8'),{type:'reps',value:8,exercise:'Pull'});
  a.equal(c('pull done banana'),null);
 });

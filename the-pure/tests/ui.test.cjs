@@ -579,7 +579,7 @@ test('owner #115 blocker: exercise-qualified voice — a skipped squat never swa
  r.hears('pull done eight reps');
  assert.equal(r.read('db.active.records.length'),1,'pull is NOT recorded as squat');
  assert.match(r.node('voiceStatus').textContent,/Squat reps not recorded yet/);assert.match(r.node('voiceStatus').textContent,/Pull 8 is held/);
- r.hears('squat done twenty reps');assert.equal(r.read('db.active.records[1].exercise'),'Squat');assert.equal(r.read('db.active.records[1].reps'),20);
+ r.hears('squat complete twenty reps');assert.equal(r.read('db.active.records[1].exercise'),'Squat');assert.ok(r.spoken.includes('Squat, 20.'),'spoken confirmation after the verified save');assert.equal(r.read('db.active.records[1].reps'),20);
  r.time(6000);r.tick();
  assert.equal(r.read('db.active.records.length'),3,'held pull saved once Pull starts');assert.equal(r.read('db.active.records[2].exercise'),'Pull');assert.equal(r.read('db.active.records[2].reps'),8);
  r.tick();assert.equal(r.read('db.active.records.length'),3,'no duplicate');

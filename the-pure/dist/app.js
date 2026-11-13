@@ -465,10 +465,12 @@ if(typeof document!=='undefined'){
 
  // Device adapters use the same guarded model mutations and atomic save path.
  if(typeof PureDevices!=='undefined'){
+  // Owner #115: every accepted voice entry gets a short spoken confirmation after the save is verified (default assumed by Claude; ding still plays).
+  const voiceRecord=(value,a)=>{const before=a.records.length,ex=Pure.EX[a.ex];$('reps').value=String(value);a.draft.reps=String(value);$('record').click();if(!dirty&&!blocked&&(db.active?db.active.records.length:before+1)>before)announce(ex+', '+value+'.',false,true)};
   let pendingVoice=[];const hold=p=>{pendingVoice=pendingVoice.filter(x=>x.exercise!==p.exercise||x.round!==p.round).concat(p)};
   // Read back the current round (owner #115). An explicit request speaks even when the coach voice is off.
   const readBack=()=>{const a=db.active;if(!a){sayStatus('No active workout.');return}const round=a.round===0?'maximum':'conditioning',parts=Pure.EX.map(c=>{const r=a.records.findLast(x=>x.round===round&&x.exercise===c);return c+' '+(r?r.reps:'not recorded')});const t=(a.round===0?'Round one: ':'Round two: ')+parts.join(', ')+'.';sayStatus(t);announce(t,false,true)};
-  setInterval(()=>{const a=db.active;if(!pendingVoice.length)return;if(!a){pendingVoice=[];return}const round=a.round===0?'maximum':'conditioning';pendingVoice=pendingVoice.filter(x=>x.round===round);const p=pendingVoice.find(x=>x.exercise===Pure.EX[a.ex]);if(!p||dirty||blocked||a.paused||a.countdownKind||a.phase!=='exercise')return;pendingVoice=pendingVoice.filter(x=>x!==p);$('reps').value=String(p.value);a.draft.reps=String(p.value);$('record').click()},500);
+  setInterval(()=>{const a=db.active;if(!pendingVoice.length)return;if(!a){pendingVoice=[];return}const round=a.round===0?'maximum':'conditioning';pendingVoice=pendingVoice.filter(x=>x.round===round);const p=pendingVoice.find(x=>x.exercise===Pure.EX[a.ex]);if(!p||dirty||blocked||a.paused||a.countdownKind||a.phase!=='exercise')return;pendingVoice=pendingVoice.filter(x=>x!==p);voiceRecord(p.value,a)},500);
   let handsFree=false,micOptOut=false,proposal=null,lastMonitorLog=0,connecting=false,monitorSignalSeen=false,monitorLossAnnounced=false;
   const context=()=>JSON.stringify([db.active?.id,db.active?.records.length,db.active?.phase,db.active?.paused,!!db.active?.countdownKind]);
   const sayStatus=s=>{voiceActive=voice.listening;voiceWanted=voice.wanted;$('stopTalk').classList.toggle('hidden',!voice.wanted);$('voiceStatus').classList.toggle('muted-voice',s.startsWith('Listening —'));$('voiceStatus').textContent=s;$('talk').textContent=voice.listening?'Listening':voice.wanted?'Connecting voice…':'Enable voice'};
@@ -483,8 +485,8 @@ if(typeof document!=='undefined'){
     if(want!==cur||a.phase!=='exercise'){const missing=order.slice(0,order.indexOf(want)).filter(c=>!done.includes(c));hold({exercise:want,value:parsed.value,round});if(release)errorCue();
      sayStatus((missing.length?missing.join(' and ')+' reps not recorded yet. Say “'+missing[0].toLowerCase()+' done, N reps” first. ':'')+want+' '+parsed.value+' is held and will be saved when '+want+' starts.');announce((missing.length?missing.join(' and ')+' reps not recorded. Say '+missing[0].toLowerCase()+' done and the number. ':'')+want+' '+parsed.value+' held.',false,true);return}
     if(a.paused||a.countdownKind){hold({exercise:want,value:parsed.value,round});sayStatus(want+' '+parsed.value+' held until the exercise starts.');return}
-    $('reps').value=String(parsed.value);a.draft.reps=String(parsed.value);$('record').click();return}
-   if(parsed.type==='reps'){const a=db.active;if(!a||a.paused||a.countdownKind||a.phase!=='exercise'||dirty||blocked){sayStatus('Not accepting reps during transition or recovery.');return}$('reps').value=String(parsed.value);a.draft.reps=String(parsed.value);$('record').click();return}
+    voiceRecord(parsed.value,a);return}
+   if(parsed.type==='reps'){const a=db.active;if(!a||a.paused||a.countdownKind||a.phase!=='exercise'||dirty||blocked){sayStatus('Not accepting reps during transition or recovery.');return}voiceRecord(parsed.value,a);return}
    if(parsed.type==='correct'){const a=db.active;if(!a||dirty||blocked||a.paused){sayStatus('No recent reps to correct.');return}
     const index=parsed.exercise?a.records.findLastIndex(r=>r.exercise===parsed.exercise):a.records.length-1,r=a.records[index];
     if(!r){if(release)errorCue();sayStatus((parsed.exercise||'That exercise')+' has no reps recorded yet. Say “'+(parsed.exercise||'push').toLowerCase()+' done, N reps” to record it.');return}

@@ -6,7 +6,7 @@ const PureDevices=(()=>{
   const cat={push:'Push',squat:'Squat',squats:'Squat',pull:'Pull'};
   if(/^undo( last( entry)?)?$/.test(s))return {type:'undo'};if(/^read back( my round)?$/.test(s))return {type:'readback'};
   const fix=s.match(/^(?:correct|change) (push|squats?|pull) to (.+?)(?: reps?)?$/);if(fix){const c=command(fix[2]+' reps');return c?.type==='reps'?{type:'correct',value:c.value,exercise:cat[fix[1]]}:null}
-  const q=s.match(/^(push|squats?|pull) (?:done )?(.+?)(?: reps?)?$/);if(q){const c=command(q[2]+' reps');return c?.type==='reps'?{type:'reps',value:c.value,exercise:cat[q[1]]}:null}
+  const q=s.match(/^(push|squats?|pull) (?:(?:done|complete|completed) )?(.+?)(?: reps?)?$/);if(q){const c=command(q[2]+' reps');return c?.type==='reps'?{type:'reps',value:c.value,exercise:cat[q[1]]}:null}
   const actions={'confirm':'confirm','cancel':'cancel','pause':'pause','pause workout':'pause','resume':'resume','resume workout':'resume','continue recovery':'recover','end workout':'end','save workout':'save','finish and save':'save','finish and save workout':'save','discard workout':'discard','start workout':'start'};if(actions[s])return {type:actions[s]};
   const correction=s.match(/^correction (.+)$/);if(correction){const c=command(correction[1]);return c?.type==='reps'?{type:'correct',value:c.value}:null}
   const m=s.match(/^(?:record |log )?(\d{1,4}|[a-z ]+) reps?$/);if(!m)return null;const words=m[1].split(' ');let n;if(/^\d+$/.test(m[1]))n=+m[1];else if(words.length===1)n=numbers[words[0]];else if(words.length===2&&numbers[words[0]]>=20&&numbers[words[0]]%10===0&&numbers[words[1]]>0&&numbers[words[1]]<10)n=numbers[words[0]]+numbers[words[1]];return Number.isInteger(n)&&n<=9999?{type:'reps',value:n}:null;

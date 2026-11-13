@@ -546,3 +546,52 @@ test('#118 finding: an accepted correction plays the audible success cue only af
  assert.ok(r.tones.slice(t).includes(1320),'ding after a saved correction');
  r.writeFault('drop');const t2=r.tones.length;r.read('(correctRecord(0,"12"),1)');assert.ok(!r.tones.slice(t2).includes(1320),'no success cue when the write fails');
 });
+test('owner #115 blocker: a frozen heart-rate signal HOLDS recovery — never the 2-minute timer, never an automatic Round 2',async()=>{
+ let packet;const ch={addEventListener(n,f){packet=f},removeEventListener(){},async startNotifications(){}};
+ const device={addEventListener(){},removeEventListener(){},gatt:{connected:true,disconnect(){},async connect(){return {async getPrimaryService(){return {async getCharacteristic(){return ch}}}}}}};
+ const r=runtime({release:true,devices:true,bluetooth:{async requestDevice(){return device},async getDevices(){return [device]}}});
+ await r.node('connectHr').onclick();
+ const feed=(bpm,ms=1000)=>{r.time(ms);packet({target:{value:new DataView(Uint8Array.from([0,bpm]).buffer)}});r.tick()};
+ feed(140);r.click('start');for(const n of ['10','20','8']){r.input('reps',n);r.click('record')}
+ for(let i=0;i<20;i++)feed(140);
+ assert.equal(r.read('db.active.phase'),'recovery');
+ // Signal freezes at ~140 BPM; the owner keeps recovering for 3+ minutes with no fresh packets.
+ for(let i=0;i<200;i++){r.time(1000);r.tick()}
+ const info=r.read('Pure.recoveryInfo(db.active,Date.now())');
+ assert.equal(info.held,true,'held');assert.equal(info.fallback,false,'no timed fallback once a monitor was in use');assert.equal(info.override,true);
+ assert.equal(r.read('db.active.phase'),'recovery','Round 2 never starts on stale HR');assert.equal(r.read('db.active.round'),0);
+ assert.match(r.node('status').textContent,/Recovery ON HOLD/);
+ assert.ok(r.read('db.active.events.some(e=>e.event==="hr-signal-unavailable")'));assert.ok(r.read('db.active.events.some(e=>e.event==="hr-auto-reconnect-attempt")'),'bounded reconnect attempted');
+ assert.throws(()=>r.read('Pure.recover(db.active,Date.now())'),/fresh HR/,'no advance without fresh HR or a deliberate override');
+ // The owner taps Reconnect (or the monitor returns) and fresh readings stay at or under 110 for 5 seconds: recovery can complete.
+ await r.node('connectHr').onclick();for(let i=0;i<7;i++)feed(108);
+ assert.equal(r.read('Pure.recoveryInfo(db.active,Date.now()).held'),false);assert.equal(r.node('recover').disabled,false);
+});
+test('owner #115: a workout started WITHOUT a monitor still uses the 2-minute timed recovery',()=>{
+ const r=runtime({release:true});r.click('start');for(const n of ['10','20','8'])r.input('reps',n),r.click('record');
+ assert.equal(r.read('db.active.phase'),'recovery');assert.equal(r.read('Pure.recoveryInfo(db.active,Date.now()).fallback'),true);
+ r.time(121000);r.tick();assert.equal(r.read('Pure.recoveryInfo(db.active,Date.now()).timed'),true);
+});
+test('owner #115 blocker: exercise-qualified voice — a skipped squat never swallows the pull count; held entry saves in order',()=>{
+ const r=runtime({devices:true,autoCountdown:false});r.click('start');r.time(6000);r.tick();r.click('talk');
+ r.hears('push done ten reps');assert.equal(r.read('db.active.records.length'),1);assert.equal(r.read('db.active.records[0].exercise'),'Push');
+ r.time(6000);r.tick();r.tick();assert.equal(r.read('Pure.EX[db.active.ex]'),'Squat');
+ r.hears('pull done eight reps');
+ assert.equal(r.read('db.active.records.length'),1,'pull is NOT recorded as squat');
+ assert.match(r.node('voiceStatus').textContent,/Squat reps not recorded yet/);assert.match(r.node('voiceStatus').textContent,/Pull 8 is held/);
+ r.hears('squat done twenty reps');assert.equal(r.read('db.active.records[1].exercise'),'Squat');assert.equal(r.read('db.active.records[1].reps'),20);
+ r.time(6000);r.tick();
+ assert.equal(r.read('db.active.records.length'),3,'held pull saved once Pull starts');assert.equal(r.read('db.active.records[2].exercise'),'Pull');assert.equal(r.read('db.active.records[2].reps'),8);
+ r.tick();assert.equal(r.read('db.active.records.length'),3,'no duplicate');
+});
+test('owner #115 blocker: exercise-specific corrections, already-recorded guard, zero is a real count, read back',()=>{
+ const r=runtime({devices:true,autoCountdown:false});r.click('start');r.time(6000);r.tick();r.click('talk');const say=t=>{r.hears(t);r.time(6000);r.tick();r.tick()};
+ say('push zero reps');assert.equal(r.read('db.active.records[0].reps'),0,'zero is recorded, not treated as missing');
+ say('squat done twenty reps');
+ say('push done twelve reps');assert.equal(r.read('db.active.records[0].reps'),0,'already recorded: no silent overwrite');assert.match(r.node('voiceStatus').textContent,/already recorded as 0/);
+ say('correct push to twelve');assert.equal(r.read('db.active.records[0].reps'),12);assert.equal(r.read('db.active.records[1].reps'),20,'only Push changed');
+ assert.ok(r.read('db.active.events.some(e=>e.event==="rep-correction"&&e.after.reps===12)'),'audit trail');
+ say('change squats to eighteen');assert.equal(r.read('db.active.records[1].reps'),18);
+ say('correct pull to five');assert.match(r.node('voiceStatus').textContent,/Pull has no reps recorded yet/);assert.equal(r.read('db.active.records.length'),2);
+ say('read back my round');assert.match(r.node('voiceStatus').textContent,/Round one: Push 12, Squat 18, Pull not recorded/);
+});

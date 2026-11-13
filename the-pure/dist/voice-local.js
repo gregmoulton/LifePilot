@@ -6,7 +6,11 @@ const PureLocalVoiceEngine = (() => {
  const teens=['ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
  const tens=['twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
  const counts=[...units,...teens,...tens.flatMap(n=>[n,...units.slice(1).map(u=>n+' '+u)])];
- const grammar=JSON.stringify([...counts.map(n=>n+' reps'),'[unk]']);
+ // Owner #115 (Nov 13): exercise-qualified entries and corrections, so a skipped exercise can never swallow the next count.
+ const cats=['push','squat','squats','pull'],small=counts.slice(0,61);
+ const grammar=JSON.stringify([...counts.map(n=>n+' reps'),
+  ...cats.flatMap(c=>small.flatMap(n=>[c+' '+n+' reps',c+' done '+n+' reps',c+' done '+n,'correct '+c+' to '+n,'change '+c+' to '+n])),
+  'undo last entry','undo','read back my round','read back','[unk]']);
  class Voice {
   constructor({onState,onError,onText}){Object.assign(this,{onState,onError,onText});this.wanted=false;this.running=false;this.listening=false;this.attempts=0;}
   preload(){

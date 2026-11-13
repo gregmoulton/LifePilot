@@ -139,3 +139,14 @@ test('browser-branded timer allows voice auto-reconnect without Illegal invocati
  voice.start();r.onend();
  a.equal(scheduled,1);voice.stop();a.equal(cancelled,1);
 });
+test('owner #115: exercise-qualified voice phrases parse to the right exercise',()=>{
+ const D=require('../dist/devices.js'),c=D.command,a=require('node:assert/strict');
+ a.deepEqual(c('Push done, 10 reps'),{type:'reps',value:10,exercise:'Push'});
+ a.deepEqual(c('squats done four reps'),{type:'reps',value:4,exercise:'Squat'});
+ a.deepEqual(c('pull eight reps'),{type:'reps',value:8,exercise:'Pull'});
+ a.deepEqual(c('correct squats to six'),{type:'correct',value:6,exercise:'Squat'});
+ a.deepEqual(c('change push to 10'),{type:'correct',value:10,exercise:'Push'});
+ a.deepEqual(c('read back my round'),{type:'readback'});a.deepEqual(c('undo last entry'),{type:'undo'});
+ a.deepEqual(c('twelve reps'),{type:'reps',value:12},'unqualified entry unchanged');
+ a.equal(c('pull done banana'),null);
+});

@@ -439,9 +439,9 @@ test('malformed phone V2 exports are rejected before any change',async()=>{const
 test('issue #118: correcting a Round 1 count recomputes the 70% goal (10 -> 11 moves 7 -> 8) and re-evaluates Round 2',()=>{const r=calibrated();let f=r1(r,[10,10,10]);assert.equal(f[0].floor,7);assert.equal(r.read('db.active.phase'),'recovery');r.input('stationValue0main','11');assert.equal(r.read('db.active.records[0].reps'),11);assert.equal(r.read('db.active.floors[0].maximumReps'),11);assert.equal(r.read('db.active.floors[0].floor'),8);assert.equal(r.read('db.active.floors[1].floor'),7,'other exercises unchanged');r2(r,[7,7,7]);assert.equal(r.read('db.active.records[3].metFloor'),false,'7 is under the corrected goal of 8');r.input('stationValue0main','8');assert.equal(r.read('db.active.records[3].reps'),8);assert.equal(r.read('db.active.records[3].metFloor'),true);assert.equal(r.read('db.active.records[3].floor'),8);const w=finish(r);assert.deepEqual(w.records.slice(3).map(x=>[x.floor,x.metFloor]),[[8,true],[7,true],[7,true]]);assert.ok(w.events.filter(e=>e.event==='rep-correction').length>=2,'corrections stay audited')});
 test('owner #115 audio: chimes default to half, coach voice adjustable and silenced at 0, levels saved on the device',()=>{
  const r=runtime({release:true});
- assert.deepEqual(r.read('sound()'),{chime:.5,voice:1});
+ assert.deepEqual(r.read('sound()'),{chime:.5,voice:1,voiceName:''});
  r.read("(setSound('voice',0),1)");r.read("(setSound('chime',.3),1)");
- assert.deepEqual(runtime({release:true,data:r.data}).read('sound()'),{chime:.3,voice:0},'levels survive reload');
+ assert.deepEqual(runtime({release:true,data:r.data}).read('sound()'),{chime:.3,voice:0,voiceName:''},'levels survive reload');
  r.click('start');r.input('reps','10');r.click('record');
  assert.equal(r.read('db.active.records[0].reps'),10);assert.deepEqual(r.spoken,[],'voice at 0 means no coach speech');
  r.read("(setSound('voice',2),1)");assert.equal(r.read('sound().voice'),1,'out-of-range level falls back to default');
@@ -453,4 +453,12 @@ test('owner #115 audio: the microphone is ignored while the AI Coach is speaking
  assert.deepEqual(r.spoken,['Repetitions recorded. 10. Next: Jump Squats.']);
  assert.equal(r.read('coachBusy()'),true,'busy while speaking');
  r.time(10000);assert.equal(r.read('coachBusy()'),false,'quiet window ends even if the speech engine never reports the end');
+});
+test('owner #115: the chosen coach voice is saved on the device and used when speaking',()=>{
+ const r=runtime({release:true});
+ r.context.speechSynthesis.getVoices=()=>[{name:'Old robot',lang:'en-US',localService:true},{name:'Natural US',lang:'en-US',localService:false},{name:'French',lang:'fr-FR',localService:true}];
+ assert.deepEqual(r.read('englishVoices().map(v=>v.name)'),['Natural US','Old robot'],'English voices only');
+ r.read("(setSound('voiceName','Natural US'),coachVoice=null,pickVoice(),1)");
+ assert.equal(r.read('coachVoice.name'),'Natural US');
+ assert.equal(runtime({release:true,data:r.data}).read('sound().voiceName'),'Natural US','choice survives reload');
 });

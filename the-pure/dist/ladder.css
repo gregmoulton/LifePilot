@@ -45,3 +45,4 @@
 .sound-levels label{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px}
 .sound-levels output{color:var(--muted);font-size:13px}
 .sound-levels input{grid-column:1/-1;width:100%;min-height:32px}
+.sound-levels select{grid-column:1/-1;width:100%;min-height:44px;font-size:15px}

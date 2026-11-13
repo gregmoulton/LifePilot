@@ -50,3 +50,7 @@
 .mode-banner.practice{background:rgba(239,202,122,.18);border:2px solid var(--yellow);color:var(--yellow)}
 .mode-banner.live{background:rgba(80,200,120,.12);border:2px solid var(--green);color:var(--green)}
 #controls #discardLive{background:#5a1620;border:1px solid #e0485a;color:#ffd6db}
+.workout-panel .station-row.pending{opacity:.55}
+.workout-panel .station-row.completed{border:2px solid #3fbf7f;background:linear-gradient(90deg,rgba(63,191,127,.12),transparent)}
+.workout-panel .station-row.completed .station-label span{color:#7ff0b0;font-weight:800}
+.workout-panel .station-row.current .station-label span{color:#78c4ff;font-weight:800;letter-spacing:.04em}

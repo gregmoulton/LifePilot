@@ -500,3 +500,19 @@ test('owner #115 Discard Workout: live session shows it beside Finish & Save; di
  assert.equal(r.read('db.active'),null);assert.equal(JSON.stringify(r.read('db.history')),saved,'earlier workout untouched, nothing new saved');
  assert.equal(runtime({release:true,data:r.data}).read('db.history.length'),1,'no ghost write after reload');
 });
+test('owner #115 transitions: green check + saved reps, CURRENT highlight, 3-second trial transition, early Ready, no rep capture in between',()=>{
+ const r=runtime({release:true,autoCountdown:false});
+ r.click('start');r.time(3000);r.tick();
+ assert.equal(r.node('stationState0').textContent,'CURRENT · Go');assert.equal(r.node('stationState1').textContent,'Up next');
+ assert.equal(r.node('station1').classList.contains('pending'),true);
+ r.input('reps','12');r.click('record');
+ assert.equal(r.node('stationState0').textContent,'✓ 12 reps saved');assert.equal(r.node('station0').classList.contains('completed'),true);
+ assert.equal(r.node('stationState1').textContent,'CURRENT · Get set');assert.equal(r.read('db.active.transitionSeconds'),3);
+ assert.match(r.node('status').textContent,/^Next: .* · get set$/);assert.doesNotMatch(r.node('status').textContent,/\d/,'no visible countdown number');assert.equal(r.node('focusCount').classList.contains('hidden'),true,'no big countdown number');
+ assert.throws(()=>r.read('Pure.reps(db.active,"9",Date.now())'),/Resume the exercise first/,'no rep capture during the transition');
+ assert.equal(r.node('readyNow').classList.contains('hidden'),false);
+ const go=r.tones.filter(n=>n===1047).length;r.node('readyNow').onclick();
+ assert.equal(r.read('!!db.active.countdownUntil'),false);assert.equal(r.tones.filter(n=>n===1047).length,go+1,'distinct start cue on early Ready');
+ assert.equal(r.read('db.active.events.some(e=>e.event==="ready-early")'),true);assert.equal(r.node('stationState1').textContent,'CURRENT · Go');
+ const again=runtime({release:true,data:r.data,autoCountdown:false});assert.equal(again.node('stationState0').textContent,'✓ 12 reps saved','highlight survives reload');
+});

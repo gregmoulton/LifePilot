@@ -27,3 +27,6 @@ The same kit appears in every exercise image. Branding is small, premium and bui
 - Use the Sleek P symbol only; the THE PURE wordmark never goes on exercise gear. Logos are smaller than a fist, and placement, size and color are identical on all 21 images. No third-party marks.
 - **Process:** masked edit of `locked-originals/` only. No new scenes. If a true masked edit isn't possible, stop.
 - **Hero image (later, separate):** the Purist in the full Pure kit, with a fitted shirt and a chest P, branded shorts and shoes, in a ready stance. For onboarding, splash and marketing, not the exercise cards. The wordmark may appear in the layout, outside the figure.
+
+## Preserved reference: shorts logo done right (do not delete)
+`final-approved/archive/pull_inverted_row_original_with_shorts_logo.png` (SHA-256 `2648158678d09ae5d00be2e45d0ea83b4d80b3d99a90cf76f21b1ece57452326`) is the purple inverted row from Gemini. It is the only image where **both** the shorts Sleek P and the shoe Sleek P came out correct. It is not used in the app; the final set has no shorts logo. Keep it as the reference for a future pass that adds the shorts logo to every image.

@@ -111,3 +111,11 @@ test('temporary Purist art exists only for exact rung matches, and every listed 
  for(const x of L.EXERCISES){const a=L.art(x.id);if(!a)continue;a.length;require('node:assert').ok(fs.existsSync(__dirname+'/../dist/'+a),a);require('node:assert').ok(sw.includes("'./"+a+"'"),a+' precached')}
  a.equal(L.art('pull-1-inverted-bent'),'exercises/pull-1-inverted-bent.webp','bent-knee row from Chat\'s Nov 13 Purist set');a.equal(L.art('push-4-ring'),null,'no exact panel: silhouette stays');a.equal(L.art('push-3-decline'),'exercises/push-3-decline.webp');
 });
+test('#118 finding: ordinary settings travel in a backup to a new app address and never overwrite settings already on the device',()=>{
+ globalThis.PureLadder=L;const J=require('../dist/journal.js');
+ const backup={schema:'the-pure-backup-v2',history:[],settings:{sound:{chime:.3,voice:0,v:2},startSeconds:3,ladder:L.fresh(t0)}};
+ const parsed=J.parseBackup(JSON.stringify(backup));a.deepEqual(parsed.settings,{sound:{chime:.3,voice:0,v:2},startSeconds:3});
+ const empty={schema:'the-pure-store-v2',revision:0,active:null,history:[]};
+ const m=J.merge(empty,parsed);a.deepEqual(m.settings.sound,{chime:.3,voice:0,v:2});a.equal(m.settings.startSeconds,3);a.ok(L.valid(m.settings.ladder));
+ const kept=J.merge({...empty,settings:{sound:{chime:.8,voice:1,v:2}}},parsed);a.deepEqual(kept.settings.sound,{chime:.8,voice:1,v:2},'existing device setting kept');a.equal(kept.settings.startSeconds,3,'missing setting filled in');
+});

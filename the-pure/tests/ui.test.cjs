@@ -532,3 +532,17 @@ test('owner Nov 12 11:14 PM: silent start countdown then the start chime; coach 
  r.node('coachVoiceOn').checked=true;r.node('coachVoiceOn').onchange();assert.equal(r.read('sound().voice'),1);
  r.input('reps','10');r.click('record');assert.ok(r.spoken.some(t=>/Repetitions recorded\. 10/.test(t)),'switch on: coach speaks');
 });
+test('#118 finding: a renamed display label keeps the baseline when both rows carry the same stable exercise ID; legacy name fallback stays',()=>{
+ const r=runtime({release:true});
+ const w={id:'h1',started:'2026-10-20T10:00:00Z',status:'complete',exercisePlan:[{category:'Push',name:'Old label',variant:'',exerciseId:'push-3-decline'}],records:[{round:'maximum',exercise:'Push',reps:12,exerciseId:'push-3-decline',exerciseName:'Old label',variation:''}]};
+ r.read('(db.history.push('+JSON.stringify(w)+'),1)');
+ assert.equal(r.read('Pure.historicalMaximum(db.history,{category:"Push",name:"Decline push-ups",variant:"",exerciseId:"push-3-decline"})?.maximumReps'),12,'same ID, renamed label');
+ assert.equal(r.read('Pure.historicalMaximum(db.history,{category:"Push",name:"Old label",variant:"",exerciseId:"push-4-ring"})'),null,'different ID never matches, even with the same name');
+ assert.equal(r.read('Pure.historicalMaximum(db.history,{category:"Push",name:"Old label",variant:""})?.maximumReps'),12,'legacy name match when the move has no ID');
+});
+test('#118 finding: an accepted correction plays the audible success cue only after verified persistence',()=>{
+ const r=runtime({release:true});r.click('start');r.input('reps','10');r.click('record');
+ const t=r.tones.length;r.read('(correctRecord(0,"11"),1)');assert.equal(r.read('db.active.records[0].reps'),11);
+ assert.ok(r.tones.slice(t).includes(1320),'ding after a saved correction');
+ r.writeFault('drop');const t2=r.tones.length;r.read('(correctRecord(0,"12"),1)');assert.ok(!r.tones.slice(t2).includes(1320),'no success cue when the write fails');
+});

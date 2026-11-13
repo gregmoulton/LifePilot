@@ -236,7 +236,9 @@ if(typeof document!=='undefined'){
  function pickVoice(){const v=englishVoices(),want=sound().voiceName;coachVoice=(want&&v.find(x=>x.name===want))||autoVoice(v);fillVoices()}
  // Owner Nov 12: 'pick one for now' that sounds human, free. Rank US English voices: natural/neural/enhanced names, then
  // Google's online voices (most natural on Android), then any on-device voice. Offline, a failed online voice retries on-device.
- function voiceScore(x){let n=0;if(/^en[-_]US/i.test(x.lang))n+=100;if(/natural|neural|enhanced|premium|wavenet|studio/i.test(x.name))n+=40;if(/google/i.test(x.name))n+=20;if(!x.localService)n+=10;if(/compact|espeak|robot/i.test(x.name))n-=60;return n}
+ function voiceScore(x){let n=0;if(/^en[-_]US/i.test(x.lang))n+=100;if(/natural|neural|enhanced|premium|wavenet|studio/i.test(x.name))n+=40;if(/google/i.test(x.name))n+=20;if(!x.localService)n+=10;if(/compact|espeak|robot/i.test(x.name))n-=60;
+  // Owner Nov 12: male voice preferred. Browsers give no gender field, so use known names (Android Google codes iol/iom/tpd are male).
+  if(/female|-sfg-|-tpc-|-tpf-|-iob-|-iog-|zira|aria|jenny|samantha|susan|karen|google us english/i.test(x.name))n-=30;else if(/-iol-|-iom-|-tpd-|\bmale\b|david|guy|mark|daniel|alex|aaron|fred|tom\b|christopher|eric|roger|andrew|brian|davis|tony/i.test(x.name))n+=30;return n}
  function autoVoice(v){return [...v].sort((a,b)=>voiceScore(b)-voiceScore(a))[0]||null}
  function offlineVoice(){const v=englishVoices().filter(x=>x.localService);return autoVoice(v)}
  function fillVoices(){try{const sel=$('voiceChoice');if(!sel?.replaceChildren)return;const v=englishVoices(),want=sound().voiceName;sel.replaceChildren(...[['','Automatic (most natural)'],...v.map(x=>[x.name,x.name+' ('+x.lang+(x.localService?'':', online')+')'])].map(([value,label])=>{const o=document.createElement('option');o.value=value;o.textContent=label;o.selected=value===want;return o}))}catch{ /* picker is optional */ }}

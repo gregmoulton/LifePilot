@@ -370,10 +370,10 @@ test('release Bluetooth recovery arms at 110, resets at 113, latches one cue and
  assert.equal(r.read('db.active.round'),1);
  assert.equal(r.read('db.active.ex'),0);
  assert.equal(r.read('db.active.recoveries[0].manualOverride'),false);
- assert.deepEqual(r.spoken,[]);
+ assert.deepEqual(r.spoken,['Repetitions recorded. 10. Next: Jump Squats.','Repetitions recorded. 20. Next: Inverted rows.','Repetitions recorded. 8.','Recovery threshold reached. Prepare for the next round.'],'AI Coach speaks each verified save once and the recovery line once');
 });
 
-test('release go cue and single verified rep/final-save cues play without narration',()=>{
+test('release go cue, single verified rep/final-save cues, and the calm AI Coach lines (owner #115)',()=>{
  const r=runtime({release:true});r.click('start');
  assert.equal(r.tones.filter(n=>n===1047).length,1);
  r.input('reps','10');r.click('record');
@@ -382,12 +382,12 @@ test('release go cue and single verified rep/final-save cues play without narrat
  assert.equal(r.tones.filter(n=>n===1320).length,2);
  const resumed=runtime({release:true,data:r.data});
  assert.equal(resumed.read('db.history[0].records[0].reps'),10);
- assert.deepEqual(r.spoken,[]);
+ assert.deepEqual(r.spoken,['Repetitions recorded. 10. Next: Jump Squats.','Workout saved.']);
 });
 test('release makes no rep or final-save cue when storage rejects the write',()=>{
  for(const action of ['record','saveNow']){
   const r=runtime({release:true});r.click('start');r.input('reps','10');r.writeFault('drop');r.click(action);
-  assert.equal(r.read('dirty'),true);assert(!r.tones.includes(587));assert.deepEqual(r.spoken,[]);
+  assert.equal(r.read('dirty'),true);assert(!r.tones.includes(587));assert(r.spoken.every(t=>!/recorded|saved/i.test(t)),'never announces data that did not save');
  }
 });
 
@@ -437,3 +437,20 @@ test('phone V2 export imports as preserved original records, outside HIT history
 test('malformed phone V2 exports are rejected before any change',async()=>{const r=runtime({journal:true});const base={app:'The Pure — approved phone test V2',version:2,phase:'ready',history:[]};const before=r.data.get('the-pure-hit-field-test-v2')??null;for(const bad of [{...base,version:3},{...base,history:'x'},{...base,history:[{startedAt:'yesterday',counts:[]}]},{...base,history:[{startedAt:1,counts:[{push:-1}]}]},{...base,history:[{startedAt:1,counts:[{push:1.5}]}]},{...base,history:[{startedAt:5,counts:[]},{startedAt:5,counts:[]}]}]){r.node('importFile').files=[{size:500,async text(){return JSON.stringify(bad)}}];await r.node('importFile').change();assert.equal(r.node('importReview').hidden??r.node('importReview').classList.hidden,true);assert.match(r.node('importMessage').textContent,/Invalid|Unsupported|Duplicate/)}assert.equal(r.data.get('the-pure-hit-field-test-v2')??null,before)});
 
 test('issue #118: correcting a Round 1 count recomputes the 70% goal (10 -> 11 moves 7 -> 8) and re-evaluates Round 2',()=>{const r=calibrated();let f=r1(r,[10,10,10]);assert.equal(f[0].floor,7);assert.equal(r.read('db.active.phase'),'recovery');r.input('stationValue0main','11');assert.equal(r.read('db.active.records[0].reps'),11);assert.equal(r.read('db.active.floors[0].maximumReps'),11);assert.equal(r.read('db.active.floors[0].floor'),8);assert.equal(r.read('db.active.floors[1].floor'),7,'other exercises unchanged');r2(r,[7,7,7]);assert.equal(r.read('db.active.records[3].metFloor'),false,'7 is under the corrected goal of 8');r.input('stationValue0main','8');assert.equal(r.read('db.active.records[3].reps'),8);assert.equal(r.read('db.active.records[3].metFloor'),true);assert.equal(r.read('db.active.records[3].floor'),8);const w=finish(r);assert.deepEqual(w.records.slice(3).map(x=>[x.floor,x.metFloor]),[[8,true],[7,true],[7,true]]);assert.ok(w.events.filter(e=>e.event==='rep-correction').length>=2,'corrections stay audited')});
+test('owner #115 audio: chimes default to half, coach voice adjustable and silenced at 0, levels saved on the device',()=>{
+ const r=runtime({release:true});
+ assert.deepEqual(r.read('sound()'),{chime:.5,voice:1});
+ r.read("(setSound('voice',0),1)");r.read("(setSound('chime',.3),1)");
+ assert.deepEqual(runtime({release:true,data:r.data}).read('sound()'),{chime:.3,voice:0},'levels survive reload');
+ r.click('start');r.input('reps','10');r.click('record');
+ assert.equal(r.read('db.active.records[0].reps'),10);assert.deepEqual(r.spoken,[],'voice at 0 means no coach speech');
+ r.read("(setSound('voice',2),1)");assert.equal(r.read('sound().voice'),1,'out-of-range level falls back to default');
+});
+test('owner #115 audio: the microphone is ignored while the AI Coach is speaking, so the coach is never counted as reps',()=>{
+ const r=runtime({release:true});r.click('start');
+ assert.equal(r.read('coachBusy()'),false);
+ r.input('reps','10');r.click('record');
+ assert.deepEqual(r.spoken,['Repetitions recorded. 10. Next: Jump Squats.']);
+ assert.equal(r.read('coachBusy()'),true,'busy while speaking');
+ r.time(10000);assert.equal(r.read('coachBusy()'),false,'quiet window ends even if the speech engine never reports the end');
+});

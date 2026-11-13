@@ -187,7 +187,7 @@ if(typeof document!=='undefined'){
   const buf=new ArrayBuffer(44+samples.length*2),v=new DataView(buf),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
   w(0,'RIFF');v.setUint32(4,36+samples.length*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,rate,true);v.setUint32(28,rate*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,samples.length*2,true);
   samples.forEach((s,i)=>v.setInt16(44+i*2,Math.max(-1,Math.min(1,s))*32767,true));return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}))}
- function clip(notes,lead=.25){if(!release||typeof Audio==='undefined'||typeof URL?.createObjectURL!=='function'||document.hidden)return false;try{const key=JSON.stringify([notes,lead]);let el=cueClips.get(key);if(!el){el=new Audio(cueWav(notes,lead));el.preload='auto';cueClips.set(key,el)}el.currentTime=0;const p=el.play();if(p?.catch)p.catch(()=>{});return true}catch{return false}}
+ function clip(notes,lead=.25){if(!release||typeof Audio==='undefined'||typeof URL?.createObjectURL!=='function'||document.hidden)return false;try{const key=JSON.stringify([notes,lead]);let el=cueClips.get(key);if(!el){el=new Audio(cueWav(notes,lead));el.preload='auto';cueClips.set(key,el)}const lv=sound().chime;if(lv<=0)return true;el.volume=lv;el.currentTime=0;const p=el.play();if(p?.catch)p.catch(()=>{});return true}catch{return false}}
  function tone(kind){
   const spec=kind==='go'?[1047,.18]:kind==='rep'?[587,.10]:kind==='ready'?[784,.14]:kind==='pause'?[392,.075]:kind==='resume'?[659,.075]:[523,.075];
   if(clip([spec],kind==='pause'||kind==='resume'?.12:.25))return;
@@ -199,7 +199,7 @@ if(typeof document!=='undefined'){
    if(release)oscillator.type='square';
    oscillator.frequency.value=frequency;
    gain.gain.setValueAtTime(.0001,at);
-   gain.gain.exponentialRampToValueAtTime(release?.6:.09,at+.012);
+   gain.gain.exponentialRampToValueAtTime(release?Math.max(.001,.6*sound().chime):.09,at+.012);
    gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
    oscillator.connect(gain);
    gain.connect(release?loud():audio.destination);
@@ -218,13 +218,23 @@ if(typeof document!=='undefined'){
  let showReceipt=false;
  function ladder(){return PureLadder.ensure(db?.settings?.ladder,now())}
  function syncLadder(){const r=PureLadder.sync(db.settings?.ladder,db.history,now());if(r.changed)db.settings={...(db.settings||{}),ladder:r.state};if(r.graduations.length)celebrate=true}
+ // Owner pocket test Nov 12 (#115): chimes too loud, coach voice not heard. Separate levels, saved on this device.
+ const SOUND_DEFAULT={chime:.5,voice:1};
+ function sound(){const s=db?.settings?.sound||{},n=(v,d)=>Number.isFinite(v)&&v>=0&&v<=1?v:d;return {chime:n(s.chime,SOUND_DEFAULT.chime),voice:n(s.voice,SOUND_DEFAULT.voice)}}
+ function setSound(key,value){change(()=>{db.settings={...(db.settings||{}),sound:{...sound(),[key]:value}}})}
+ function nextName(a){if(!a||a.phase!=='exercise')return '';const cat=Pure.EX?.[a.ex],m=(a.exercisePlan||[]).find(x=>x.category===cat);return m?.name||cat||''}
  function buzz(pattern){try{navigator.vibrate?.(pattern)}catch{ /* vibration is optional */ }}
  // Owner device test Nov 12: cues were faint at arm's length. A compressor raises perceived loudness without clipping.
  function loud(){try{if(!audio.__loud){const c=audio.createDynamicsCompressor();c.threshold.value=-24;c.knee.value=6;c.ratio.value=12;c.attack.value=.002;c.release.value=.12;const m=audio.createGain();m.gain.value=1.6;c.connect(m);m.connect(audio.destination);audio.__loud=c}return audio.__loud}catch{return audio.destination}}
- function melody(notes){if(clip(notes))return;wakeAudio();if(audio?.state!=='running'||document.hidden)return;try{let at=audio.currentTime;for(const [frequency,length] of notes){const o=audio.createOscillator(),g=audio.createGain();o.type='square';o.frequency.value=frequency;g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(.7,at+.01);g.gain.setValueAtTime(.7,at+length*.6);g.gain.exponentialRampToValueAtTime(.0001,at+length);o.connect(g);g.connect(loud());o.start(at);o.stop(at+length);at+=length+.03}}catch{ /* visual state remains authoritative */ }}
+ function melody(notes){if(clip(notes))return;wakeAudio();if(audio?.state!=='running'||document.hidden)return;try{let at=audio.currentTime;for(const [frequency,length] of notes){const o=audio.createOscillator(),g=audio.createGain();o.type='square';o.frequency.value=frequency;g.gain.setValueAtTime(.0001,at);const pk=Math.max(.001,.7*sound().chime);g.gain.exponentialRampToValueAtTime(pk,at+.01);g.gain.setValueAtTime(pk,at+length*.6);g.gain.exponentialRampToValueAtTime(.0001,at+length);o.connect(g);g.connect(loud());o.start(at);o.stop(at+length);at+=length+.03}}catch{ /* visual state remains authoritative */ }}
  function errorCue(){melody([[330,.25],[220,.4]]);buzz([400,120,400])}
  function trophyCue(){melody([[784,.14],[988,.14],[1175,.14],[1568,.4]]);buzz([150,80,150,80,400])}
- function announce(text,queue=false){if(release||localVoiceSelected)return;try{if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined')return;const serial=++speechSerial;if(!queue)speechSynthesis.cancel();const prompt=new SpeechSynthesisUtterance(text);prompt.lang='en-US';prompt.rate=1;prompt.onend=()=>{if(serial===speechSerial)speechHooks.resume?.()};prompt.onerror=prompt.onend;speechSynthesis.speak(prompt)}catch{ /* Visual state remains authoritative if device audio is unavailable. */ }}
+ // AI Coach voice (owner direction #115): calm, measured, slightly synthetic. While the coach speaks (plus a short tail)
+ // the microphone's results are ignored, so the coach can never be heard as a rep count.
+ let coachQuietUntil=0,coachVoice=null;
+ function pickVoice(){try{const v=speechSynthesis.getVoices().filter(x=>/^en[-_]US/i.test(x.lang));coachVoice=v.find(x=>x.localService)||v[0]||null}catch{ /* default voice */ }}
+ function coachBusy(){let speaking=false;try{speaking=!!speechSynthesis.speaking}catch{ /* none */ }return speaking||now()<coachQuietUntil}
+ function announce(text,queue=false){if(!release&&localVoiceSelected)return;const level=release?sound().voice:1;if(level<=0)return;try{if(typeof speechSynthesis==='undefined'||typeof SpeechSynthesisUtterance==='undefined')return;const serial=++speechSerial;if(!queue)speechSynthesis.cancel();const prompt=new SpeechSynthesisUtterance(text);prompt.lang='en-US';prompt.rate=1;if(release){if(!coachVoice)pickVoice();if(coachVoice)prompt.voice=coachVoice;prompt.rate=.92;prompt.pitch=.8;prompt.volume=level;coachQuietUntil=Math.max(coachQuietUntil,now()+2500+text.length*90)}prompt.onend=()=>{if(release)coachQuietUntil=now()+800;if(serial===speechSerial)speechHooks.resume?.()};prompt.onerror=prompt.onend;speechSynthesis.speak(prompt)}catch{ /* Visual state remains authoritative if device audio is unavailable. */ }}
  // Compare the exact previous verified bytes, not just a revision number. An
  // unverified write must never be presented as a saved workout or overwrite
  // another tab's update. No storage keys or schema are changed by this repair.
@@ -311,7 +321,7 @@ if(typeof document!=='undefined'){
   if(a?.phase==='recovery'&&!a.finalRecovery&&!a.paused&&!dirty&&!blocked&&
      !Pure.recoveryInfo(a,now()).override&&lastRecoveryCue!==a.recoveryStarted){
    lastRecoveryCue=a.recoveryStarted;
-   tone('ready');
+   tone('ready');if(release)announce('Recovery threshold reached. Prepare for the next round.');
   }
   renderStationRows();if(typeof PureJournal!=='undefined')renderJournal();
  }
@@ -357,7 +367,7 @@ if(typeof document!=='undefined'){
  }
 
  $('record').onclick=()=>change(()=>{const done=Pure.reps(db.active,$('reps').value,now());if(done)Pure.archive(db,now())});
- const recordReps=$('record').onclick;$('record').onclick=()=>{const before=db.active?.records.length,side=!!db.active?.pendingSide;recordReps();if(db.active&&(db.active.records.length>before||!side&&db.active.pendingSide)){if(dirty||blocked){errorCue();announce('Save failed. Workout paused. Keep this page open.');return}if(release)savedCue();if(db.active.pendingSide)announce('Right leg next.');cueCountdown()}};
+ const recordReps=$('record').onclick;$('record').onclick=()=>{const before=db.active?.records.length,side=!!db.active?.pendingSide;recordReps();if(db.active&&(db.active.records.length>before||!side&&db.active.pendingSide)){if(dirty||blocked){errorCue();announce('Save failed. Workout paused. Keep this page open.');return}if(release)savedCue();if(db.active.pendingSide)announce('Left leg recorded. Right leg next.');else if(release){const r=db.active.records.at(-1),nx=nextName(db.active);announce('Repetitions recorded. '+r.reps+'.'+(nx?' Next: '+nx+'.':''))}cueCountdown()}};
 
  $('loghr').onclick=()=>{let archived=false;change(()=>{Pure.hr(db.active,$('hr').value,now());archived=finishRecoveryIfReady()});if(archived&&!dirty&&!blocked)announce('Cooldown complete. Workout saved.')};
  function finishRecoveryIfReady(){const a=db.active;if(a?.cooldownDeadline)return Pure.finishMonitoredCooldown(db,now());if(a?.flowVersion>=2&&a.finalRecovery&&!a.paused&&!Pure.recoveryInfo(a,now()).override){Pure.recover(a,now());Pure.archive(db,now());return true}}
@@ -423,6 +433,7 @@ if(typeof document!=='undefined'){
   const context=()=>JSON.stringify([db.active?.id,db.active?.records.length,db.active?.phase,db.active?.paused,!!db.active?.countdownKind]);
   const sayStatus=s=>{voiceActive=voice.listening;voiceWanted=voice.wanted;$('stopTalk').classList.toggle('hidden',!voice.wanted);$('voiceStatus').classList.toggle('muted-voice',s.startsWith('Listening —'));$('voiceStatus').textContent=s;$('talk').textContent=voice.listening?'Listening':voice.wanted?'Connecting voice…':'Enable voice'};
   const voiceCallbacks={onState:sayStatus,onError:sayStatus,onText:text=>{
+   if(release&&coachBusy()){sayStatus('Ignored while the coach was speaking: “'+text+'”. Say it again.');return}
    const parsed=PureDevices.command(text);if(parsed?.type==='confirm'){$('voiceApply').click();return}if(parsed?.type==='cancel'){$('voiceCancel').click();return}if(!parsed){sayStatus('Heard: “'+text+'”. Command not recognized; nothing changed.');return}
    if(parsed.type==='reps'){const a=db.active;if(!a||a.paused||a.countdownKind||a.phase!=='exercise'||dirty||blocked){sayStatus('Not accepting reps during transition or recovery.');return}$('reps').value=String(parsed.value);a.draft.reps=String(parsed.value);$('record').click();return}
    if(parsed.type==='correct'){const a=db.active,r=a?.records.at(-1);if(!r||dirty||blocked||a.paused){sayStatus('No recent reps to correct.');return}if(r.sideReps){sayStatus('Use the left or right field to correct split squat reps.');return}correctRecord(a.records.length-1,parsed.value);return}
@@ -613,7 +624,7 @@ if(typeof document!=='undefined'){
  showPlan();
  if(ladderOn)bindLadder();
  if(release){setInterval(()=>{if(showReceipt&&db&&!db.active)render()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&showReceipt&&db&&!db.active)render()})}
- if(release){addEventListener('pointerdown',()=>{if(audio)wakeAudio()},{capture:true,passive:true});const tb=$('testSound');if(tb)tb.onclick=()=>{unlockAudio();setTimeout(()=>{savedCue();$('testSoundState').textContent='Sound: '+(audio?.state||'unavailable')+(audio?.state==='running'?' · you should hear two notes and feel a buzz':' · tap again')},120)}}
+ if(release){let speechPrimed=false;addEventListener('pointerdown',()=>{if(audio)wakeAudio();if(!speechPrimed){speechPrimed=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch{ /* optional */ }}},{capture:true,passive:true});try{speechSynthesis.addEventListener?.('voiceschanged',pickVoice)}catch{ /* optional */ }const showLevels=()=>{const v=sound();for(const k of ['chime','voice']){const i=$(k+'Level'),o=$(k+'LevelOut');if(i)i.value=String(Math.round(v[k]*100));if(o)o.textContent=Math.round(v[k]*100)+'%'}};showLevels();for(const k of ['chime','voice']){const i=$(k+'Level');if(i)i.onchange=()=>{unlockAudio();setSound(k,Math.max(0,Math.min(100,+i.value))/100);showLevels();if(k==='chime')savedCue();else announce('Repetitions recorded. Ten.')}}const tb=$('testSound');if(tb)tb.onclick=()=>{unlockAudio();setTimeout(()=>{savedCue();setTimeout(()=>announce('Coach voice check. Repetitions recorded. Ten.'),700);$('testSoundState').textContent='Sound: '+(audio?.state||'unavailable')+(audio?.state==='running'?' · you should hear two notes and feel a buzz':' · tap again')},120)}}
 
  render();
 }

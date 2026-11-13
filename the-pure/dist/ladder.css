@@ -41,3 +41,7 @@
 .grade-parts{margin:8px 0 6px;padding-left:18px;font-size:14px}
 .grade-cardio{margin:6px 0;font-size:14px}
 .grade-note{margin:4px 0 0;color:var(--muted);font-size:12px}
+.sound-levels{display:grid;gap:6px;margin:4px 0 8px}
+.sound-levels label{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px}
+.sound-levels output{color:var(--muted);font-size:13px}
+.sound-levels input{grid-column:1/-1;width:100%;min-height:32px}

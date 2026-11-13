@@ -58,3 +58,7 @@
 .sound-levels .coach-switch input{width:22px;height:22px;min-height:0}
 #coachVoiceOptions{display:grid;gap:6px}
 #coachVoiceOptions.hidden{display:none}
+.pure-tagline{display:block;min-height:16px;margin:2px 0 0;font-size:12px;font-style:italic;letter-spacing:.02em;color:#b8d9f6;transition:opacity .6s ease}
+@media (prefers-reduced-motion:reduce){.pure-tagline{transition:none}}
+.pure-tagline.fading{opacity:0}
+.workout-panel .ready-stats{grid-template-columns:repeat(3,minmax(0,1fr))}

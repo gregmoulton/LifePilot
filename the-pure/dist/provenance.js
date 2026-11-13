@@ -90,7 +90,8 @@
     .then(build => {
       const conflict = checkLocation(build, location.href);
       if (conflict) throw new Error(conflict);
-      summary.textContent = build.version + ' · ' + build.environment + ' · ' + build.commit.slice(0, 12);
+      // Owner design principle (Nov 13): remove what isn't necessary. Version details stay one tap away for troubleshooting.
+      summary.textContent = 'About';
       const evidenceTime = evidence => evidence
         ? formatTime(evidence.at) + ' (' + evidence.at + ') · ' + evidence.reference : 'Pending';
       const time = at => at === null ? 'Unknown' : formatTime(at) + ' (' + at + ')';
@@ -118,9 +119,8 @@
       copy.disabled = false;
     })
     .catch(error => {
-      summary.textContent = 'Build identity unavailable';
+      summary.textContent = 'About';
       packet.value = error.message;
-      document.getElementById('buildDetails').open = true;
       feedback.textContent = 'Confirm the preview version before using it.';
     });
 })();

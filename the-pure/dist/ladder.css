@@ -34,3 +34,10 @@
 .sound-test{display:flex;align-items:center;gap:10px;margin:6px 0}
 .sound-test button{min-height:44px;flex:0 0 auto}
 .sound-test span{color:var(--muted);font-size:13px}
+.grade-panel{margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--panel2)}
+.grade-head{display:flex;align-items:center;gap:12px}
+.grade-letter{display:flex;align-items:center;justify-content:center;width:52px;height:52px;flex:0 0 auto;border-radius:12px;background:var(--blue);color:#06121f;font-size:30px;font-weight:800}
+.grade-letter.none{background:var(--line);color:var(--muted)}
+.grade-parts{margin:8px 0 6px;padding-left:18px;font-size:14px}
+.grade-cardio{margin:6px 0;font-size:14px}
+.grade-note{margin:4px 0 0;color:var(--muted);font-size:12px}

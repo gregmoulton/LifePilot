@@ -462,3 +462,9 @@ test('owner #115: the chosen coach voice is saved on the device and used when sp
  assert.equal(r.read('coachVoice.name'),'Natural US');
  assert.equal(runtime({release:true,data:r.data}).read('sound().voiceName'),'Natural US','choice survives reload');
 });
+test('owner Nov 12: automatic voice prefers the most natural US English voice; offline falls back to an on-device voice',()=>{
+ const r=runtime({release:true});
+ r.context.speechSynthesis.getVoices=()=>[{name:'English (United States) compact',lang:'en-US',localService:true},{name:'English United States',lang:'en-US',localService:true},{name:'Google US English',lang:'en-US',localService:false},{name:'Google UK English',lang:'en-GB',localService:false}];
+ r.read('(coachVoice=null,pickVoice(),1)');assert.equal(r.read('coachVoice.name'),'Google US English');
+ assert.equal(r.read('offlineVoice().name'),'English United States');
+});

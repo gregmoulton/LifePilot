@@ -54,3 +54,7 @@
 .workout-panel .station-row.completed{border:2px solid #3fbf7f;background:linear-gradient(90deg,rgba(63,191,127,.12),transparent)}
 .workout-panel .station-row.completed .station-label span{color:#7ff0b0;font-weight:800}
 .workout-panel .station-row.current .station-label span{color:#78c4ff;font-weight:800;letter-spacing:.04em}
+.sound-levels .coach-switch{display:flex;align-items:center;gap:10px;min-height:44px}
+.sound-levels .coach-switch input{width:22px;height:22px;min-height:0}
+#coachVoiceOptions{display:grid;gap:6px}
+#coachVoiceOptions.hidden{display:none}

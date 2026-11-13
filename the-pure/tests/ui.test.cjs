@@ -511,7 +511,7 @@ test('owner #115 transitions: green check + saved reps, CURRENT highlight, 3-sec
  assert.equal(r.node('stationState1').textContent,'CURRENT · Get set');assert.equal(r.read('db.active.transitionSeconds'),3);
  assert.match(r.node('status').textContent,/^Next: .* in 3$/,'owner Nov 12 11:10 PM: visible 3-2-1 countdown restored');assert.equal(r.node('focusCount').classList.contains('hidden'),false);
  assert.throws(()=>r.read('Pure.reps(db.active,"9",Date.now())'),/Resume the exercise first/,'no rep capture during the transition');
- assert.equal(r.node('readyNow').classList.contains('hidden'),false);
+ assert.equal(r.node('readyNow').classList.contains('hidden'),true,'owner 11:14 PM: no Ready button');
  const go=r.tones.filter(n=>n===1047).length;r.node('readyNow').onclick();
  assert.equal(r.read('!!db.active.countdownUntil'),false);assert.equal(r.tones.filter(n=>n===1047).length,go+1,'distinct start cue on early Ready');
  assert.equal(r.read('db.active.events.some(e=>e.event==="ready-early")'),true);assert.equal(r.node('stationState1').textContent,'CURRENT · Go');
@@ -522,4 +522,13 @@ test('owner Nov 12 sounds: ding (A) for each save, cha-ching (C) for a new perso
  r.click('start');const t0=r.tones.length;r.input('reps','11');r.click('record');
  assert.deepEqual(r.tones.slice(t0).filter(n=>[1320,2637].includes(n)),[2637],'11 beats the best of 10: cha-ching');
  const t1=r.tones.length;r.input('reps','19');r.click('record');assert.deepEqual(r.tones.slice(t1).filter(n=>[1320,2637].includes(n)),[1320],'19 under 20: ding');
+});
+test('owner Nov 12 11:14 PM: silent start countdown then the start chime; coach voice is an optional on/off switch, off by default',()=>{
+ const r=runtime({release:true,autoCountdown:false});
+ assert.equal(r.node('coachVoiceOn').checked,false);
+ r.click('start');const before=r.tones.length;r.time(1000);r.tick();r.time(1000);r.tick();
+ assert.equal(r.tones.length,before,'no ticks during the countdown');r.time(1500);r.tick();
+ assert.equal(r.tones.slice(before).filter(n=>n===1047).length,1,'one start chime');assert.deepEqual(r.spoken,[]);
+ r.node('coachVoiceOn').checked=true;r.node('coachVoiceOn').onchange();assert.equal(r.read('sound().voice'),1);
+ r.input('reps','10');r.click('record');assert.ok(r.spoken.some(t=>/Repetitions recorded\. 10/.test(t)),'switch on: coach speaks');
 });

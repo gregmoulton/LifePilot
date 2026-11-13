@@ -333,7 +333,7 @@ if(typeof document!=='undefined'){
   $('discardPaused')?.classList.toggle('hidden',!a?.paused||!!a.cooldownDeadline||release);
   if(release){const mb=$('modeBanner');if(mb){mb.classList.toggle('hidden',!a);mb.classList.toggle('practice',!!a?.practice);mb.classList.toggle('live',!!a&&!a.practice);mb.textContent=a?.practice?'PRACTICE — NOT RECORDED':'LIVE WORKOUT — RECORDED'}
    $('end').textContent=a?.practice?'End Practice':'Finish & Save Workout';$('saveNow').textContent=a?.practice?'End practice now':'Finish & save now';
-   $('discardLive')?.classList.toggle('hidden',!a||!!a.cooldownDeadline);$('readyNow')?.classList.toggle('hidden',!a?.countdownUntil||!!a.paused||!a.countdownKind);if($('discardLive'))$('discardLive').textContent=a?.practice?'Discard Practice':'Discard Workout'}
+   $('discardLive')?.classList.toggle('hidden',!a||!!a.cooldownDeadline);$('readyNow')?.classList.add('hidden');if($('discardLive'))$('discardLive').textContent=a?.practice?'Discard Practice':'Discard Workout'}
   $('exercise').textContent=active&&a.phase==='exercise'?'Exercise: '+Pure.EX[a.ex]:'';
   if(a){$('reps').value=a.draft.reps;$('hr').value=a.draft.hr;$('sessionNotes').value=a.userNotes||''}else $('sessionNotes').value='';
   $('sessionNotes').disabled=!active||blocked||dirty;
@@ -397,7 +397,7 @@ if(typeof document!=='undefined'){
   const key=[a.id,a.countdownKind,a.records.length,seconds].join(':');
   if(key===lastCountdownCue)return;
   lastCountdownCue=key;
-  if(!release||a.countdownKind==='start')tone('tick');
+  if(!release)tone('tick');
  }
 
  $('record').onclick=()=>change(()=>{const done=Pure.reps(db.active,$('reps').value,now());if(done)Pure.archive(db,now())});
@@ -658,7 +658,7 @@ if(typeof document!=='undefined'){
  showPlan();
  if(ladderOn)bindLadder();
  if(release){setInterval(()=>{if(showReceipt&&db&&!db.active)render()},60000);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&showReceipt&&db&&!db.active)render()})}
- if(release){let speechPrimed=false;addEventListener('pointerdown',()=>{if(audio)wakeAudio();if(!speechPrimed){speechPrimed=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch{ /* optional */ }}},{capture:true,passive:true});try{speechSynthesis.addEventListener?.('voiceschanged',pickVoice)}catch{ /* optional */ }pickVoice();const vc=$('voiceChoice');if(vc)vc.onchange=()=>{unlockAudio();setSound('voiceName',vc.value);coachVoice=null;pickVoice();announce('Repetitions recorded. Ten. Next: Jump squats.')};const showLevels=()=>{const v=sound();for(const k of ['chime','voice']){const i=$(k+'Level'),o=$(k+'LevelOut');if(i)i.value=String(Math.round(v[k]*100));if(o)o.textContent=v[k]>0?Math.round(v[k]*100)+'%':'Off'}};showLevels();for(const k of ['chime','voice']){const i=$(k+'Level');if(i)i.onchange=()=>{unlockAudio();setSound(k,Math.max(0,Math.min(100,+i.value))/100);showLevels();if(k==='chime')savedCue();else announce('Repetitions recorded. Ten.')}}const tb=$('testSound');if(tb)tb.onclick=()=>{unlockAudio();setTimeout(()=>{savedCue();setTimeout(()=>announce('Coach voice check. Repetitions recorded. Ten.'),700);$('testSoundState').textContent='Sound: '+(audio?.state||'unavailable')+(audio?.state==='running'?' · you should hear two notes and feel a buzz':' · tap again')},120)}}
+ if(release){let speechPrimed=false;addEventListener('pointerdown',()=>{if(audio)wakeAudio();if(!speechPrimed){speechPrimed=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch{ /* optional */ }}},{capture:true,passive:true});try{speechSynthesis.addEventListener?.('voiceschanged',pickVoice)}catch{ /* optional */ }pickVoice();const vc=$('voiceChoice');if(vc)vc.onchange=()=>{unlockAudio();setSound('voiceName',vc.value);coachVoice=null;pickVoice();announce('Repetitions recorded. Ten. Next: Jump squats.')};const showLevels=()=>{const v=sound();for(const k of ['chime','voice']){const i=$(k+'Level'),o=$(k+'LevelOut');if(i)i.value=String(Math.round(v[k]*100));if(o)o.textContent=v[k]>0?Math.round(v[k]*100)+'%':'Off'}};showLevels();const coachSwitch=$('coachVoiceOn');if(coachSwitch){coachSwitch.checked=sound().voice>0;coachSwitch.onchange=()=>{unlockAudio();setSound('voice',coachSwitch.checked?1:0);showLevels();$('coachVoiceOptions')?.classList.toggle('hidden',!coachSwitch.checked);if(coachSwitch.checked)announce('Coach voice on. Repetitions recorded. Ten.')};$('coachVoiceOptions')?.classList.toggle('hidden',!coachSwitch.checked)}for(const k of ['chime','voice']){const i=$(k+'Level');if(i)i.onchange=()=>{unlockAudio();setSound(k,Math.max(0,Math.min(100,+i.value))/100);showLevels();if(k==='chime')savedCue();else announce('Repetitions recorded. Ten.')}}const tb=$('testSound');if(tb)tb.onclick=()=>{unlockAudio();setTimeout(()=>{savedCue();setTimeout(()=>announce('Coach voice check. Repetitions recorded. Ten.'),700);$('testSoundState').textContent='Sound: '+(audio?.state||'unavailable')+(audio?.state==='running'?' · you should hear two notes and feel a buzz':' · tap again')},120)}}
 
  render();
 }

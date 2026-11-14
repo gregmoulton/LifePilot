@@ -65,3 +65,9 @@
 #status:empty{display:none}
 body.session-active #phoneTabs{display:none!important}
 body.session-active main{padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
+.hr-meta{margin-left:8px;color:var(--muted);font-size:13px;font-weight:600}
+.hr-spark{display:block;width:100%;height:60px;margin:6px 0;border:1px solid var(--line);border-radius:10px;background:#07192b}
+.hr-spark.hidden{display:none}.hr-spark-line{fill:none;stroke:#ff5638;stroke-width:2;vector-effect:non-scaling-stroke}.hr-spark-th{stroke:#64b8ff;stroke-dasharray:4 4;stroke-width:1;vector-effect:non-scaling-stroke}
+.hr-panel{margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--panel2)}.hr-panel h3{margin:0 0 6px;font-size:15px}
+.hr-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}.hr-list li{display:flex;justify-content:space-between;gap:10px;font-size:14px}.hr-list b{text-align:right}.hr-list small{color:var(--muted);font-weight:500}
+.hr-note,.hr-missing{margin:6px 0 0;color:var(--muted);font-size:12px}

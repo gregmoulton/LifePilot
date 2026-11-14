@@ -16,6 +16,7 @@ function runtime({data=new Map(),source=code,fail=false,devices=false,journal=fa
  const context=vm.createContext({AudioContext,speechSynthesis:{cancel(){},speak(p){spoken.push(p.text)}},SpeechSynthesisUtterance:class{constructor(text){this.text=text}},DataView,Date:class extends Date{constructor(...a){super(...(a.length?a:[t]))}static now(){return t}},document,navigator:{bluetooth},SpeechRecognition:Recognition,localStorage:store,crypto:{getRandomValues:webcrypto.getRandomValues.bind(webcrypto)},Blob,URL:{createObjectURL:b=>{const key='blob:'+id++;blobs.set(key,b);return key},revokeObjectURL(){}},setInterval(f){intervals.push(f)},setTimeout(f,ms){const k=++nextTimeout;timeouts.set(k,{f,at:t+ms});return k},clearTimeout(k){timeouts.delete(k)},addEventListener:(n,f)=>events[n]=f,alert(){},confirm:()=>confirmation});
  if(journal)vm.runInContext(fs.readFileSync('dist/journal.js','utf8'),context);
  if(devices)vm.runInContext(fs.readFileSync('dist/devices.js','utf8'),context);
+ if(source===code)vm.runInContext(fs.readFileSync('dist/hrmetrics.js','utf8'),context);
  vm.runInContext(source===code?source.replace('\n render();\n}', '\n globalThis.__readForTest=expression=>eval(expression);\n render();\n}'):source,context);
  return {voiceEnd(){recognition.onend()},voiceError(error){recognition.onerror({error});recognition.onend()},hidden(v){document.hidden=v;docEvents.visibilitychange?.forEach(handler=>handler())},data,node,context,spoken,tones,downloads,blobs,events,docEvents,writeFault:mode=>{writeFault=mode},hears(text){assert(recognition,'Microphone was not started');assert(this.read('voiceActive'),'Microphone stopped');const results=recognitionResults.get(recognition)||[];results.push(Object.assign([{transcript:text}],{isFinal:true}));recognitionResults.set(recognition,results);recognition.onresult({resultIndex:results.length-1,results})},speech(text){this.click('talk');recognition.onresult({resultIndex:0,results:[Object.assign([{transcript:text}],{isFinal:true})]});recognition.onend();if(autoCountdown&&source===code&&this.read('!!db.active?.countdownUntil')){t+=5000;intervals.forEach(f=>f())}},time(ms){t+=ms},fail(v){failed=v},confirm(v){confirmation=v},tick(){for(const [k,x] of timeouts)if(x.at<=t){timeouts.delete(k);x.f()}intervals.forEach(f=>f())},click(id){node(id).onclick();if(id==='start'&&autoHrGate&&source===code&&!this.read('!!db.active'))node('hrGateProceed').onclick();if(autoCountdown&&source===code&&this.read('!!db.active?.countdownUntil')){t+=5000;intervals.forEach(f=>f())}},input(id,v){node(id).value=v;node(id).input?.()},read(expression){return JSON.parse(vm.runInContext('JSON.stringify(__readForTest('+JSON.stringify(expression)+'))',context))}};
 }
@@ -624,4 +625,24 @@ test('owner-approved 3-screen UX step (b): final Round 2 count saves automatical
  assert.equal(r.node('finishCooldown').classList.contains('hidden'),false);for(const id of ['end','saveNow','pause','discardLive'])assert.equal(r.node(id).classList.contains('hidden'),true,id+' hidden during cooldown');
  for(let i=0;i<30;i++)feed(100);assert.ok(r.read('!!db.active'),'never auto-finishes at 110');
  r.click('finishCooldown');assert.equal(r.read('db.active'),null);assert.equal(r.read('db.history.length'),1,'no duplicate');
+});
+test('owner-approved step (c): baseline, live % of max/zone/peak, Results HR panel, and max HR learned from a sustained peak',async()=>{
+ let packet;const ch={addEventListener(n,f){packet=f},removeEventListener(){},async startNotifications(){}};
+ const device={addEventListener(){},removeEventListener(){},gatt:{connected:true,disconnect(){},async connect(){return {async getPrimaryService(){return {async getCharacteristic(){return ch}}}}}}};
+ const r=runtime({release:true,devices:true,bluetooth:{async requestDevice(){return device}}});await r.node('connectHr').onclick();
+ r.read("(db.settings={...(db.settings||{}),age:50},1)");
+ const feed=(bpm,ms=1000)=>{r.time(ms);packet({target:{value:new DataView(Uint8Array.from([0,bpm]).buffer)}});r.tick()};
+ for(const b of [72,74,70,73,75,71,73])feed(b);
+ r.click('start');assert.deepEqual(r.read('[db.active.hrBaseline.bpm,db.active.hrBaseline.label]'),[73,'pre-workout baseline']);
+ for(let i=0;i<6;i++)feed(150);for(let i=0;i<7;i++)feed(180);
+ assert.match(r.node('liveHrMeta').textContent,/^106% max · Zone 5 · peak 180$/);
+ for(const n of ['10','20','8']){r.input('reps',n);r.click('record');feed(178)}
+ for(let i=0;i<10;i++)feed(140);for(let i=0;i<8;i++)feed(108);for(let i=0;i<6;i++)feed(120);
+ for(const n of ['7','14','6']){r.input('reps',n);r.click('record');feed(150)}
+ assert.equal(r.read('db.history.length'),1);
+ for(let i=0;i<70;i++)feed(150-Math.min(i,40));
+ assert.equal(r.node('hrCooldown').classList.contains('hidden'),false);assert.match(r.node('hrCooldown').innerHTML,/Cooldown: drop after 1 min<\/span><b>40 BPM/);
+ r.click('finishCooldown');
+ assert.equal(r.read('db.settings.hrMaxObserved.bpm'),180,'sustained 180 replaces the 170 age estimate');
+ const html=r.node('hrResults').innerHTML;assert.match(html,/Pre-workout baseline<\/span><b>73 BPM/);assert.match(html,/Peak<\/span><b>180 BPM · 100% of max/);assert.match(html,/measured in your workouts/);
 });

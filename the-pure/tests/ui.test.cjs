@@ -441,9 +441,9 @@ test('malformed phone V2 exports are rejected before any change',async()=>{const
 test('issue #118: correcting a Round 1 count recomputes the 70% goal (10 -> 11 moves 7 -> 8) and re-evaluates Round 2',()=>{const r=calibrated();let f=r1(r,[10,10,10]);assert.equal(f[0].floor,7);assert.equal(r.read('db.active.phase'),'recovery');r.input('stationValue0main','11');assert.equal(r.read('db.active.records[0].reps'),11);assert.equal(r.read('db.active.floors[0].maximumReps'),11);assert.equal(r.read('db.active.floors[0].floor'),8);assert.equal(r.read('db.active.floors[1].floor'),7,'other exercises unchanged');r2(r,[7,7,7]);assert.equal(r.read('db.active.records[3].metFloor'),false,'7 is under the corrected goal of 8');r.input('stationValue0main','8');assert.equal(r.read('db.active.records[3].reps'),8);assert.equal(r.read('db.active.records[3].metFloor'),true);assert.equal(r.read('db.active.records[3].floor'),8);const w=finish(r);assert.deepEqual(w.records.slice(3).map(x=>[x.floor,x.metFloor]),[[8,true],[7,true],[7,true]]);assert.ok(w.events.filter(e=>e.event==='rep-correction').length>=2,'corrections stay audited')});
 test('owner #115 audio: chimes default to half, coach voice adjustable and silenced at 0, levels saved on the device',()=>{
  const r=runtime({release:true});
- assert.deepEqual(r.read('sound()'),{chime:.5,voice:0,voiceName:''},'owner Nov 12: coach voice off by default, chimes carry the workout');
+ assert.deepEqual(r.read('sound()'),{chime:.5,rep:.5,voice:0,voiceName:''},'owner Nov 12: coach voice off by default, chimes carry the workout');
  r.read("(setSound('voice',0),1)");r.read("(setSound('chime',.3),1)");
- assert.deepEqual(runtime({release:true,data:r.data}).read('sound()'),{chime:.3,voice:0,voiceName:''},'levels survive reload');
+ assert.deepEqual(runtime({release:true,data:r.data}).read('sound()'),{chime:.3,rep:.5,voice:0,voiceName:''},'levels survive reload');
  r.read("(db.settings.sound={chime:.5,voice:1},1)");assert.equal(r.read('sound().voice'),0,'a voice level saved before the Off default is reset once');r.read("(setSound('voice',.8),1)");assert.equal(r.read('sound().voice'),.8,'turning it on again sticks');r.read("(setSound('voice',0),1)");
  r.click('start');r.input('reps','10');r.click('record');
  assert.equal(r.read('db.active.records[0].reps'),10);assert.deepEqual(r.spoken,[],'voice at 0 means no coach speech');
@@ -526,12 +526,19 @@ test('owner Nov 12 sounds: ding (A) for each save, cha-ching (C) for a new perso
 });
 test('owner Nov 12 11:14 PM: silent start countdown then the start chime; coach voice is an optional on/off switch, off by default',()=>{
  const r=runtime({release:true,autoCountdown:false});
- assert.equal(r.node('coachVoiceOn').checked,false);
+ assert.equal(r.node('voiceLevel').value,'0');assert.equal(r.node('voiceLevelOut').textContent,'Off · warnings still speak');
  r.click('start');const before=r.tones.length;r.time(1000);r.tick();r.time(1000);r.tick();
  assert.equal(r.tones.length,before,'no ticks during the countdown');r.time(1500);r.tick();
  assert.equal(r.tones.slice(before).filter(n=>n===1047).length,1,'one start chime');assert.deepEqual(r.spoken,[]);
- r.node('coachVoiceOn').checked=true;r.node('coachVoiceOn').onchange();assert.equal(r.read('sound().voice'),1);
- r.input('reps','10');r.click('record');assert.ok(r.spoken.some(t=>/Repetitions recorded\. 10/.test(t)),'switch on: coach speaks');
+ r.node('voiceLevel').value='60';r.node('voiceLevel').onchange();assert.equal(r.read('sound().voice'),.6);assert.equal(r.node('voiceLevelOut').textContent,'60%');
+ r.input('reps','10');r.click('record');assert.ok(r.spoken.some(t=>/Repetitions recorded\. 10/.test(t)),'voice up: coach speaks');
+});
+test('owner Nov 14 sound mix: coach voice, rep tone and chimes are independent, saved levels; a rep tone at 0 is silent while chimes still play',()=>{
+ const r=runtime({release:true});r.click('soundOpenMore');assert.equal(r.node('soundMix').classList.contains('hidden'),false);
+ r.node('repLevel').value='0';r.node('repLevel').onchange();r.node('chimeLevel').value='35';r.node('chimeLevel').onchange();
+ assert.deepEqual(r.read('[sound().rep,sound().chime,sound().voice]'),[0,.35,0]);
+ r.click('start');const t0=r.tones.length;r.input('reps','10');r.click('record');assert.equal(r.tones.slice(t0).filter(n=>n===1320).length,0,'rep tone off');
+ const again=runtime({data:r.data,release:true});assert.deepEqual(again.read('[sound().rep,sound().chime]'),[0,.35],'levels persist');
 });
 test('#118 finding: a renamed display label keeps the baseline when both rows carry the same stable exercise ID; legacy name fallback stays',()=>{
  const r=runtime({release:true});
@@ -672,13 +679,13 @@ test('owner #122: a bare "push done" or a count without "reps" never saves — i
 
 test('owner #117 Ready: rung beside each exercise, required equipment listed (never confirmed), NEW only for a newly reached rung, one-tap Practice visible',()=>{
  const r=runtime({release:true,ladder:true});
- assert.equal(r.node('stationVariant0').textContent,'Push · Rung 3');assert.equal(r.node('stationEquip0').textContent,'Needs: Plyo box (feet)');
- assert.equal(r.node('stationEquip1').textContent,'No equipment');assert.equal(r.node('stationEquip2').textContent,'Needs: Gymnastic rings (waist height)');
+ assert.equal(r.node('stationVariant0').textContent,'Push · Rung 3');assert.equal(r.node('stationEquip0').textContent,'Rung 3 · Plyo box (feet)');
+ assert.equal(r.node('stationEquip1').textContent,'Rung 3 · Bodyweight');assert.equal(r.node('stationEquip2').textContent,'Rung 1 · Rings, waist height');
  assert.equal(r.node('stationNew0').classList.contains('hidden'),true,'starting rungs are not NEW');
  assert.equal(r.node('practiceStart').classList.contains('hidden'),false);assert.equal(r.node('practiceOption').classList.contains('hidden'),true);
  assert.doesNotMatch(r.node('stationVariant0').textContent+r.node('stationVariant1').textContent,/Level|→/,'no combined level, no next-rung arrow');
  r.read("(db.settings={...db.settings,ladder:PureLadder.setCurrent(ladder(),'push-4-ring',Date.now())},render(),1)");
- assert.equal(r.node('stationNew0').classList.contains('hidden'),false,'a newly reached rung is NEW');assert.equal(r.node('stationEquip0').textContent,'Needs: Gymnastic rings');
+ assert.equal(r.node('stationNew0').classList.contains('hidden'),false,'a newly reached rung is NEW');assert.equal(r.node('stationEquip0').textContent,'Rung 4 · Rings');
 });
 test('owner #117: Exercises reorders Push/Squat/Pull; the workout runs and records in that order; history keeps categories',()=>{
  const r=runtime({release:true,ladder:true});r.click('reorderOpen');assert.equal(r.node('reorder').classList.contains('hidden'),false);

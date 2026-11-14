@@ -15,26 +15,26 @@ const PureLadder=(()=>{
   equipment:Object.freeze(o.eq||[]),equipmentPending:o.eqPending||null});
  const P={graduate:15,entry:[8,10]},S2={graduate:30,entry:[15,20]},S1={graduate:15,entry:[8,10],unilateral:true};
  const EXERCISES=Object.freeze([
-  D('push-1-knee-incline','Push',1,'Knee/incline push-ups','',{...P,short:'Knee push-ups',eq:['Bench or box (incline version)']}),
+  D('push-1-knee-incline','Push',1,'Knee/incline push-ups','',{...P,short:'Knee push-ups',eq:['Bench or box (incline)']}),
   D('push-2-standard','Push',2,'Push-ups','Standard',{...P,eq:[]}),
   D('push-3-decline','Push',3,'Decline push-ups','',{...P,eq:['Plyo box (feet)']}),
-  D('push-4-ring','Push',4,'Ring push-ups','',{...P,eq:['Gymnastic rings']}),
+  D('push-4-ring','Push',4,'Ring push-ups','',{...P,eq:['Rings']}),
   D('push-5-bar-dips','Push',5,'Parallel-bar dips','',{...P,short:'Bar dips',eq:['Parallel bars']}),
-  D('push-6-ring-dips','Push',6,'Ring dips','',{...P,eq:['Gymnastic rings']}),
-  D('push-elite-weighted-ring-dips','Push','ELITE','Weighted ring dips','',{config:'load',short:'Weighted dips',eq:['Gymnastic rings','Weight vest']}),
+  D('push-6-ring-dips','Push',6,'Ring dips','',{...P,eq:['Rings']}),
+  D('push-elite-weighted-ring-dips','Push','ELITE','Weighted ring dips','',{config:'load',short:'Weighted dips',eq:['Rings','Weight vest']}),
   D('squat-1-chair','Squat',1,'Chair squats','',{...S2,eq:['Chair']}),
   D('squat-2-bodyweight','Squat',2,'Squats','Bodyweight',{...S2,eq:[]}),
   D('squat-3-jump','Squat',3,'Jump Squats','Bodyweight',{...S2,short:'Jump squats',eq:[]}),
   D('squat-4-step-up','Squat',4,'Step-ups','',{...S1,config:'box',eq:['Plyo box']}),
-  D('squat-5-bulgarian','Squat',5,'Bulgarian split squats','',{...S1,provisional:true,short:'Bulgarian squats',eq:['Bench or box (rear foot)']}),
+  D('squat-5-bulgarian','Squat',5,'Bulgarian split squats','',{...S1,provisional:true,short:'Bulgarian squats',eq:['Bench (rear foot)']}),
   D('squat-6-pistol','Squat',6,'Pistol squats','',{...S1,provisional:true,short:'Pistols',eq:[]}),
-  D('squat-elite-weighted-pistol','Squat','ELITE','Weighted pistol squats','',{unilateral:true,config:'load',provisional:true,short:'Weighted pistols',eq:['Added weight'],eqPending:'Type of weight not yet chosen by the owner'}),
-  D('pull-1-inverted-bent','Pull',1,'Inverted rows','Bent-knee',{...P,short:'Bent-knee rows',eq:['Gymnastic rings (waist height)']}),
-  D('pull-2-inverted-straight','Pull',2,'Inverted rows','Straight-leg',{...P,short:'Straight-leg rows',eq:['Gymnastic rings (waist height)']}),
-  D('pull-3-assisted','Pull',3,'Assisted pull-ups','',{...P,config:'assist',eq:['Pull-up bar','Assistance (band)'],eqPending:'Assistance type is recorded per workout'}),
+  D('squat-elite-weighted-pistol','Squat','ELITE','Weighted pistol squats','',{unilateral:true,config:'load',provisional:true,short:'Weighted pistols',eq:['Weight vest']}),
+  D('pull-1-inverted-bent','Pull',1,'Inverted rows','Bent-knee',{...P,short:'Bent-knee rows',eq:['Rings, waist height']}),
+  D('pull-2-inverted-straight','Pull',2,'Inverted rows','Straight-leg',{...P,short:'Straight-leg rows',eq:['Rings, waist height']}),
+  D('pull-3-assisted','Pull',3,'Assisted pull-ups','',{...P,config:'assist',eq:['Pull-up bar','Band'],eqPending:'Assistance type is recorded per workout'}),
   D('pull-4-pullup','Pull',4,'Pull-ups','',{...P,eq:['Pull-up bar']}),
-  D('pull-5-ring-pullup','Pull',5,'Ring pull-ups','',{...P,provisional:true,eq:['Gymnastic rings']}),
-  D('pull-6-assisted-archer','Pull',6,'Assisted archer pull-ups','',{...P,unilateral:true,config:'assist',provisional:true,short:'Archer pull-ups',eq:['Pull-up bar','Assistance (band)']}),
+  D('pull-5-ring-pullup','Pull',5,'Ring pull-ups','',{...P,provisional:true,eq:['Rings']}),
+  D('pull-6-assisted-archer','Pull',6,'Assisted archer pull-ups','',{...P,unilateral:true,config:'assist',provisional:true,short:'Archer pull-ups',eq:['Pull-up bar','Band']}),
   D('pull-elite-muscle-up','Pull','ELITE','Bar muscle-ups','Strict',{config:'load',short:'Muscle-ups',eq:['Pull-up bar']})
  ]);
  const BY_ID=Object.freeze(Object.fromEntries(EXERCISES.map(x=>[x.id,x])));

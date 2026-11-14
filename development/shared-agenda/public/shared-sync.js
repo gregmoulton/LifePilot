@@ -40,7 +40,7 @@ async function sharedResolve(choice){
   if(data.profile===null)throw Error('Shared copy is missing. Your local copy has not changed.');
   sharedPreserveConflict(data);
   if(choice==='cloud')await sharedAdopt(data,reviewed.local,true);
-  else if(choice==='local'){sharedRemember(data.profile,data.revision);sharedConflict=false;sharedPending=JSON.parse(JSON.stringify(profile));await sharedFlush();}
+  else if(choice==='local'){sharedRemember(data.profile,data.revision);sharedConflict=false;sharedPending=JSON.parse(JSON.stringify(profile));await sharedFlush('reviewed-replacement');}
   if(!sharedConflict){$('sharedConflictReview').hidden=true;sharedRemote=null;}
  }catch(e){sharedStatus(e.message||'Could not resolve copies. Both agendas remain available.');}
 }
@@ -89,11 +89,11 @@ async function sharedConnect(){
   else if(profile===null){if(!confirm('Load your shared agenda on this device?'))return;await sharedAdopt(data,expected);}else sharedConflictView(data);
  }catch(e){sharedStatus(e.message);}
 }
-async function sharedFlush(){
+async function sharedFlush(intent){
  if(sharedSending||sharedConflict||sharedPending===null||sharedRevision===null)return;
  sharedSending=true;const snapshot=sharedPending,revision=sharedRevision;sharedStatus('Saved locally · syncing…');
  try{
-  const r=await sharedFetch(sharedEndpoint,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,profile:snapshot})});
+  const r=await sharedFetch(sharedEndpoint,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,profile:snapshot,intent})});
   if(r.status===409){sharedConflict=true;sharedStatus('Saved locally · another device changed the agenda.');try{sharedConflictView(await sharedRead());}catch{$('sharedRetry').hidden=false;}return;}
   if(!r.ok)throw Error();const receipt=await r.json();if(receipt.revision!==revision+1)throw Error();if(sharedRevision!==revision)return;const remembered=sharedRemember(snapshot,receipt.revision);
   if(sharedPending===snapshot)sharedPending=null;

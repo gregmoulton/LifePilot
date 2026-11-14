@@ -11,3 +11,33 @@ test('oversized and failed requests never claim cloud save',async()=>{const {db}
 test('sandbox sync never modifies the owner real shared agenda',async()=>{const {db}=setup();await sharedProfile(req('PUT',{revision:0,profile:p}),db,valid);const q=req('PUT',{revision:0,profile:{goals:[],qa:true}});const sandbox=new Request(q.url+'?sandbox=1',q);assert.equal((await sharedProfile(sandbox,db,valid)).status,200);assert.deepEqual((await (await sharedProfile(req(),db,valid)).json()).profile,p);});
 
 test('goal/program/milestone task links and context audit survive shared save, restart and backup',async()=>{const {db,sql}=setup(),linked={goals:[{id:'g',name:'Fictional goal'}],execution:{programs:[{id:'p',name:'Fictional program',goal_id:'g'}],milestones:[{id:'m',name:'Fictional milestone',goal_id:'g',program_id:'p'}],tasks:[{id:'t',name:'Fictional task',goal_id:'g',program_id:'p',milestone_id:'m',unknown:8}]},agenda:{version:1,events:[{type:'context_changed',task_id:'t',context:{goal_id:'g',program_id:'p',milestone_id:'m'}}],proposals:[],rejections:[]}};assert.equal((await sharedProfile(req('PUT',{revision:0,profile:linked}),db,valid)).status,200);assert.deepEqual((await (await sharedProfile(req(),db,valid)).json()).profile,linked);const changed=JSON.parse(JSON.stringify(linked));delete changed.execution.tasks[0].milestone_id;assert.equal((await sharedProfile(req('PUT',{revision:1,profile:changed}),db,valid)).status,200);assert.deepEqual(JSON.parse(sql.prepare('SELECT previous_payload FROM shared_profiles').get().previous_payload),linked)});
+
+test('blank sync preserves the exact active row and backup until a current revision is explicitly replaced', async () => {
+ const {db,sql}=setup();
+ const fixture=JSON.parse(readFileSync(new URL('./fixtures/fictional-legacy-v04.json',import.meta.url),'utf8'));
+ const put=(revision,profile,intent)=>sharedProfile(req('PUT',{revision,profile,intent}),db,valid);
+ const row=()=>sql.prepare('SELECT * FROM shared_profiles').get();
+ assert.equal((await put(0,fixture)).status,200);
+ assert.equal((await put(1,{...fixture,label:'Fictional edit'})).status,200);
+ const before=row();
+ for (const blank of [{goals:[]},{goals:[],decision_register:[],execution:{tasks:[]},label:'Empty draft'}]) {
+  assert.equal((await put(2,blank)).status,409);
+  assert.deepEqual(row(),before);
+ }
+ assert.equal((await put(2,{goals:[]},'restore')).status,400);
+ assert.equal((await put(1,{goals:[]},'reviewed-replacement')).status,409);
+ assert.deepEqual(row(),before);
+ assert.equal((await put(2,{goals:[]},'reviewed-replacement')).status,200);
+ assert.equal(row().revision,3);
+ assert.equal(row().previous_payload,before.payload);
+ assert.deepEqual(JSON.parse(row().payload),{goals:[]});
+ assert.equal((await put(3,{goals:[],label:'Fictional empty profile edit'})).status,200);
+});
+
+test('task-only profiles are protected against an empty sync', async () => {
+ const {db,sql}=setup();
+ assert.equal((await sharedProfile(req('PUT',{revision:0,profile:p}),db,valid)).status,200);
+ const before=sql.prepare('SELECT * FROM shared_profiles').get();
+ assert.equal((await sharedProfile(req('PUT',{revision:1,profile:{goals:[]}}),db,valid)).status,409);
+ assert.deepEqual(sql.prepare('SELECT * FROM shared_profiles').get(),before);
+});

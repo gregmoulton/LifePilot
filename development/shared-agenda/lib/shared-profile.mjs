@@ -1,5 +1,14 @@
 const MAX=1048576;
 export const response=(status,body)=>Response.json(body,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+function hasProfileRecords(profile) {
+ const collections = [
+  profile.goals, profile.decision_register, profile.system_improvement_log,
+  profile.agenda?.events, profile.agenda?.proposals, profile.agenda?.rejections,
+  ...['programs','milestones','tasks','observations','experiments','reviews'].map(key => profile.execution?.[key])
+ ];
+ return collections.some(records => Array.isArray(records) && records.length > 0);
+}
+
 // Profile storage. ownerId must come from an identity already verified by lib/verified-owner.mjs.
 // Nothing here reads identity headers.
 export async function profileForOwner(request,db,validProfile,ownerId){
@@ -19,6 +28,16 @@ export async function profileForOwner(request,db,validProfile,ownerId){
   const bytes=new Uint8Array(length);let offset=0;for(const p of parts){bytes.set(p,offset);offset+=p.length;}
   let body;try{body=JSON.parse(new TextDecoder().decode(bytes));}catch{return response(400,{error:'Invalid JSON'});}
   if(!body||!Number.isSafeInteger(body.revision)||body.revision<0||!validProfile(body.profile))return response(400,{error:'Invalid profile or revision'});
+  if(body.intent!==undefined && (body.intent!=='reviewed-replacement'||body.revision===0)){
+   return response(400,{error:'Invalid replacement intent or revision'});
+  }
+  if(body.revision>0 && !body.intent && !hasProfileRecords(body.profile)){
+   const current=await db.prepare('SELECT revision,payload FROM shared_profiles WHERE owner_id=?').bind(owner).first();
+   if(current?.revision===body.revision && hasProfileRecords(JSON.parse(current.payload))){
+    return response(409,{error:'An empty sync would replace a populated profile. Review both copies before continuing.'});
+   }
+  }
+  // The update still compares revisions atomically after any retention read.
   const payload=JSON.stringify(body.profile),at=new Date().toISOString();
   const result=body.revision===0
    ?await db.prepare('INSERT INTO shared_profiles(owner_id,revision,payload,updated_at) VALUES(?,1,?,?) ON CONFLICT(owner_id) DO NOTHING').bind(owner,payload,at).run()

@@ -139,15 +139,20 @@ test('browser-branded timer allows voice auto-reconnect without Illegal invocati
  voice.start();r.onend();
  a.equal(scheduled,1);voice.stop();a.equal(cancelled,1);
 });
-test('owner #115: exercise-qualified voice phrases parse to the right exercise',()=>{
+test('owner #115/#122: voice needs exercise + number + "reps"; corrections likewise; a bare exercise asks for the number',()=>{
  const D=require('../dist/devices.js'),c=D.command,a=require('node:assert/strict');
+ a.deepEqual(c('Push, 12 reps'),{type:'reps',value:12,exercise:'Push'});
  a.deepEqual(c('Push done, 10 reps'),{type:'reps',value:10,exercise:'Push'});
  a.deepEqual(c('squats done four reps'),{type:'reps',value:4,exercise:'Squat'});
+ a.deepEqual(c('squat complete twenty reps'),{type:'reps',value:20,exercise:'Squat'});
  a.deepEqual(c('pull eight reps'),{type:'reps',value:8,exercise:'Pull'});
- a.deepEqual(c('correct squats to six'),{type:'correct',value:6,exercise:'Squat'});
- a.deepEqual(c('change push to 10'),{type:'correct',value:10,exercise:'Push'});
+ a.deepEqual(c('Correct Push, 11 reps'),{type:'correct',value:11,exercise:'Push'});
+ a.deepEqual(c('correct squats to six reps'),{type:'correct',value:6,exercise:'Squat'});
+ a.deepEqual(c('change push to 10 reps'),{type:'correct',value:10,exercise:'Push'});
+ a.deepEqual(c('pull completed 8'),{type:'needreps',exercise:'Pull'},'no "reps": ask, never guess');
+ a.deepEqual(c('push done'),{type:'needreps',exercise:'Push'});a.deepEqual(c('correct push to 10'),{type:'needreps',exercise:'Push'});
+ a.deepEqual(c('hold'),{type:'hold'});
  a.deepEqual(c('read back my round'),{type:'readback'});a.deepEqual(c('undo last entry'),{type:'undo'});
- a.deepEqual(c('twelve reps'),{type:'reps',value:12},'unqualified entry unchanged');
- a.deepEqual(c('squat complete twenty reps'),{type:'reps',value:20,exercise:'Squat'},'complete works like done');a.deepEqual(c('pull completed 8'),{type:'reps',value:8,exercise:'Pull'});
- a.equal(c('pull done banana'),null);
+ a.deepEqual(c('twelve reps'),{type:'reps',value:12},'parsed, but the app asks for the exercise');
+ a.equal(c('pull done banana reps'),null);
 });

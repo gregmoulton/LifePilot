@@ -6,10 +6,11 @@ const PureLocalVoiceEngine = (() => {
  const teens=['ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
  const tens=['twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
  const counts=[...units,...teens,...tens.flatMap(n=>[n,...units.slice(1).map(u=>n+' '+u)])];
- // Owner #115 (Nov 13): exercise-qualified entries and corrections, so a skipped exercise can never swallow the next count.
+ // Owner #115/#122: 'Push, 12 reps' / 'Correct Push, 11 reps' — exercise + number + 'reps', so ambient speech and a skipped
+ // exercise can never become a count. Bare 'push done' is recognized only so the app can ask for the number.
  const cats=['push','squat','squats','pull'],small=counts.slice(0,61);
  const grammar=JSON.stringify([...counts.map(n=>n+' reps'),
-  ...cats.flatMap(c=>small.flatMap(n=>[c+' '+n+' reps',c+' done '+n+' reps',c+' done '+n,c+' complete '+n+' reps',c+' complete '+n,'correct '+c+' to '+n,'change '+c+' to '+n])),
+  ...cats.flatMap(c=>small.flatMap(n=>[c+' '+n+' reps',c+' done '+n+' reps',c+' complete '+n+' reps','correct '+c+' '+n+' reps','correct '+c+' to '+n+' reps','change '+c+' to '+n+' reps'])),'hold','hold recovery',...cats.map(c=>c+' done'),...cats.map(c=>c+' complete'),
   'undo last entry','undo','read back my round','read back','[unk]']);
  class Voice {
   constructor({onState,onError,onText}){Object.assign(this,{onState,onError,onText});this.wanted=false;this.running=false;this.listening=false;this.attempts=0;}

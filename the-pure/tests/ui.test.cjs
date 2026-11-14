@@ -580,7 +580,7 @@ test('owner #115 blocker: exercise-qualified voice — a skipped squat never swa
  r.hears('pull done eight reps');
  assert.equal(r.read('db.active.records.length'),1,'pull is NOT recorded as squat');
  assert.match(r.node('voiceStatus').textContent,/Squat reps not recorded yet/);assert.match(r.node('voiceStatus').textContent,/Pull 8 is held/);
- r.hears('squat complete twenty reps');assert.equal(r.read('db.active.records[1].exercise'),'Squat');assert.ok(!r.spoken.some(t=>/Squat, 20/.test(t)),'owner: quiet on normal saves');assert.ok(r.spoken.some(t=>/Squat reps not recorded/.test(t)),'exception IS spoken even with the coach voice off');assert.equal(r.read('db.active.records[1].reps'),20);
+ r.hears('squat complete twenty reps');assert.equal(r.read('db.active.records[1].exercise'),'Squat');assert.ok(r.spoken.some(t=>/Squat, 20 reps. Saved/.test(t)),'owner #122: accepted entries are confirmed aloud after the save');assert.ok(r.spoken.some(t=>/Squat reps not recorded/.test(t)),'exception IS spoken even with the coach voice off');assert.equal(r.read('db.active.records[1].reps'),20);
  r.time(6000);r.tick();
  assert.equal(r.read('db.active.records.length'),3,'held pull saved once Pull starts');assert.equal(r.read('db.active.records[2].exercise'),'Pull');assert.equal(r.read('db.active.records[2].reps'),8);
  r.tick();assert.equal(r.read('db.active.records.length'),3,'no duplicate');
@@ -590,10 +590,10 @@ test('owner #115 blocker: exercise-specific corrections, already-recorded guard,
  say('push zero reps');assert.equal(r.read('db.active.records[0].reps'),0,'zero is recorded, not treated as missing');
  say('squat done twenty reps');
  say('push done twelve reps');assert.equal(r.read('db.active.records[0].reps'),0,'already recorded: no silent overwrite');assert.match(r.node('voiceStatus').textContent,/already recorded as 0/);
- say('correct push to twelve');assert.equal(r.read('db.active.records[0].reps'),12);assert.equal(r.read('db.active.records[1].reps'),20,'only Push changed');
+ say('correct push twelve reps');assert.equal(r.read('db.active.records[0].reps'),12);assert.equal(r.read('db.active.records[1].reps'),20,'only Push changed');
  assert.ok(r.read('db.active.events.some(e=>e.event==="rep-correction"&&e.after.reps===12)'),'audit trail');
- say('change squats to eighteen');assert.equal(r.read('db.active.records[1].reps'),18);
- say('correct pull to five');assert.match(r.node('voiceStatus').textContent,/Pull has no reps recorded yet/);assert.equal(r.read('db.active.records.length'),2);
+ say('change squats to eighteen reps');assert.equal(r.read('db.active.records[1].reps'),18);
+ say('correct pull five reps');assert.match(r.node('voiceStatus').textContent,/Pull has no reps recorded yet/);assert.equal(r.read('db.active.records.length'),2);
  say('read back my round');assert.match(r.node('voiceStatus').textContent,/Round one: Push 12, Squat 18, Pull not recorded/);
 });
 test('owner Nov 13: an implausible count ("80" heard for 8) is held for confirmation and spoken; the right number replaces it',()=>{
@@ -645,4 +645,10 @@ test('owner-approved step (c): baseline, live % of max/zone/peak, Results HR pan
  r.click('finishCooldown');
  assert.equal(r.read('db.settings.hrMaxObserved.bpm'),180,'sustained 180 replaces the 170 age estimate');
  const html=r.node('hrResults').innerHTML;assert.match(html,/Pre-workout baseline<\/span><b>73 BPM/);assert.match(html,/Peak<\/span><b>180 BPM · 100% of max/);assert.match(html,/measured in your workouts/);
+});
+test('owner #122: a bare "push done" or a count without "reps" never saves — it asks',()=>{
+ const r=runtime({devices:true,autoCountdown:false});r.click('start');r.time(6000);r.tick();r.click('talk');
+ r.hears('push done');assert.equal(r.read('db.active.records.length'),0);assert.match(r.node('voiceStatus').textContent,/Say the number and “reps”/);
+ r.hears('push done twelve');assert.equal(r.read('db.active.records.length'),0,'no "reps": nothing saved');
+ r.hears('push twelve reps');assert.equal(r.read('db.active.records[0].reps'),12);assert.ok(r.spoken.some(t=>/Push, 12 reps. Saved/.test(t)));
 });

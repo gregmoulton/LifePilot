@@ -236,6 +236,39 @@ class SignedInSharedSync(unittest.TestCase):
             self.assertEqual(result["due"], "2020-01-02")
             self.assertEqual(result["status"], "completed")
 
+    def test_empty_backup_requires_review_before_replacing_shared_profile(self):
+        harness = Harness()
+        self.addCleanup(harness.stop)
+        page, _ = self.device(harness)
+        self.start_fresh(page)
+        self.add_task(page, "Fictional task before restore")
+        page.locator("#sharedConnect").click()
+        self.status(page, "Synced · revision 1")
+        owner_id = "google:fictional-owner-sub-1001"
+        before = next(row for row in harness.control("/__test/rows") if row["owner_id"] == owner_id)
+
+        await_restore = """() => restoreLocalBackup(new File(
+            [JSON.stringify({goals: []})], 'fictional-backup.json',
+            {type: 'application/json'}))"""
+        page.evaluate(await_restore)
+        self.status(page, "Both copies are safe")
+        task_names = lambda row: [
+            task["name"] for task in json.loads(row["payload"])["execution"]["tasks"]
+        ]
+        current = next(row for row in harness.control("/__test/rows") if row["owner_id"] == owner_id)
+        self.assertEqual(current, before)
+        self.assertEqual(task_names(current), ["Fictional task before restore"])
+        local_recovery = page.evaluate("k => localStorage.getItem(k + ':recovery-original')", KEY)
+        self.assertEqual(json.loads(local_recovery), json.loads(before["payload"]))
+
+        page.get_by_role("button", name="Keep this device’s copy", exact=True).click()
+        self.status(page, "Synced · revision 2")
+        restored = next(row for row in harness.control("/__test/rows") if row["owner_id"] == owner_id)
+        self.assertEqual(json.loads(restored["payload"])["goals"], [])
+        self.assertEqual(restored["previous_payload"], before["payload"])
+        page.reload()
+        self.status(page, "Synced · revision 2")
+
     # ---- negative cases: nothing is written, local data is kept ----
     def refused_connect(self, mode, pattern):
         before = self.rows()

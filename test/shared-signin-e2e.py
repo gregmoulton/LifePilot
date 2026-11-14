@@ -81,7 +81,7 @@ class SignedInSharedSync(unittest.TestCase):
 
     def device(self, harness=None, clock=False, viewport=None):
         harness = harness or self.harness
-        context = self.browser.new_context(timezone_id="America/Phoenix", viewport=viewport)
+        context = self.browser.new_context(timezone_id="America/Phoenix", viewport=viewport or {"width": 1280, "height": 720})
         blocked, gis = [], []
 
         def block(route):
@@ -106,7 +106,7 @@ class SignedInSharedSync(unittest.TestCase):
         page = context.new_page()
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.on("dialog", lambda d: d.accept())
+        page.on("dialog", lambda d: d.accept("0") if d.type == "prompt" else d.accept())
         if clock:
             page.clock.install()
         page.goto(ORIGIN + "/")

@@ -11,7 +11,9 @@ const PureLocalVoiceEngine = (() => {
  const cats=['push','squat','squats','pull'],small=counts.slice(0,61);
  const grammar=JSON.stringify([...counts.map(n=>n+' reps'),
   ...cats.flatMap(c=>small.flatMap(n=>[c+' '+n+' reps',c+' done '+n+' reps',c+' complete '+n+' reps','correct '+c+' '+n+' reps','correct '+c+' to '+n+' reps','change '+c+' to '+n+' reps'])),'hold','hold recovery',...cats.map(c=>c+' done'),...cats.map(c=>c+' complete'),
-  'undo last entry','undo','read back my round','read back','[unk]']);
+  'undo last entry','undo','read back my round','read back',
+  // Answers to the app's own questions (owner Nov 14: "confirm" was not in the grammar, so it could never be heard).
+  'confirm','confirmed','yes','yes confirm','keep it','cancel','[unk]']);
  class Voice {
   constructor({onState,onError,onText}){Object.assign(this,{onState,onError,onText});this.wanted=false;this.running=false;this.listening=false;this.attempts=0;}
   preload(){

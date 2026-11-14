@@ -138,3 +138,50 @@ body .workout-panel.immersive,body.workout-mode .workout-panel.immersive{positio
 .edit-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
 .edit-row span{font-size:15px}.edit-row input{width:88px;min-height:44px;font-size:22px;text-align:center}
 #editRepsNote:empty{display:none}
+/* ===== Owner #117 (Nov 14): Ready screen — three prominent exercise cards in workout order ===== */
+.workout-panel.ready-view .station-fields{display:none!important}
+.workout-panel.ready-view .station-row{display:flex;align-items:center;gap:14px;min-height:112px;padding:10px 12px 10px 10px}
+.workout-panel.ready-view .station-row::before{width:92px!important;height:92px!important;flex:none;border-radius:14px;background:var(--move-image) center/cover no-repeat,#0b1324}
+.workout-panel.ready-view .station-label{display:flex;flex-direction:column;gap:3px;min-width:0}
+.workout-panel.ready-view .station-label strong{font-size:21px;line-height:1.15}
+.workout-panel.ready-view [id^=stationVariant]{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.workout-panel.ready-view .station-row[data-move=Push] [id^=stationVariant]{color:#ff7a5c}
+.workout-panel.ready-view .station-row[data-move=Squat] [id^=stationVariant]{color:#5cf08a}
+.workout-panel.ready-view .station-row[data-move=Pull] [id^=stationVariant]{color:#cf86ff}
+.station-equip{font-size:13px;color:#c9d6e6}
+.workout-panel.ready-view .previous-max{font-size:12.5px;color:#8fa1b6}
+.new-badge{align-self:flex-start;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.14em;color:#04121f;background:#7fe9ff;box-shadow:0 0 12px rgba(127,233,255,.6)}
+.new-badge.hidden{display:none}
+.ready-link{min-height:36px;padding:4px 12px;border-radius:10px;border:1px solid rgba(127,233,255,.35);background:transparent;color:#bfefff;font-size:13px;font-weight:700;letter-spacing:.04em}
+.ready-link.hidden{display:none}
+.ready-sequence{display:flex;align-items:center;justify-content:space-between}
+.ready-chip{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:3px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.14);font-size:12px;color:#b8c7da}
+.ready-chip::before{content:"";width:7px;height:7px;border-radius:50%;background:#7fe9ff}
+.ready-chip.warn{color:#ffc9a8;border-color:rgba(255,150,100,.45)}.ready-chip.warn::before{background:#ff8a50}
+.ready-chip.hidden{display:none}
+/* Primary Start: electric cyan neon; Practice: restrained secondary */
+.workout-panel.ready-view #start{box-shadow:0 0 0 1px rgba(127,233,255,.55),0 0 18px rgba(0,200,255,.55),0 0 42px rgba(0,140,255,.35),inset 0 1px 0 rgba(255,255,255,.35)}
+.practice-start{margin-top:8px;min-height:44px;width:100%;background:transparent!important;border:1px solid rgba(255,255,255,.18)!important;color:#c9d6e6!important;font-weight:700}
+.practice-start small{font-weight:500;color:#8fa1b6}
+.practice-start.hidden{display:none}
+/* Exercise order sheet */
+.reorder-list{list-style:none;margin:12px 0;padding:0;display:grid;gap:8px}
+.reorder-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);border-left:4px solid}
+.reorder-list li.q-push{border-left-color:#FF5638}.reorder-list li.q-squat{border-left-color:#39E66B}.reorder-list li.q-pull{border-left-color:#B64DFF}
+.reorder-list li b{margin-right:6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.reorder-btns{display:flex;gap:6px}.reorder-btns button{width:44px;height:44px;border-radius:10px;font-size:16px}
+.workout-panel .practice-start{order:3}
+.workout-panel.ready-view #start{margin-bottom:0}
+@media (max-height:860px){
+ .workout-panel.ready-view .station-row{min-height:90px;gap:12px;padding:7px 10px 7px 8px}
+ .workout-panel.ready-view .station-row::before{width:74px!important;height:74px!important}
+ .workout-panel.ready-view .station-label strong{font-size:18px}
+ .workout-panel.ready-view .station-label{gap:1px}
+ .practice-start{min-height:40px;margin-top:6px}
+}
+@media (max-height:700px){
+ .workout-panel.ready-view .station-row{min-height:78px}
+ .workout-panel.ready-view .station-row::before{width:64px!important;height:64px!important}
+ .workout-panel.ready-view .previous-max{display:none}
+ .workout-panel.ready-view .ready-chip{margin-top:2px;font-size:11px}
+}

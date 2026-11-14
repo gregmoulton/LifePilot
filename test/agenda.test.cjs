@@ -128,3 +128,31 @@ test('standalone tasks get no invented context and missing task parents stay exp
  const p=profile([task('standalone')]);assert.equal(agenda.taskContext(p,p.execution.tasks[0]),null);
  p.execution.programs=[{id:'p',goal_id:'goal',name:'Program'}];const c=agenda.taskContext(p,task('partial',{program_id:'p'}));assert.equal(c.goal,null);assert(c.issues.includes('Task has no goal link'));
 });
+
+for (const [surface, model] of [
+ ['local', agenda],
+ ['shared', require('../development/shared-agenda/public/agenda-model.js')]
+]) {
+ test(`${surface} Today progress derives from saved tasks and rolls over by local day`, () => {
+  const p = profile([
+   task('today'),
+   task('overdue', {due:'2026-10-23'}),
+   task('future', {due:'2026-10-27'}),
+   task('hold', {agenda_hold:true}),
+   task('undated', {due:''}),
+   task('legacy', {status:'done'}),
+   task('prior', {status:'completed', recorded_at:new Date(2026, 9, 23, 23, 59).toISOString()})
+  ]);
+  assert.deepEqual(model.projection(p, now).progress, {active:2, overdue:1, completed:0, total:2});
+
+  const saved = model.apply(p, {type:'complete', task_id:'overdue', minutes:0}, now);
+  const reloaded = JSON.parse(JSON.stringify(saved));
+  const view = model.projection(reloaded, now);
+  assert.deepEqual(view.progress, {active:1, overdue:0, completed:1, total:2});
+  assert.equal(view.completed.find(t => t.id === 'overdue').due, '2026-10-23');
+  assert.deepEqual(model.projection(reloaded, new Date(2026, 9, 25)).progress,
+   {active:1, overdue:1, completed:0, total:1});
+  assert.deepEqual(model.projection(profile(), now).progress,
+   {active:0, overdue:0, completed:0, total:0});
+ });
+}

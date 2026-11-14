@@ -55,14 +55,24 @@ Appears as soon as the last Round 2 count saves. The workout is already saved; h
 
 Full scrolling pages: [3a during cooldown](3a-cooldown-results-full.jpg) · [3b final](3b-results-final-full.jpg)
 
+The reps table shows Round 1, Round 2 and the 70% goal (✓ met / ✗ missed; — until there's an earlier best).
+
 **Then:** reopening the app goes back to Ready.
 
 <img src="1e-ready-after-workout.jpg" width="250">
 
 ---
 
+## Other tabs
+
+| 4a · History | 4b · More (Backup, Ladder, Heart rate age, Sound mix) |
+|---|---|
+| <img src="4a-history.jpg" width="250"> | <img src="4b-more.jpg" width="250"> |
+
+---
+
 ### Known gaps (honest list)
-- **Results:** layout is still waiting on Chat's audit. "Workout Complete" appears twice, and the round reps are behind a collapsed "Exercise performance".
+- **Results:** reworked in the sprint (one title, reps and 70% goal up front). It's still open to Chat's audit.
 - **Art:** only 3 of the 21 exercise images are final. The big workout image is a small file, so it looks soft.
 - **Mic marker:** the "Mic …" in these shots is the simulated voice. On the phone it shows the real state.
 - **Not yet checked on a real Android phone:** microphone, heart-rate strap, voice volume over music.

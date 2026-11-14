@@ -308,3 +308,50 @@ body .workout-panel.ready-view[data-stage="ready"] .station-label strong{display
 
 @media (max-width:379px){body .workout-panel.ready-view[data-stage="ready"] .ready-chip{display:none}}
 .workout-panel.immersive .ready-sequence,.workout-panel:not(.ready-view) .ready-sequence{display:none!important}
+/* ===== Results (sprint, Nov 14): one title, reps + 70% goal up front, cooldown first while it runs ===== */
+.results-sub{margin:2px 0 0;font-size:13px;color:#9fdcff;text-align:center;letter-spacing:.04em}
+.results-hero h2{margin-bottom:0}
+#savedReceipt.quiet-head #savedTitle,#savedReceipt.quiet-head #savedDetails,#savedReceipt.quiet-head .summary-progress{display:none}
+#savedReceipt.quiet-head .summary-heading{padding-bottom:0;margin-bottom:0}
+#savedReceipt{display:flex;flex-direction:column}
+#savedReceipt .summary-heading{order:0}#savedReceipt #premiumSummary{order:1}#savedReceipt #ladderReceiptBanner{order:2}#savedReceipt #gradePanel{order:3}#savedReceipt #hrResults{order:4}#savedReceipt .summary-details{order:5}#savedReceipt .summary-actions{order:6}
+.results-reps table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.results-reps th,.results-reps td{padding:9px 6px;border-bottom:1px solid rgba(255,255,255,.07);text-align:center;font-size:15px}
+.results-reps thead th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8fa1b6;font-weight:700}
+.results-reps tbody th{text-align:left;font-weight:700;color:#fff;border-left:3px solid #2fd3ff;padding-left:9px}
+.results-reps tbody th small{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
+.results-reps tr.cat-push th{border-left-color:#ff3b2f}.results-reps tr.cat-push th small{color:#ff7a5c}
+.results-reps tr.cat-squat th{border-left-color:#2ee65a}.results-reps tr.cat-squat th small{color:#5cf08a}
+.results-reps tr.cat-pull th{border-left-color:#c13bff}.results-reps tr.cat-pull th small{color:#cf86ff}
+.results-reps td{font-size:20px;font-weight:800;color:#fff}
+.results-reps td.goal-met{color:#3df07a}.results-reps td.goal-miss{color:#ff8a6a}.results-reps td.goal-none,.results-reps td.goal-wait{color:#8fa1b6}
+.results-reps .summary-muted{font-size:12px;margin-top:8px}
+/* Grade card: compact */
+#gradePanel{font-size:14px}#gradePanel li{margin:2px 0}
+/* Cooldown on top while it runs: live BPM, timer + drop, Finish; the full HR table waits for the final Results */
+.workout-panel.ph-cooldown .workout-monitor{order:-3}
+.workout-panel.ph-cooldown #recovery{order:-2;padding:14px;margin-bottom:12px}
+.workout-panel.ph-cooldown #liveCooldownSummary{order:-1}
+.workout-panel.ph-cooldown #hrCooldown,.workout-panel.ph-cooldown #monitorDetails,.workout-panel.ph-cooldown #modeBanner{display:none!important}
+.workout-panel.ph-cooldown #cooldownTime{font-size:clamp(24px,7vw,32px);line-height:1.15;margin:4px 0 8px}
+.workout-panel.ph-cooldown #hrSpark{height:56px}
+.workout-panel.ph-cooldown #finishCooldown{min-height:48px}
+.workout-panel.ph-cooldown #recoveryTime,.workout-panel.ph-cooldown #cooldownTime{font-size:clamp(22px,6.4vw,30px)!important;line-height:1.15}
+/* History + More (sprint): same wordmark header as the Ready screen, no developer text */
+body:not(.workout-mode) .topbar .mobile-brand{display:block;width:150px;height:36px;font-size:0;color:transparent;background:url('ready-wordmark.webp') left center/contain no-repeat}
+body:not(.workout-mode) .topbar .top-label{display:none}
+section[data-view="history"] .page-head .btn,section[data-view="history"]>details{display:none}
+.hist-card{padding:14px 14px 10px}
+.hist-card .result-head h2{font-size:18px}
+.hist-card .badge.ok{background:rgba(61,240,122,.15);color:#7ff0b0;border:1px solid rgba(61,240,122,.4)}
+.hist-meta{margin:4px 0 8px;color:#9fb2c8;font-size:13px}
+.hist-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.hist-table th,.hist-table td{padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.07);text-align:center}
+.hist-table thead th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8fa1b6}
+.hist-table tbody th{text-align:left;font-weight:700;border-left:3px solid #2fd3ff;padding-left:9px;font-size:14px}
+.hist-table tbody th small{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
+.hist-table td{font-size:18px;font-weight:800}
+.hist-table tr.cat-push th{border-left-color:#ff3b2f}.hist-table tr.cat-push th small{color:#ff7a5c}
+.hist-table tr.cat-squat th{border-left-color:#2ee65a}.hist-table tr.cat-squat th small{color:#5cf08a}
+.hist-table tr.cat-pull th{border-left-color:#c13bff}.hist-table tr.cat-pull th small{color:#cf86ff}
+.hist-table td.goal-met{color:#3df07a}.hist-table td.goal-miss{color:#ff8a6a}

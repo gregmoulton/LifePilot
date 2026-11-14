@@ -32,6 +32,16 @@ function projection(profile,now=new Date()){
  for(const t of list){const s=state(t),days=t.due?engine.daysUntil(t.due,new Date(now)):0;const blocked=!!t.prerequisite_id&&state(byId.get(t.prerequisite_id)||{status:'missing'})!=='completed';const item={...copy(t),blocked,overdue:s==='open'&&days<0,agenda_context:taskContext(profile,t)};
  if(s==='completed')result.completed.push(item);else if(s==='hold'||blocked)result.hold.push(item);else if(s==='review'||!Number.isFinite(days))result.review.push(item);else if(!t.due)result.unscheduled.push(item);else result[days<=0?'today':'upcoming'].push(item);}
  for(const key of ['today','upcoming','unscheduled'])result[key].sort((a,b)=>Number(!!b.agenda_priority)-Number(!!a.agenda_priority)||({high:3,normal:2,low:1}[b.agenda_importance]||2)-({high:3,normal:2,low:1}[a.agenda_importance]||2));
+ const today = new Date(now).toDateString();
+ const completedToday = result.completed.filter(task =>
+  typeof task.recorded_at === 'string' && new Date(task.recorded_at).toDateString() === today
+ ).length;
+ result.progress = {
+  active: result.today.length,
+  overdue: result.today.filter(task => task.overdue).length,
+  completed: completedToday,
+  total: result.today.length + completedToday
+ };
  return result;
 }
 function apply(profile,command,now=new Date()){

@@ -79,9 +79,9 @@ class SignedInSharedSync(unittest.TestCase):
     def row(cls, owner):
         return cls.rows().get(owner)
 
-    def device(self, harness=None, clock=False):
+    def device(self, harness=None, clock=False, viewport=None):
         harness = harness or self.harness
-        context = self.browser.new_context(timezone_id="America/Phoenix")
+        context = self.browser.new_context(timezone_id="America/Phoenix", viewport=viewport or {"width": 1280, "height": 720})
         blocked, gis = [], []
 
         def block(route):
@@ -106,7 +106,7 @@ class SignedInSharedSync(unittest.TestCase):
         page = context.new_page()
         errors = []
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.on("dialog", lambda d: d.accept())
+        page.on("dialog", lambda d: d.accept("0") if d.type == "prompt" else d.accept())
         if clock:
             page.clock.install()
         page.goto(ORIGIN + "/")
@@ -203,6 +203,38 @@ class SignedInSharedSync(unittest.TestCase):
         self.no_token_at_rest(b)
         # The pre-upgrade row stored under the old platform identity is untouched (rollback stays possible).
         self.assertEqual(self.row("platform-user-legacy"), self.legacy_row)
+
+    def test_today_progress_survives_reload_and_syncs_to_second_screen(self):
+        harness = Harness()
+        self.addCleanup(harness.stop)
+        harness.control("/__test/mode?mode=owner")
+        phone, _ = self.device(harness, viewport={"width": 390, "height": 844})
+        self.start_fresh(phone)
+        phone.get_by_role("button", name="Today's Agenda", exact=True).click()
+        phone.get_by_text("Add a task manually", exact=True).click()
+        phone.locator("#agendaName").fill("Fictional carryover")
+        phone.locator("#agendaDue").fill("2020-01-02")
+        phone.get_by_role("button", name="Add task", exact=True).click()
+        phone.get_by_text("0 of 1 completed today · 1 active · 1 overdue", exact=True).wait_for()
+        phone.locator("#sharedConnect").click()
+        self.status(phone, "Synced · revision 1")
+        phone.get_by_role("button", name="Complete", exact=True).click()
+        self.status(phone, "Synced · revision 2")
+        phone.reload()
+        self.status(phone, "Synced · revision 2")
+
+        laptop, _ = self.device(harness, viewport={"width": 1366, "height": 768})
+        laptop.locator("#sharedConnect").click()
+        self.status(laptop, "Synced · revision 2")
+        for page in (phone, laptop):
+            page.get_by_role("button", name="Today's Agenda", exact=True).click()
+            page.get_by_text("1 of 1 completed today · 0 active · 0 overdue", exact=True).wait_for()
+            progress = page.get_by_role("progressbar", name="Today's task progress")
+            self.assertEqual(progress.get_attribute("value"), "1")
+            self.assertEqual(progress.get_attribute("max"), "1")
+            result = page.evaluate("profile.execution.tasks[0]")
+            self.assertEqual(result["due"], "2020-01-02")
+            self.assertEqual(result["status"], "completed")
 
     # ---- negative cases: nothing is written, local data is kept ----
     def refused_connect(self, mode, pattern):

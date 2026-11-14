@@ -71,3 +71,70 @@ body.session-active main{padding-bottom:calc(24px + env(safe-area-inset-bottom))
 .hr-panel{margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--panel2)}.hr-panel h3{margin:0 0 6px;font-size:15px}
 .hr-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}.hr-list li{display:flex;justify-content:space-between;gap:10px;font-size:14px}.hr-list b{text-align:right}.hr-list small{color:var(--muted);font-weight:500}
 .hr-note,.hr-missing{margin:6px 0 0;color:var(--muted);font-size:12px}
+/* ===== Owner #122: minimal Workout screen (release). One hero exercise, compact queue, tiny LIVE + mic. ===== */
+.workout-panel.immersive #pureTagline,.workout-panel.immersive .ready-banner,.workout-panel.immersive #sessionTimer,.workout-panel.immersive #instruction,.workout-panel.immersive #ladderBanner,.workout-panel.immersive #focusCount,.workout-panel.immersive #focusRound,.workout-panel.immersive #liveHrMeta,.workout-panel.immersive #monitorDetails,.workout-panel.immersive #monitorStatus,.workout-panel.immersive #connectHr,.workout-panel.immersive #hrSignalAge,.workout-panel.immersive #readyTip,.workout-panel.immersive #exercise,.workout-panel.immersive #talk,.workout-panel.immersive #stopTalk,.workout-panel.immersive #voiceHint,.workout-panel.immersive #voicePrivacy,.workout-panel.immersive #voiceStatus,.workout-panel.immersive #resumeNotice:empty,.workout-panel.immersive #status{display:none!important}
+.workout-panel.immersive.hr-lost #connectHr{display:inline-flex!important}
+.workout-panel.immersive .station-row:not(.hero),.workout-panel.immersive [id^=stationVariant]{display:none!important}
+.workout-panel.immersive:not(.r2) [id^=stationPrevious]{display:none!important}
+/* Tiny LIVE / PRACTICE pill and mic dot share one quiet row with the BPM */
+.workout-panel.immersive .focus-meta{position:absolute!important;top:6px;right:8px;left:auto;display:flex;align-items:center;gap:8px;margin:0;padding:0;background:transparent;border:0;z-index:3}
+.workout-panel.immersive #modeBanner{position:absolute;top:10px;left:12px;margin:0;padding:3px 9px 3px 20px;border-width:1px;border-radius:999px;font-size:11px;letter-spacing:.12em;z-index:2}
+body .workout-panel.immersive,body.workout-mode .workout-panel.immersive{position:relative;padding-top:42px!important}
+.workout-panel.immersive #repReceipt{display:none!important}
+.workout-panel.immersive.ph-recovery #recovery .hint{display:block!important;font-size:15px;margin:6px 0 0}
+.workout-panel.immersive #modeBanner::before{content:"";position:absolute;left:8px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:currentColor;animation:pure-pulse 1.6s ease-in-out infinite}
+.workout-panel.immersive #modeBanner.practice{font-size:10px;letter-spacing:.06em}
+@keyframes pure-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+#micDot{position:relative;min-height:28px;min-width:28px;padding:3px 10px 3px 22px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:transparent;color:#9fb2c8;font-size:11px;font-weight:700;letter-spacing:.08em;z-index:2}
+#micDot::before{content:"";position:absolute;left:9px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:#5d6b7c}
+#micDot.on{color:#7ff0b0;border-color:rgba(127,240,176,.45)}#micDot.on::before{background:#3fe08a;animation:pure-pulse 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){#micDot.on::before,.workout-panel.immersive #modeBanner::before,.rest-figure{animation:none!important}}
+/* Compact Push / Squat / Pull queue */
+.queue{margin:2px 0 10px}.queue-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+#queueRound{font-size:12px;font-weight:800;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-transform:uppercase;color:#cfe3ff;margin:0}
+#editRepsOpen{flex:none;white-space:nowrap;min-height:36px;padding:6px 12px;font-size:13px;border-radius:10px}
+#queueList{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#queueList li{display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 4px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);min-width:0}
+#queueList li span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9fb2c8}
+#queueList li b{font-size:17px;line-height:1.2;min-height:20px;color:#e9f2ff}
+#queueList li small{font-size:10px;color:#7d8da0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#queueList li.done{border-color:rgba(63,191,127,.45)}#queueList li.done b{color:#7ff0b0}
+#queueList li.current{border:2px solid #3fe08a;background:rgba(63,224,138,.12)}#queueList li.current span,#queueList li.current b{color:#7ff0b0}
+#queueList li.pending{opacity:.6}
+/* One large current exercise */
+.workout-panel.immersive .station-row.hero{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:0 0 14px;border-radius:18px;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%,rgba(80,140,255,.16),rgba(8,14,28,.9) 70%)}
+.workout-panel.immersive .station-row.hero::before{width:100%!important;height:clamp(200px,58vw,300px);align-self:center;background:var(--move-image) center/contain no-repeat}
+.workout-panel.immersive .station-row.hero .station-label{padding:0 16px;text-align:center}
+.workout-panel.immersive .station-row.hero .station-label strong{font-size:clamp(24px,7.4vw,32px);line-height:1.1}
+.workout-panel.immersive .station-row.hero [id^=stationState]{display:none}
+.workout-panel.immersive .station-row.hero .previous-max{font-size:13px;color:#b8c7da;margin-top:4px}
+.workout-panel.immersive .station-row.hero .station-fields{justify-content:center;padding:0 16px}
+.workout-panel.immersive .station-row.hero .station-field>div{gap:14px}
+.workout-panel.immersive .station-row.hero .station-field button{width:56px;height:56px;font-size:26px;border-radius:16px}
+.workout-panel.immersive .station-row.hero .station-field input{width:96px;font-size:44px;font-weight:800;text-align:center}
+/* Live BPM stays prominent */
+.workout-panel.immersive .workout-monitor{margin:0 0 8px}
+.workout-panel.immersive .hr-live-card{justify-content:center}
+/* Actions: Pause visible; Abort / Finish behind ⋯ */
+.workout-panel.immersive #controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.workout-panel.immersive #controls:not(.show-more) #discardLive,.workout-panel.immersive #controls:not(.show-more) #saveNow,.workout-panel.immersive #controls:not(.show-more) #end{display:none!important}
+.workout-panel.immersive #controls button{flex:0 1 auto;min-height:44px;padding:8px 16px;font-size:14px}
+#moreActions{min-width:52px;font-size:20px;letter-spacing:.1em}
+.workout-panel:not(.immersive) #moreActions{display:none}
+/* Recovery Interval: rest, BPM, 110 target, elapsed count-up timer, Hold */
+.workout-panel.immersive.ph-recovery #stationRows,.workout-panel.immersive.ph-recovery #voicePanel,.workout-panel.immersive.ph-recovery #recoverySignal,.workout-panel.immersive.ph-recovery #recover{display:none!important}
+.workout-panel.immersive.ph-recovery #recovery{text-align:center;padding:18px 12px;border-radius:18px;background:radial-gradient(100% 70% at 50% 20%,rgba(80,140,255,.14),rgba(8,14,28,.85) 75%)}
+.recovery-rest{display:flex;flex-direction:column;align-items:center;gap:10px}
+.rest-figure{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(120,196,255,.35),rgba(120,196,255,.05) 62%,transparent 70%);animation:pure-breathe 8s ease-in-out infinite}
+@keyframes pure-breathe{0%,100%{transform:scale(.82);opacity:.65}50%{transform:scale(1);opacity:1}}
+.rest-words{margin:0;font-size:15px;letter-spacing:.14em;color:#b8c7da}
+#holdRecovery{min-height:40px;padding:6px 18px;font-size:13px}
+.workout-panel.immersive.ph-recovery #recoveryTime{font-size:clamp(44px,14vw,64px);font-weight:800;margin:8px 0 0;color:#e9f2ff;font-variant-numeric:tabular-nums}
+.workout-panel.immersive.ph-recovery #recovery .hint{font-size:14px;color:#9fb2c8}
+/* Edit Reps overlay */
+.edit-reps{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:rgba(2,6,14,.72)}
+.edit-reps.hidden{display:none}
+.edit-reps>div{width:min(520px,100%);max-height:88vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-radius:20px 20px 0 0;background:#0d1729;border-top:1px solid rgba(255,255,255,.12)}
+.edit-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.edit-row span{font-size:15px}.edit-row input{width:88px;min-height:44px;font-size:22px;text-align:center}
+#editRepsNote:empty{display:none}

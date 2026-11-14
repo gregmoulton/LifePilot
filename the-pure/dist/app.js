@@ -137,6 +137,10 @@ const Pure = (() => {
   a.cooldownDeadline=Date.parse(a.recoveryStarted)+300000;
   return archive(db,now,{keepMonitoring:true});
  }
+ // #122: the cooldown finishes itself once fresh Bluetooth HR has stayed at or below 100 BPM for 5 seconds.
+ function cooldownSettled(a,now,limit=100,ms=5000){if(!a?.cooldownDeadline||a.paused)return false;const s=a.hr.filter(r=>r.source==='bluetooth'&&r.recoveryStarted===a.recoveryStarted&&Date.parse(r.timestamp)>=now-ms-1000&&Date.parse(r.timestamp)<=now);
+  if(s.length<4||now-Date.parse(s.at(-1).timestamp)>3000)return false;const win=s.filter(r=>Date.parse(r.timestamp)>=now-ms);const first=Date.parse(win[0]?.timestamp);
+  return win.length>=4&&now-first>=ms-1500&&s.every(r=>Date.parse(r.timestamp)<now-ms||r.bpm<=limit)&&win.every(r=>r.bpm<=limit)}
  function finishMonitoredCooldown(db,now,early=false){
   const a=db.active;
   if(!a?.cooldownDeadline||(!early&&now<a.cooldownDeadline))return false;
@@ -159,7 +163,7 @@ const Pure = (() => {
   return true;
  }
  function restoreActive(db,active,now){if(db.active)throw Error('Save or discard the current session before restoring another.');if(!active||db.history.some(w=>w.id===active.id))throw Error('Cannot restore a missing or already archived session.');const next=copy(db);next.active=copy(active);return load({getItem:key=>key===KEY?JSON.stringify(next):null},now)}
- return {KEY,LEGACY,EX,calibrationFor,floorFor,floorRuleFor,floorsFor,refreshFloors,historicalMaximum,FLOOR_PERCENT,CALIBRATION_WORKOUTS,previousWorkout,workoutReference,validPlan,sequence,current,copy,fresh,load,start,project,reps,hr,recoveryInfo,recover,pause,resume,archive,saveAndMonitor,finishMonitoredCooldown,snapshot,advance,restoreActive,startGuided,sampleHr,countdown,tickCountdown,startHandsFree,endWorkout,observeRecovery};
+ return {cooldownSettled,KEY,LEGACY,EX,calibrationFor,floorFor,floorRuleFor,floorsFor,refreshFloors,historicalMaximum,FLOOR_PERCENT,CALIBRATION_WORKOUTS,previousWorkout,workoutReference,validPlan,sequence,current,copy,fresh,load,start,project,reps,hr,recoveryInfo,recover,pause,resume,archive,saveAndMonitor,finishMonitoredCooldown,snapshot,advance,restoreActive,startGuided,sampleHr,countdown,tickCountdown,startHandsFree,endWorkout,observeRecovery};
 })();
 if(typeof module!=='undefined')module.exports=Pure;
 if(typeof document!=='undefined'){
@@ -337,11 +341,11 @@ if(typeof document!=='undefined'){
    'Paused when the app went out of view. Resume this workout or discard this unfinished session.':pauseEvent?.event==='interrupted-restored'?
    'An unfinished workout was recovered from this device. Resume it or discard it to start fresh.':'Session: '+new Date(a.started).toLocaleString();
   $('discardPaused')?.classList.toggle('hidden',!a?.paused||!!a.cooldownDeadline||release);
-  if(release){const mb=$('modeBanner');if(mb){mb.classList.toggle('hidden',!a);mb.classList.toggle('practice',!!a?.practice);mb.classList.toggle('live',!!a&&!a.practice);mb.textContent=a?.practice?'PRACTICE — NOT RECORDED':'LIVE WORKOUT — RECORDED'}
+  if(release){const mb=$('modeBanner');if(mb){mb.classList.toggle('hidden',!a||!!a.workoutEndedAt);mb.classList.toggle('practice',!!a?.practice);mb.classList.toggle('live',!!a&&!a.practice);mb.textContent=a?.practice?'PRACTICE · not recorded':'LIVE'}
    $('end').textContent=a?.practice?'End Practice':'Finish & Save Workout';$('saveNow').textContent=a?.practice?'End practice now':'Finish & save now';
    $('discardLive')?.classList.toggle('hidden',!a||!!a.cooldownDeadline);$('readyNow')?.classList.add('hidden');if($('discardLive'))$('discardLive').textContent=a?.practice?'Abort Practice':'Abort Workout'}
    // Owner-approved 3-screen UX: no bottom navigation during a workout or its cooldown.
-   document.body?.classList?.toggle('session-active',!!a);renderLiveHr(a);showAge();if(a?.phase!=='recovery')recoveryHeld=false;
+   document.body?.classList?.toggle('session-active',!!a);renderLiveHr(a);renderImmersive(a);showAge();if(a?.phase!=='recovery')recoveryHeld=false;
    $('recover').classList.add('hidden');
    // Step (b): the workout saves itself after the final Round 2 count; the cooldown is ended only by Finish Cooldown.
    $('end').classList.add('hidden');const cooling=!!a?.workoutEndedAt;$('saveNow').classList.toggle('hidden',!a||cooling);$('pause').classList.toggle('hidden',!a||cooling)
@@ -363,7 +367,7 @@ if(typeof document!=='undefined'){
   if(a?.phase==='recovery'&&!a.finalRecovery&&!a.paused&&!dirty&&!blocked&&
      !Pure.recoveryInfo(a,now()).override&&lastRecoveryCue!==a.recoveryStarted){
    lastRecoveryCue=a.recoveryStarted;readyCueAt=now();
-   tone('ready');if(release){buzz([500,150,500,150,500]);announce('Recovery threshold reached. Prepare for the next round.')}
+   tone('ready');if(release){buzz([500,150,500,150,500]);const nx=(a.exercisePlan||[]).find(x=>x.category===Pure.EX[0]);announce('Recovered. Round two. Next: '+(nx?.name||Pure.EX[0])+'.',false,true)}
   }
   // Owner Nov 13: Round 2 starts automatically once HR has held at 110 or lower — the ready tone and long buzz are the
   // eyes-free signal, then (after 2 s) the usual 3-2-1 and go. Stale HR can never get here (recovery is held instead).
@@ -379,7 +383,7 @@ if(typeof document!=='undefined'){
   const startWithHrDecision=(reading,explicitWithoutHr=false)=>{
    if(db.active||dirty||blocked||(!reading&&!explicitWithoutHr))return;
    if(release&&!modeChosen)return;modeChosen=false;
-   unlockAudio();closeHrGate();startWorkout();
+   unlockAudio();closeHrGate();startWorkout();if(release&&db.active)speechHooks.autoMic?.()
    if(db.active&&!dirty){
     {const b=typeof PureHR!=='undefined'?PureHR.baseline(preStartHr,now()):null;if(b)change(()=>{db.active.hrBaseline=b})}
     change(()=>db.active.events.push({event:reading?'started-with-live-hr':'started-without-hr-confirmed',timestamp:new Date(now()).toISOString(),...(reading?{bpm:reading.bpm}:{}),confirmation:reading?'live-monitor':'explicit-user-override',mode:db.active.practice?'practice':'live'}));
@@ -431,7 +435,16 @@ if(typeof document!=='undefined'){
  $('saveNow').onclick=()=>finishAndSave();
  function discardUnfinished(confirmed=false){if(blocked||dirty||!db.active||db.active.cooldownDeadline)return;if(confirmed!==true&&!confirm(db.active.practice?'Discard this practice session? Nothing is recorded.':'Discard this workout? Nothing from it is saved: no history, maximums, 70% goals, ladder progress or grades. Earlier saved workouts are not touched.'))return;change(()=>{db.active=null})}
  $('discard').onclick=discardUnfinished;
- const discardPaused=$('discardPaused');if(discardPaused)discardPaused.onclick=discardUnfinished;const readyNow=$('readyNow');if(readyNow)readyNow.onclick=()=>{const a=db.active;if(!a?.countdownUntil||a.paused||dirty||blocked)return;unlockAudio();let began=false;change(()=>{a.countdownUntil=now();a.countdownRemainingMs=0;a.events.push({event:'ready-early',timestamp:new Date(now()).toISOString(),kind:a.countdownKind});began=Pure.tickCountdown(a,now())});if(began&&!dirty&&!blocked){tone('go');speechHooks.resume?.()}};const ageIn=$('ageSetting');showAge();if(ageIn)ageIn.onchange=()=>{const v=+ageIn.value;if(!Number.isInteger(v)||v<10||v>100){$('hrMaxInfo').textContent='Enter a whole-number age from 10 to 100.';return}change(()=>{db.settings={...(db.settings||{}),age:v}});showAge()};
+ const discardPaused=$('discardPaused');if(discardPaused)discardPaused.onclick=discardUnfinished;const readyNow=$('readyNow');if(readyNow)readyNow.onclick=()=>{const a=db.active;if(!a?.countdownUntil||a.paused||dirty||blocked)return;unlockAudio();let began=false;change(()=>{a.countdownUntil=now();a.countdownRemainingMs=0;a.events.push({event:'ready-early',timestamp:new Date(now()).toISOString(),kind:a.countdownKind});began=Pure.tickCountdown(a,now())});if(began&&!dirty&&!blocked){tone('go');speechHooks.resume?.()}};const ageIn=$('ageSetting');showAge();
+  if($('holdRecovery'))$('holdRecovery').onclick=()=>holdRecovery();
+  if($('moreActions'))$('moreActions').onclick=()=>{const c=$('controls'),open=!c.classList.contains('show-more');c.classList.toggle('show-more',open);$('moreActions').setAttribute?.('aria-expanded',String(open))};
+  if($('micDot'))$('micDot').onclick=()=>{const ms=speechHooks.micState?.()||{};if(ms.micOptOut||!ms.handsFree)$('talk').onclick?.();else $('stopTalk').onclick?.()};
+  const editRows=()=>{const a=db.active;if(!a)return [];return a.records.map((r,i)=>({r,i})).filter(x=>!x.r.sideReps)};
+  if($('editRepsOpen'))$('editRepsOpen').onclick=()=>{const a=db.active;if(!a)return;const rows=editRows();$('editRepsNote').textContent=rows.length?'':'No saved counts yet.';
+   $('editRepsRows').innerHTML=rows.map(({r,i})=>'<label class="edit-row"><span>'+(r.round==='maximum'?'Round 1':'Round 2')+' · '+escL(r.exercise)+'</span><input id="editRep'+i+'" type="number" inputmode="numeric" min="0" max="999" value="'+r.reps+'"></label>').join('');$('editReps').classList.remove('hidden')};
+  if($('editRepsClose'))$('editRepsClose').onclick=()=>$('editReps').classList.add('hidden');
+  if($('editRepsSave'))$('editRepsSave').onclick=()=>{const a=db.active;if(!a)return;let changed=0,bad=0;for(const {r,i} of editRows()){const el=$('editRep'+i);if(!el)continue;const v=Number(el.value);if(!Number.isInteger(v)||v<0||v>999){bad++;continue}if(v!==r.reps){correctRecord(i,String(v));if(dirty||blocked)break;changed++}}
+   $('editRepsNote').textContent=bad?'Enter whole numbers from 0 to 999.':changed?changed+' change'+(changed>1?'s':'')+' saved.':'No changes.';if(!bad&&!dirty&&!blocked)$('editReps').classList.add('hidden');render()};if(ageIn)ageIn.onchange=()=>{const v=+ageIn.value;if(!Number.isInteger(v)||v<10||v>100){$('hrMaxInfo').textContent='Enter a whole-number age from 10 to 100.';return}change(()=>{db.settings={...(db.settings||{}),age:v}});showAge()};
   const discardLive=$('discardLive');if(discardLive)discardLive.onclick=()=>discardUnfinished();
  for(const [id,field] of [['reps','reps'],['hr','hr']])$(id).addEventListener('input',()=>{if(db.active&&!blocked&&!dirty){db.active.draft[field]=$(id).value;Pure.advance(db.active,now());persist();$('notice').textContent=message;$('retry').classList.toggle('hidden',!dirty)}});
  $('sessionNotes').addEventListener('input',()=>{if(db.active&&!blocked&&!dirty){db.active.userNotes=$('sessionNotes').value.slice(0,2000);persist();$('notice').textContent=message}});
@@ -446,7 +459,7 @@ if(typeof document!=='undefined'){
  document.addEventListener('visibilitychange',()=>{if(document.hidden&&db.active&&!blocked&&!dirty){if(db.active.liveCooldown&&db.active.finalRecovery){delete db.active.recoveryWindow;persist();return}if(db.active.flowVersion!==3)delete db.active.countdownUntil;Pure.pause(db.active,now(),'page-hidden');persist();render()}});
  addEventListener('pagehide',()=>{if(db.active&&!blocked&&!dirty){if(db.active.flowVersion!==3)delete db.active.countdownUntil;Pure.pause(db.active,now(),'page-exit');persist()}});
  addEventListener('storage',e=>{if(e.key===Pure.KEY){blocked=true;message='Workout data changed in another tab. Export any unsaved work, then reload. This tab cannot overwrite it.';render()}});
- setInterval(()=>{if(db.active?.cooldownDeadline&&now()>=db.active.cooldownDeadline&&!dirty&&!blocked){change(()=>Pure.finishMonitoredCooldown(db,now()));return}if(db.active?.countdownUntil&&!dirty&&!blocked){const began=Pure.tickCountdown(db.active,now());persist();render();if(began&&!dirty&&!blocked){tone('go');speechHooks.resume?.()}else cueCountdown()}if(db.active&&!db.active.paused&&!dirty&&!blocked){Pure.advance(db.active,now());persist();$('notice').textContent=message;$('retry').classList.toggle('hidden',!dirty);if(dirty)render();else render()}},100);
+ setInterval(()=>{if(db.active?.cooldownDeadline&&!dirty&&!blocked&&Pure.cooldownSettled(db.active,now())){change(()=>{db.active.events.push({event:'cooldown-auto-finished',timestamp:new Date(now()).toISOString(),bpmLimit:100});Pure.finishMonitoredCooldown(db,now(),true)});return}if(db.active?.cooldownDeadline&&now()>=db.active.cooldownDeadline&&!dirty&&!blocked){change(()=>Pure.finishMonitoredCooldown(db,now()));return}if(db.active?.countdownUntil&&!dirty&&!blocked){const began=Pure.tickCountdown(db.active,now());persist();render();if(began&&!dirty&&!blocked){tone('go');speechHooks.resume?.()}else cueCountdown()}if(db.active&&!db.active.paused&&!dirty&&!blocked){Pure.advance(db.active,now());persist();$('notice').textContent=message;$('retry').classList.toggle('hidden',!dirty);if(dirty)render();else render()}},100);
 
 
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -543,6 +556,7 @@ if(typeof document!=='undefined'){
    };
   }
   const tryVoice=(gesture=false)=>{if(handsFree&&!document.hidden&&(repEntryOpen()||release&&!!db.active&&!db.active.paused)&&!dirty&&!blocked){try{voice.start({gesture})}catch(e){sayStatus(e.message)}}};
+  speechHooks.micState=()=>({handsFree,micOptOut,live:!!voice.listening});speechHooks.autoMic=()=>{if(!micOptOut){handsFree=true;tryVoice(true)}};
   speechHooks={arm:()=>{handsFree=!micOptOut;if(release)tryVoice(true)},stop:()=>{if(voice.running||voice.wanted||proposal)stopVoice(false)},resume:()=>tryVoice(),continue:()=>{handsFree=!micOptOut;tryVoice()}};
   $('talk').onclick=()=>{if(release)unlockAudio();micOptOut=false;handsFree=true;tryVoice(true)};
   $('stopTalk').onclick=()=>{micOptOut=true;handsFree=false;voice.stop()};
@@ -689,9 +703,22 @@ if(typeof document!=='undefined'){
  function holdRecovery(){const a=db.active;if(!a||a.phase!=='recovery'||a.finalRecovery)return;recoveryHeld=!recoveryHeld;readyCueAt=recoveryHeld?0:(lastRecoveryCue===a.recoveryStarted?now():0);change(()=>a.events.push({event:recoveryHeld?'recovery-held':'recovery-hold-released',timestamp:new Date(now()).toISOString()}));sayStatus(recoveryHeld?'Holding — Round 2 waits. Say “hold” again or tap Release when ready.':'Released — Round 2 starts when your heart rate is ready.');render()}
  function showAge(){const ageIn=$('ageSetting'),m=typeof PureHR!=='undefined'?PureHR.maxHr(db?.settings||{}):null;if(ageIn&&document.activeElement!==ageIn)ageIn.value=db?.settings?.age??'';if($('hrMaxInfo'))$('hrMaxInfo').textContent=m?'Max heart rate '+m.bpm+' BPM — '+m.label+'. It updates automatically when you sustain a higher heart rate in a workout.':'Enter your age to see % of max heart rate and zones. It stays on this phone.'}
  // Live heart rate during the workout and cooldown: % of max, zone, peak and a compact graph of the last 3 minutes.
+ // Owner-approved Workout screen (#122): one large current exercise + compact Push/Squat/Pull queue, tiny LIVE and mic
+ // indicators, no banners/analytics/countdowns; Recovery Interval shows rest, BPM, 110 target and an elapsed timer only.
+ function renderImmersive(a){const panel=document.querySelector?.('.workout-panel'),on=!!a&&!a.workoutEndedAt,rec=on&&a.phase==='recovery';
+  const lastBle=on?a.hr.findLast?.(x=>x.source==='bluetooth'):null,usedMon=!!lastBle||(on&&(a.events||[]).some(e=>e.event==='started-with-live-hr')),hrLost=usedMon&&(!lastBle||now()-Date.parse(lastBle.timestamp)>15000);
+  if(panel?.classList){panel.classList.toggle('immersive',on&&release);panel.classList.toggle('ph-recovery',rec);panel.classList.toggle('ph-countdown',on&&!!a.countdownKind);panel.classList.toggle('r2',on&&a.round===1);panel.classList.toggle('hr-lost',hrLost)}
+  $('queue')?.classList.toggle('hidden',!on||rec);
+  if(on&&!rec&&$('queueList')){const round=a.round===0?'maximum':'conditioning',plan=a.exercisePlan||[];$('queueRound').textContent=a.round===0?'Round 1 — Maximum Effort':'Round 2 — Conditioning';
+   $('queueList').innerHTML=Pure.EX.map((c,i)=>{const r=a.records.findLast(x=>x.round===round&&x.exercise===c),cur=i===a.ex,m=plan.find(x=>x.category===c),name=(m?.exerciseId&&typeof PureLadder!=='undefined'?PureLadder.byId(m.exerciseId)?.short:null)||m?.name||c;
+    return '<li class="q-'+c.toLowerCase()+(r?' done':cur?' current':' pending')+'"><span>'+escL(c)+'</span><b>'+(r?'✓ '+(r.sideReps?r.sideReps.left+'/'+r.sideReps.right:r.reps):cur?'Now':'')+'</b><small>'+escL(name)+'</small></li>'}).join('')}
+  for(let i=0;i<3;i++)$('station'+i)?.classList.toggle('hero',on&&!rec&&i===a.ex);
+  const mic=$('micDot');if(mic){const ms=speechHooks.micState?.()||{},micOff=!!ms.micOptOut,live=!!(ms.handsFree&&!micOff&&(ms.live||voiceActive));mic.classList.toggle('hidden',!on);mic.classList.toggle('on',live);mic.textContent=micOff?'Mic off':live?'Mic':'Mic …'}
+  $('recoveryRest')?.classList.toggle('hidden',!(rec&&!a.finalRecovery));if($('holdRecovery'))$('holdRecovery').textContent=recoveryHeld?'Release — start Round 2 when ready':'Hold';
+  if($('hrSpark')&&on)$('hrSpark').classList.add('hidden')}
  function renderLiveHr(a){if(typeof PureHR==='undefined')return;const meta=$('liveHrMeta'),spark=$('hrSpark'),cool=$('hrCooldown');
   const samples=(a?.hr||[]).filter(x=>x.source==='bluetooth'),last=samples.at(-1),fresh=last&&now()-Date.parse(last.timestamp)<=15000,max=PureHR.maxHr(db.settings||{});
-  if(meta){const z=fresh&&max?PureHR.zone(last.bpm,max.bpm):null,peak=samples.length?Math.max(...samples.map(x=>x.bpm)):null;meta.textContent=!a||!fresh?'':(z?z.pct+'% max · '+(z.zone?'Zone '+z.zone:'below Zone 1')+' · ':'')+'peak '+peak}
+  if(meta&&release&&a&&!a.workoutEndedAt)meta.textContent='';else if(meta){const z=fresh&&max?PureHR.zone(last.bpm,max.bpm):null,peak=samples.length?Math.max(...samples.map(x=>x.bpm)):null;meta.textContent=!a||!fresh?'':(z?z.pct+'% max · '+(z.zone?'Zone '+z.zone:'below Zone 1')+' · ':'')+'peak '+peak}
   if(spark){const win=samples.filter(x=>now()-Date.parse(x.timestamp)<=180000);spark.classList.toggle('hidden',!a||win.length<2);if(win.length>=2){const lo=Math.min(...win.map(x=>x.bpm),100)-5,hi=Math.max(...win.map(x=>x.bpm),120)+5,t0=now()-180000,X=x=>((Date.parse(x.timestamp)-t0)/180000*300).toFixed(1),Y=b=>(60-(b-lo)/(hi-lo)*60).toFixed(1),th=Y(a.thresholdBpm||110);
    spark.innerHTML='<line x1="0" x2="300" y1="'+th+'" y2="'+th+'" class="hr-spark-th"/><polyline points="'+win.map(x=>X(x)+','+Y(x.bpm)).join(' ')+'" class="hr-spark-line"/>'}}
   if(cool){if(!a?.workoutEndedAt){cool.classList.add('hidden')}else{const sm=PureHR.summary(a,db.settings||{});sm.cooldownLive=PureHR.recovery(a.hr,{started:a.recoveryStarted},a.thresholdBpm||110);hrPanel(cool,sm,null,true)}}}

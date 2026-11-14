@@ -371,7 +371,7 @@ test('release Bluetooth recovery arms at 110, resets at 113, latches one cue and
  assert.equal(r.read('db.active.round'),1);
  assert.equal(r.read('db.active.ex'),0);
  assert.equal(r.read('db.active.recoveries[0].manualOverride'),false);
- assert.deepEqual(r.spoken,['Repetitions recorded. 10. Next: Jump Squats.','Repetitions recorded. 20. Next: Inverted rows.','Repetitions recorded. 8.','Recovery threshold reached. Prepare for the next round.'],'AI Coach speaks each verified save once and the recovery line once');
+ assert.deepEqual(r.spoken,['Repetitions recorded. 10. Next: Jump Squats.','Repetitions recorded. 20. Next: Inverted rows.','Repetitions recorded. 8.','Recovered. Round two. Next: Push-ups.'],'AI Coach speaks each verified save once and the recovery line once');
 });
 
 test('release go cue, single verified rep/final-save cues, and the calm AI Coach lines (owner #115)',()=>{
@@ -480,7 +480,7 @@ test('owner #115 practice guardrails: explicit Practice/Live choice, clear label
  r.confirm(false);r.click('start');assert.equal(r.read('!!db.active'),false,'cancelling the Live question starts nothing');
  r.confirm(true);r.node('practiceMode').checked=true;r.click('start');
  assert.equal(r.read('db.active.practice'),true);assert.equal(r.read('db.active.events.find(e=>/^started/.test(e.event)).mode'),'practice');
- assert.equal(r.node('modeBanner').textContent,'PRACTICE — NOT RECORDED');assert.equal(r.node('end').textContent,'End Practice');assert.equal(r.node('discardLive').textContent,'Abort Practice');
+ assert.equal(r.node('modeBanner').textContent,'PRACTICE · not recorded');assert.equal(r.node('end').textContent,'End Practice');assert.equal(r.node('discardLive').textContent,'Abort Practice');
  assert.notEqual(r.node('end').textContent,'End Workout & Save');
  const again=runtime({release:true,data:r.data});assert.equal(again.read('db.active.practice'),true,'mode is fixed across reload');
  again.node('practiceMode').checked=false;again.read('(render(),1)');assert.equal(again.read('db.active.practice'),true,'unticking the box mid-session cannot switch to live');
@@ -494,7 +494,7 @@ test('owner #115 Discard Workout: live session shows it beside Finish & Save; di
  const r=runtime({release:true});
  r.click('start');for(const n of [10,20,8])r.input('reps',String(n)),r.click('record');r.time(120000);r.tick();r.click('recover');for(const n of [7,14,6])r.input('reps',String(n)),r.click('record');r.click('end');r.click('saveNow');
  assert.equal(r.read('db.history.length'),1);const saved=JSON.stringify(r.read('db.history'));
- r.click('start');assert.equal(r.node('modeBanner').textContent,'LIVE WORKOUT — RECORDED');assert.equal(r.node('end').textContent,'Finish & Save Workout');
+ r.click('start');assert.equal(r.node('modeBanner').textContent,'LIVE');assert.equal(r.node('end').textContent,'Finish & Save Workout');
  assert.equal(r.node('discardLive').classList.contains('hidden'),false);
  r.input('reps','30');r.click('record');
  r.confirm(false);r.node('discardLive').onclick();assert.equal(r.read('!!db.active'),true,'cancel keeps the session');
@@ -623,8 +623,25 @@ test('owner-approved 3-screen UX step (b): final Round 2 count saves automatical
  assert.equal(r.read('db.history.length'),1,'saved automatically');assert.equal(r.read('db.history[0].status'),'complete');
  assert.ok(r.read('!!db.active?.finalRecovery'),'cooldown is the first Results state');
  assert.equal(r.node('finishCooldown').classList.contains('hidden'),false);for(const id of ['end','saveNow','pause','discardLive'])assert.equal(r.node(id).classList.contains('hidden'),true,id+' hidden during cooldown');
- for(let i=0;i<30;i++)feed(100);assert.ok(r.read('!!db.active'),'never auto-finishes at 110');
+ for(let i=0;i<30;i++)feed(101);assert.ok(r.read('!!db.active'),'101 BPM never finishes the cooldown');
  r.click('finishCooldown');assert.equal(r.read('db.active'),null);assert.equal(r.read('db.history.length'),1,'no duplicate');
+});
+test('owner #122: cooldown finishes itself after 5 s at or below 100 BPM; a single dip does not; Results stay; reopen starts on Ready',async()=>{
+ let packet;const ch={addEventListener(n,f){packet=f},removeEventListener(){},async startNotifications(){}};
+ const device={addEventListener(){},removeEventListener(){},gatt:{connected:true,disconnect(){},async connect(){return {async getPrimaryService(){return {async getCharacteristic(){return ch}}}}}}};
+ const r=runtime({release:true,devices:true,bluetooth:{async requestDevice(){return device}}});await r.node('connectHr').onclick();
+ const feed=(bpm,ms=1000)=>{r.time(ms);packet({target:{value:new DataView(Uint8Array.from([0,bpm]).buffer)}});r.tick()};
+ feed(120);r.click('start');for(const n of ['10','20','8']){r.input('reps',n);r.click('record');feed(140)}
+ for(let i=0;i<10;i++)feed(140);for(let i=0;i<8;i++)feed(108);for(let i=0;i<6;i++)feed(120);
+ for(const n of ['7','14','6']){r.input('reps',n);r.click('record');feed(150)}
+ assert.ok(r.read('!!db.active?.finalRecovery'));
+ for(const b of [120,99,115,98,112,104])feed(b);assert.ok(r.read('!!db.active'),'brief dips below 100 do not end it');
+ for(let i=0;i<6;i++)feed(97);
+ assert.equal(r.read('db.active'),null,'auto-finished');assert.equal(r.read('db.history.length'),1);
+ assert.equal(r.read("db.history[0].events.filter(e=>e.event==='cooldown-auto-finished').length"),1);
+ assert.equal(r.node('savedReceipt').classList.contains('hidden'),false,'Results stay visible for review');
+ const reopened=runtime({data:r.data,release:true});assert.equal(reopened.node('savedReceipt').classList.contains('hidden'),true,'a completed workout reopens on Ready');
+ assert.equal(reopened.read('db.history.length'),1);
 });
 test('owner-approved step (c): baseline, live % of max/zone/peak, Results HR panel, and max HR learned from a sustained peak',async()=>{
  let packet;const ch={addEventListener(n,f){packet=f},removeEventListener(){},async startNotifications(){}};
@@ -635,7 +652,7 @@ test('owner-approved step (c): baseline, live % of max/zone/peak, Results HR pan
  for(const b of [72,74,70,73,75,71,73])feed(b);
  r.click('start');assert.deepEqual(r.read('[db.active.hrBaseline.bpm,db.active.hrBaseline.label]'),[73,'pre-workout baseline']);
  for(let i=0;i<6;i++)feed(150);for(let i=0;i<7;i++)feed(180);
- assert.match(r.node('liveHrMeta').textContent,/^106% max · Zone 5 · peak 180$/);
+ assert.equal(r.node('liveHrMeta').textContent,'','#122: no live HR analytics on the Workout screen');assert.deepEqual(r.read('[db.settings.hrMaxObserved?.bpm??null]').length,1);
  for(const n of ['10','20','8']){r.input('reps',n);r.click('record');feed(178)}
  for(let i=0;i<10;i++)feed(140);for(let i=0;i<8;i++)feed(108);for(let i=0;i<6;i++)feed(120);
  for(const n of ['7','14','6']){r.input('reps',n);r.click('record');feed(150)}

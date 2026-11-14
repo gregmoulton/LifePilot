@@ -1,0 +1,140 @@
+/* Ladder v1.0 (Nov 12, 2026): uses the app's existing palette and panel style. */
+.ladder-banner{display:flex;flex-direction:column;gap:2px;margin:6px 0;padding:10px 12px;border:1px solid var(--yellow);border-radius:13px;background:linear-gradient(90deg,rgba(239,202,122,.16),rgba(100,184,255,.10))}
+.ladder-banner strong{color:var(--yellow);letter-spacing:.12em;font-size:12px}
+.ladder-banner span{font-size:14px}
+.ladder-banner button{align-self:flex-start;margin-top:4px;min-height:44px}
+.ladder-block h2{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0 0 8px}
+.ladder-block h2 small{color:var(--muted);font-size:13px;font-weight:500}
+.ladder-list{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px}
+.ladder-list li{display:grid;grid-template-columns:34px 1fr;gap:2px 10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:11px;background:var(--panel2)}
+.ladder-list .rung{grid-row:span 2;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:15px;border:1px solid var(--line);font-weight:700;font-size:13px}
+.ladder-list .name{font-weight:700}
+.ladder-list .meta{color:var(--muted);font-size:13px}
+.ladder-list li.done .rung{border-color:var(--green);color:var(--green)}
+.ladder-list li.current{border:2px solid var(--blue);box-shadow:0 0 18px rgba(100,184,255,.22)}
+.ladder-list li.current .rung{background:var(--blue);color:#06121f;border-color:var(--blue)}
+.ladder-list li.locked{opacity:.62}
+.ladder-list li.elite{border-color:#8a5cc2;background:linear-gradient(90deg,rgba(200,139,255,.12),transparent)}
+.ladder-list li.elite .rung{font-size:9px;letter-spacing:.04em;color:#e3c9ff;border-color:#8a5cc2}
+.ladder-bar{height:8px;border-radius:4px;background:var(--line);overflow:hidden;margin:4px 0 2px}
+.ladder-bar span{display:block;height:8px;border-radius:4px;background:var(--blue)}
+.ladder-tag{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid var(--line);border-radius:6px;color:var(--muted);font-size:11px;font-weight:600;vertical-align:middle}
+.ladder-controls{display:grid;gap:8px;margin-top:8px}
+.ladder-controls button{min-height:44px}
+.exercise-history{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.exercise-history li{padding:8px 10px;border:1px solid var(--line);border-radius:11px;background:var(--panel2)}
+.exercise-history .meta{display:block;color:var(--muted);font-size:13px}
+/* Ladder cards: text wraps (never truncated) and the text column may shrink, so nothing overflows sideways. */
+.station-row[data-exercise]{min-width:0;max-width:100%}
+.station-row[data-exercise] .station-label{flex:1 1 0;min-width:0}
+.station-row[data-exercise] .station-label strong,.station-row[data-exercise] .previous-max,.station-row[data-exercise] [id^=stationVariant]{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+/* Narrow phones (under 370px wide): one step smaller text on ladder cards so each line fits. */
+@media (max-width:370px){.workout-panel .station-row[data-exercise] .station-label strong{font-size:15px}}
+@media (max-width:480px){.workout-panel[data-stage="ready"] .station-row[data-exercise],.workout-panel[data-stage="saved"] .station-row[data-exercise]{padding-top:7px;padding-bottom:7px}}
+.sound-test{display:flex;align-items:center;gap:10px;margin:6px 0}
+.sound-test button{min-height:44px;flex:0 0 auto}
+.sound-test span{color:var(--muted);font-size:13px}
+.grade-panel{margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--panel2)}
+.grade-head{display:flex;align-items:center;gap:12px}
+.grade-letter{display:flex;align-items:center;justify-content:center;width:52px;height:52px;flex:0 0 auto;border-radius:12px;background:var(--blue);color:#06121f;font-size:30px;font-weight:800}
+.grade-letter.none{background:var(--line);color:var(--muted)}
+.grade-parts{margin:8px 0 6px;padding-left:18px;font-size:14px}
+.grade-cardio{margin:6px 0;font-size:14px}
+.grade-note{margin:4px 0 0;color:var(--muted);font-size:12px}
+.sound-levels{display:grid;gap:6px;margin:4px 0 8px}
+.sound-levels label{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:14px}
+.sound-levels output{color:var(--muted);font-size:13px}
+.sound-levels input{grid-column:1/-1;width:100%;min-height:32px}
+.sound-levels select{grid-column:1/-1;width:100%;min-height:44px;font-size:15px}
+.mode-banner{margin:4px 0 6px;padding:8px 10px;border-radius:10px;font-weight:800;letter-spacing:.06em;font-size:14px;text-align:center}
+.mode-banner.practice{background:rgba(239,202,122,.18);border:2px solid var(--yellow);color:var(--yellow)}
+.mode-banner.live{background:rgba(80,200,120,.12);border:2px solid var(--green);color:var(--green)}
+#controls #discardLive{background:#5a1620;border:1px solid #e0485a;color:#ffd6db}
+.workout-panel .station-row.pending{opacity:.55}
+.workout-panel .station-row.completed{border:2px solid #3fbf7f;background:linear-gradient(90deg,rgba(63,191,127,.12),transparent)}
+.workout-panel .station-row.completed .station-label span{color:#7ff0b0;font-weight:800}
+.workout-panel .station-row.current .station-label span{color:#78c4ff;font-weight:800;letter-spacing:.04em}
+.sound-levels .coach-switch{display:flex;align-items:center;gap:10px;min-height:44px}
+.sound-levels .coach-switch input{width:22px;height:22px;min-height:0}
+#coachVoiceOptions{display:grid;gap:6px}
+#coachVoiceOptions.hidden{display:none}
+.pure-tagline{display:block;min-height:16px;margin:2px 0 0;font-size:12px;font-style:italic;letter-spacing:.02em;color:#b8d9f6;transition:opacity .6s ease}
+@media (prefers-reduced-motion:reduce){.pure-tagline{transition:none}}
+.pure-tagline.fading{opacity:0}
+.workout-panel .ready-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+#status:empty{display:none}
+body.session-active #phoneTabs{display:none!important}
+body.session-active main{padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
+.hr-meta{margin-left:8px;color:var(--muted);font-size:13px;font-weight:600}
+.hr-spark{display:block;width:100%;height:60px;margin:6px 0;border:1px solid var(--line);border-radius:10px;background:#07192b}
+.hr-spark.hidden{display:none}.hr-spark-line{fill:none;stroke:#ff5638;stroke-width:2;vector-effect:non-scaling-stroke}.hr-spark-th{stroke:#64b8ff;stroke-dasharray:4 4;stroke-width:1;vector-effect:non-scaling-stroke}
+.hr-panel{margin:10px 0;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--panel2)}.hr-panel h3{margin:0 0 6px;font-size:15px}
+.hr-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}.hr-list li{display:flex;justify-content:space-between;gap:10px;font-size:14px}.hr-list b{text-align:right}.hr-list small{color:var(--muted);font-weight:500}
+.hr-note,.hr-missing{margin:6px 0 0;color:var(--muted);font-size:12px}
+/* ===== Owner #122: minimal Workout screen (release). One hero exercise, compact queue, tiny LIVE + mic. ===== */
+.workout-panel.immersive #pureTagline,.workout-panel.immersive .ready-banner,.workout-panel.immersive #sessionTimer,.workout-panel.immersive #instruction,.workout-panel.immersive #ladderBanner,.workout-panel.immersive #focusCount,.workout-panel.immersive #focusRound,.workout-panel.immersive #liveHrMeta,.workout-panel.immersive #monitorDetails,.workout-panel.immersive #monitorStatus,.workout-panel.immersive #connectHr,.workout-panel.immersive #hrSignalAge,.workout-panel.immersive #readyTip,.workout-panel.immersive #exercise,.workout-panel.immersive #talk,.workout-panel.immersive #stopTalk,.workout-panel.immersive #voiceHint,.workout-panel.immersive #voicePrivacy,.workout-panel.immersive #voiceStatus,.workout-panel.immersive #resumeNotice:empty,.workout-panel.immersive #status{display:none!important}
+.workout-panel.immersive.hr-lost #connectHr{display:inline-flex!important}
+.workout-panel.immersive .station-row:not(.hero),.workout-panel.immersive [id^=stationVariant]{display:none!important}
+.workout-panel.immersive:not(.r2) [id^=stationPrevious]{display:none!important}
+/* Tiny LIVE / PRACTICE pill and mic dot share one quiet row with the BPM */
+.workout-panel.immersive .focus-meta{position:absolute!important;top:6px;right:8px;left:auto;display:flex;align-items:center;gap:8px;margin:0;padding:0;background:transparent;border:0;z-index:3}
+.workout-panel.immersive #modeBanner{position:absolute;top:10px;left:12px;margin:0;padding:3px 9px 3px 20px;border-width:1px;border-radius:999px;font-size:11px;letter-spacing:.12em;z-index:2}
+body .workout-panel.immersive,body.workout-mode .workout-panel.immersive{position:relative;padding-top:42px!important}
+.workout-panel.immersive #repReceipt{display:none!important}
+.workout-panel.immersive.ph-recovery #recovery .hint{display:block!important;font-size:15px;margin:6px 0 0}
+.workout-panel.immersive #modeBanner::before{content:"";position:absolute;left:8px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:currentColor;animation:pure-pulse 1.6s ease-in-out infinite}
+.workout-panel.immersive #modeBanner.practice{font-size:10px;letter-spacing:.06em}
+@keyframes pure-pulse{0%,100%{opacity:1}50%{opacity:.25}}
+#micDot{position:relative;min-height:28px;min-width:28px;padding:3px 10px 3px 22px;border-radius:999px;border:1px solid rgba(255,255,255,.18);background:transparent;color:#9fb2c8;font-size:11px;font-weight:700;letter-spacing:.08em;z-index:2}
+#micDot::before{content:"";position:absolute;left:9px;top:50%;width:7px;height:7px;margin-top:-3.5px;border-radius:50%;background:#5d6b7c}
+#micDot.on{color:#7ff0b0;border-color:rgba(127,240,176,.45)}#micDot.on::before{background:#3fe08a;animation:pure-pulse 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){#micDot.on::before,.workout-panel.immersive #modeBanner::before,.rest-figure{animation:none!important}}
+/* Compact Push / Squat / Pull queue */
+.queue{margin:2px 0 10px}.queue-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+#queueRound{font-size:12px;font-weight:800;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;text-transform:uppercase;color:#cfe3ff;margin:0}
+#editRepsOpen{flex:none;white-space:nowrap;min-height:36px;padding:6px 12px;font-size:13px;border-radius:10px}
+#queueList{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#queueList li{display:flex;flex-direction:column;align-items:center;gap:1px;padding:7px 4px;border-radius:12px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);min-width:0}
+#queueList li span{font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#9fb2c8}
+#queueList li b{font-size:17px;line-height:1.2;min-height:20px;color:#e9f2ff}
+#queueList li small{font-size:10px;color:#7d8da0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#queueList li.done{border-color:rgba(63,191,127,.45)}#queueList li.done b{color:#7ff0b0}
+#queueList li.current{border:2px solid #3fe08a;background:rgba(63,224,138,.12)}#queueList li.current span,#queueList li.current b{color:#7ff0b0}
+#queueList li.pending{opacity:.6}
+/* One large current exercise */
+.workout-panel.immersive .station-row.hero{display:flex;flex-direction:column;align-items:stretch;gap:10px;padding:0 0 14px;border-radius:18px;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%,rgba(80,140,255,.16),rgba(8,14,28,.9) 70%)}
+.workout-panel.immersive .station-row.hero::before{width:100%!important;height:clamp(200px,58vw,300px);align-self:center;background:var(--move-image) center/contain no-repeat}
+.workout-panel.immersive .station-row.hero .station-label{padding:0 16px;text-align:center}
+.workout-panel.immersive .station-row.hero .station-label strong{font-size:clamp(24px,7.4vw,32px);line-height:1.1}
+.workout-panel.immersive .station-row.hero [id^=stationState]{display:none}
+.workout-panel.immersive .station-row.hero .previous-max{font-size:13px;color:#b8c7da;margin-top:4px}
+.workout-panel.immersive .station-row.hero .station-fields{justify-content:center;padding:0 16px}
+.workout-panel.immersive .station-row.hero .station-field>div{gap:14px}
+.workout-panel.immersive .station-row.hero .station-field button{width:56px;height:56px;font-size:26px;border-radius:16px}
+.workout-panel.immersive .station-row.hero .station-field input{width:96px;font-size:44px;font-weight:800;text-align:center}
+/* Live BPM stays prominent */
+.workout-panel.immersive .workout-monitor{margin:0 0 8px}
+.workout-panel.immersive .hr-live-card{justify-content:center}
+/* Actions: Pause visible; Abort / Finish behind ⋯ */
+.workout-panel.immersive #controls{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.workout-panel.immersive #controls:not(.show-more) #discardLive,.workout-panel.immersive #controls:not(.show-more) #saveNow,.workout-panel.immersive #controls:not(.show-more) #end{display:none!important}
+.workout-panel.immersive #controls button{flex:0 1 auto;min-height:44px;padding:8px 16px;font-size:14px}
+#moreActions{min-width:52px;font-size:20px;letter-spacing:.1em}
+.workout-panel:not(.immersive) #moreActions{display:none}
+/* Recovery Interval: rest, BPM, 110 target, elapsed count-up timer, Hold */
+.workout-panel.immersive.ph-recovery #stationRows,.workout-panel.immersive.ph-recovery #voicePanel,.workout-panel.immersive.ph-recovery #recoverySignal,.workout-panel.immersive.ph-recovery #recover{display:none!important}
+.workout-panel.immersive.ph-recovery #recovery{text-align:center;padding:18px 12px;border-radius:18px;background:radial-gradient(100% 70% at 50% 20%,rgba(80,140,255,.14),rgba(8,14,28,.85) 75%)}
+.recovery-rest{display:flex;flex-direction:column;align-items:center;gap:10px}
+.rest-figure{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(120,196,255,.35),rgba(120,196,255,.05) 62%,transparent 70%);animation:pure-breathe 8s ease-in-out infinite}
+@keyframes pure-breathe{0%,100%{transform:scale(.82);opacity:.65}50%{transform:scale(1);opacity:1}}
+.rest-words{margin:0;font-size:15px;letter-spacing:.14em;color:#b8c7da}
+#holdRecovery{min-height:40px;padding:6px 18px;font-size:13px}
+.workout-panel.immersive.ph-recovery #recoveryTime{font-size:clamp(44px,14vw,64px);font-weight:800;margin:8px 0 0;color:#e9f2ff;font-variant-numeric:tabular-nums}
+.workout-panel.immersive.ph-recovery #recovery .hint{font-size:14px;color:#9fb2c8}
+/* Edit Reps overlay */
+.edit-reps{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;background:rgba(2,6,14,.72)}
+.edit-reps.hidden{display:none}
+.edit-reps>div{width:min(520px,100%);max-height:88vh;overflow:auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border-radius:20px 20px 0 0;background:#0d1729;border-top:1px solid rgba(255,255,255,.12)}
+.edit-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.edit-row span{font-size:15px}.edit-row input{width:88px;min-height:44px;font-size:22px;text-align:center}
+#editRepsNote:empty{display:none}

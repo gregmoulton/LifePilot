@@ -348,7 +348,7 @@ if(typeof document!=='undefined'){
    document.body?.classList?.toggle('session-active',!!a);renderLiveHr(a);renderImmersive(a);renderReady(a);showAge();if(a?.phase!=='recovery')recoveryHeld=false;
    $('recover').classList.add('hidden');
    // Step (b): the workout saves itself after the final Round 2 count; the cooldown is ended only by Finish Cooldown.
-   $('end').classList.add('hidden');const cooling=!!a?.workoutEndedAt;$('saveNow').classList.toggle('hidden',!a||cooling);$('pause').classList.toggle('hidden',!a||cooling)
+   $('end').classList.add('hidden');const cooling=!!a?.workoutEndedAt;$('saveNow').classList.toggle('hidden',!a||cooling);$('pause').classList.toggle('hidden',!a||cooling||!!a?.paused)
   $('exercise').textContent=active&&a.phase==='exercise'?'Exercise: '+Pure.current(a).category:'';
   if(a){$('reps').value=a.draft.reps;$('hr').value=a.draft.hr;$('sessionNotes').value=a.userNotes||''}else $('sessionNotes').value='';
   $('sessionNotes').disabled=!active||blocked||dirty;

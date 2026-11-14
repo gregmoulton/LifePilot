@@ -478,7 +478,6 @@ test('owner Nov 12: male voice preferred when the phone offers one',()=>{
 });
 test('owner #115 practice guardrails: explicit Practice/Live choice, clear labels, practice never touches real data, mode survives reload',()=>{
  const r=runtime({release:true});
- r.confirm(false);r.click('start');assert.equal(r.read('!!db.active'),false,'cancelling the Live question starts nothing');
  r.confirm(false);r.click('practiceStart');assert.equal(r.read('!!db.active'),true,'Practice is one tap: no Live question');
  assert.equal(r.read('db.active.practice'),true);assert.equal(r.read('db.active.events.find(e=>/^started/.test(e.event)).mode'),'practice');
  assert.equal(r.node('modeBanner').textContent,'PRACTICE · not recorded');assert.equal(r.node('end').textContent,'End Practice');assert.equal(r.node('discardLive').textContent,'Abort Practice');
@@ -674,7 +673,7 @@ test('owner #122: a bare "push done" or a count without "reps" never saves — i
 test('owner #117 Ready: rung beside each exercise, required equipment listed (never confirmed), NEW only for a newly reached rung, one-tap Practice visible',()=>{
  const r=runtime({release:true,ladder:true});
  assert.equal(r.node('stationVariant0').textContent,'Push · Rung 3');assert.equal(r.node('stationEquip0').textContent,'Needs: Plyo box (feet)');
- assert.equal(r.node('stationEquip1').textContent,'No equipment');assert.match(r.node('stationEquip2').textContent,/^Needs: Waist-height bar or rings$/);
+ assert.equal(r.node('stationEquip1').textContent,'No equipment');assert.equal(r.node('stationEquip2').textContent,'Needs: Gymnastic rings (waist height)');
  assert.equal(r.node('stationNew0').classList.contains('hidden'),true,'starting rungs are not NEW');
  assert.equal(r.node('practiceStart').classList.contains('hidden'),false);assert.equal(r.node('practiceOption').classList.contains('hidden'),true);
  assert.doesNotMatch(r.node('stationVariant0').textContent+r.node('stationVariant1').textContent,/Level|→/,'no combined level, no next-rung arrow');
@@ -686,7 +685,7 @@ test('owner #117: Exercises reorders Push/Squat/Pull; the workout runs and recor
  r.node('reorderList').onclick({target:{closest:()=>({dataset:{moveUp:'2'}})}});r.node('reorderList').onclick({target:{closest:()=>({dataset:{moveUp:'1'}})}});
  r.click('reorderSave');assert.deepEqual(r.read('db.settings.exerciseOrder'),['Pull','Push','Squat']);
  assert.equal(r.node('stationName0').textContent,'Bent-knee rows');
- r.confirm(true);r.click('start');assert.deepEqual(r.read('db.active.exercisePlan.map(m=>m.category)'),['Pull','Push','Squat']);
+ r.confirm(false);r.click('start');assert.equal(r.read('db.active.practice'),false,'Start Workout is Live with no extra question (owner Nov 14)');assert.deepEqual(r.read('db.active.exercisePlan.map(m=>m.category)'),['Pull','Push','Squat']);
  for(const n of ['9','12','20']){r.input('reps',n);r.click('record');r.time(4000);r.tick()}
  assert.deepEqual(r.read("db.active.records.map(x=>x.exercise+':'+x.reps)"),['Pull:9','Push:12','Squat:20']);
 });

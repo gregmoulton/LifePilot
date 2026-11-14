@@ -18,8 +18,8 @@ Generated from `dist/ladder.js` by `tools/exercise-manifest.cjs`; do not edit by
 | `squat-5-bulgarian` | Squat | 5 | Bulgarian split squats | Bench or box (rear foot) | `dist/exercises/squat-5-bulgarian.webp` | Temporary concept crop — needs final art · rung provisional |
 | `squat-6-pistol` | Squat | 6 | Pistol squats | None | `dist/exercises/squat-6-pistol.webp` | Temporary concept crop — needs final art · rung provisional |
 | `squat-elite-weighted-pistol` | Squat | ELITE | Weighted pistol squats | Added weight ⚠ Type of weight not yet chosen by the owner | — | **Missing** — needs owner-approved art · rung provisional |
-| `pull-1-inverted-bent` | Pull | 1 | Inverted rows (Bent-knee) | Waist-height bar or rings ⚠ Owner to confirm: bar or rings | `dist/exercises/pull-1-inverted-bent.webp` | Final (owner-approved) |
-| `pull-2-inverted-straight` | Pull | 2 | Inverted rows (Straight-leg) | Waist-height bar or rings ⚠ Owner to confirm: bar or rings | `dist/exercises/pull-2-inverted-straight.webp` | Temporary concept crop — needs final art |
+| `pull-1-inverted-bent` | Pull | 1 | Inverted rows (Bent-knee) | Gymnastic rings (waist height) | `dist/exercises/pull-1-inverted-bent.webp` | Final (owner-approved) |
+| `pull-2-inverted-straight` | Pull | 2 | Inverted rows (Straight-leg) | Gymnastic rings (waist height) | `dist/exercises/pull-2-inverted-straight.webp` | Temporary concept crop — needs final art |
 | `pull-3-assisted` | Pull | 3 | Assisted pull-ups | Pull-up bar, Assistance (band) ⚠ Assistance type is recorded per workout | — | **Missing** — needs owner-approved art |
 | `pull-4-pullup` | Pull | 4 | Pull-ups | Pull-up bar | `dist/exercises/pull-4-pullup.webp` | Temporary concept crop — needs final art |
 | `pull-5-ring-pullup` | Pull | 5 | Ring pull-ups | Gymnastic rings | — | **Missing** — needs owner-approved art · rung provisional |

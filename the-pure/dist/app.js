@@ -395,7 +395,7 @@ if(typeof document!=='undefined'){
   $('start').onclick=()=>{
    if(db.active||dirty||blocked)return;
    // Owner #115 practice guardrails: an explicit Practice vs Live choice before every start.
-   modeChosen=false;if(release&&!practiceTap)$('practiceMode').checked=false;const viaPractice=practiceTap;practiceTap=false;if(release&&!viaPractice&&!confirm(modeQuestion()))return;modeChosen=true;
+   modeChosen=false;if(release&&!practiceTap)$('practiceMode').checked=false;const viaPractice=practiceTap;practiceTap=false;/* Owner Nov 14: Start Workout = Live, Practice button = Practice; no extra Live question. */modeChosen=true;
    const reading=monitorReading();
    if(!reading){
     $('hrStartGate').classList.remove('hidden');

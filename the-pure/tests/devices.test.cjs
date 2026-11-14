@@ -156,3 +156,9 @@ test('owner #115/#122: voice needs exercise + number + "reps"; corrections likew
  a.deepEqual(c('twelve reps'),{type:'reps',value:12},'parsed, but the app asks for the exercise');
  a.equal(c('pull done banana reps'),null);
 });
+
+test('owner Nov 14: "confirm" and its natural variants are in the on-device grammar and parse as confirm',()=>{
+ const src=require('node:fs').readFileSync(require('node:path').join(__dirname,'../dist/voice-local.js'),'utf8');
+ for(const w of ['confirm','confirmed','yes','keep it','cancel'])a.ok(src.includes("'"+w+"'"),w+' missing from grammar');
+ const D=require('../dist/devices.js');for(const w of ['confirm','confirmed','yes','keep it'])a.deepEqual(D.command(w),{type:'confirm'});
+});

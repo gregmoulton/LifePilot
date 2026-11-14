@@ -138,3 +138,220 @@ body .workout-panel.immersive,body.workout-mode .workout-panel.immersive{positio
 .edit-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)}
 .edit-row span{font-size:15px}.edit-row input{width:88px;min-height:44px;font-size:22px;text-align:center}
 #editRepsNote:empty{display:none}
+/* ===== Owner #117 (Nov 14): Ready screen — three prominent exercise cards in workout order ===== */
+.workout-panel.ready-view .station-fields{display:none!important}
+.workout-panel.ready-view .station-row{display:flex;align-items:center;gap:14px;min-height:112px;padding:10px 12px 10px 10px}
+.workout-panel.ready-view .station-row::before{width:92px!important;height:92px!important;flex:none;border-radius:14px;background:var(--move-image) center/cover no-repeat,#0b1324}
+.workout-panel.ready-view .station-label{display:flex;flex-direction:column;gap:3px;min-width:0}
+.workout-panel.ready-view .station-label strong{font-size:21px;line-height:1.15}
+.workout-panel.ready-view [id^=stationVariant]{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.workout-panel.ready-view .station-row[data-move=Push] [id^=stationVariant]{color:#ff7a5c}
+.workout-panel.ready-view .station-row[data-move=Squat] [id^=stationVariant]{color:#5cf08a}
+.workout-panel.ready-view .station-row[data-move=Pull] [id^=stationVariant]{color:#cf86ff}
+.station-equip{font-size:13px;color:#c9d6e6}
+.workout-panel.ready-view .previous-max{font-size:12.5px;color:#8fa1b6}
+.new-badge{align-self:flex-start;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.14em;color:#04121f;background:#7fe9ff;box-shadow:0 0 12px rgba(127,233,255,.6)}
+.new-badge.hidden{display:none}
+.ready-link{min-height:36px;padding:4px 12px;border-radius:10px;border:1px solid rgba(127,233,255,.35);background:transparent;color:#bfefff;font-size:13px;font-weight:700;letter-spacing:.04em}
+.ready-link.hidden{display:none}
+.ready-sequence{display:flex;align-items:center;justify-content:space-between}
+.ready-chip{display:inline-flex;align-items:center;gap:6px;margin-top:6px;padding:3px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.14);font-size:12px;color:#b8c7da}
+.ready-chip::before{content:"";width:7px;height:7px;border-radius:50%;background:#7fe9ff}
+.ready-chip.warn{color:#ffc9a8;border-color:rgba(255,150,100,.45)}.ready-chip.warn::before{background:#ff8a50}
+.ready-chip.hidden{display:none}
+/* Primary Start: electric cyan neon; Practice: restrained secondary */
+.workout-panel.ready-view #start{box-shadow:0 0 0 1px rgba(127,233,255,.55),0 0 18px rgba(0,200,255,.55),0 0 42px rgba(0,140,255,.35),inset 0 1px 0 rgba(255,255,255,.35)}
+.practice-start{margin-top:8px;min-height:44px;width:100%;background:transparent!important;border:1px solid rgba(255,255,255,.18)!important;color:#c9d6e6!important;font-weight:700}
+.practice-start small{font-weight:500;color:#8fa1b6}
+.practice-start.hidden{display:none}
+/* Exercise order sheet */
+.reorder-list{list-style:none;margin:12px 0;padding:0;display:grid;gap:8px}
+.reorder-list li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.1);border-left:4px solid}
+.reorder-list li.q-push{border-left-color:#FF5638}.reorder-list li.q-squat{border-left-color:#39E66B}.reorder-list li.q-pull{border-left-color:#B64DFF}
+.reorder-list li b{margin-right:6px;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.reorder-btns{display:flex;gap:6px}.reorder-btns button{width:44px;height:44px;border-radius:10px;font-size:16px}
+.workout-panel .practice-start{order:3}
+.workout-panel.ready-view #start{margin-bottom:0}
+@media (max-height:860px){
+ .workout-panel.ready-view .station-row{min-height:90px;gap:12px;padding:7px 10px 7px 8px}
+ .workout-panel.ready-view .station-row::before{width:74px!important;height:74px!important}
+ .workout-panel.ready-view .station-label strong{font-size:18px}
+ .workout-panel.ready-view .station-label{gap:1px}
+ .practice-start{min-height:40px;margin-top:6px}
+}
+@media (max-height:700px){
+ .workout-panel.ready-view .station-row{min-height:78px}
+ .workout-panel.ready-view .station-row::before{width:64px!important;height:64px!important}
+ .workout-panel.ready-view .previous-max{display:none}
+ .workout-panel.ready-view .ready-chip{margin-top:2px;font-size:11px}
+}
+/* Update notice: visible at the top, above everything (owner Nov 14) */
+#pure-update-notice{position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top));z-index:90;padding:10px 14px;border-radius:12px;background:#0b2a44;border:1px solid rgba(127,233,255,.5);color:#dff6ff;font-size:14px;text-align:center;box-shadow:0 6px 24px rgba(0,0,0,.5)}
+/* Sound mix sheet */
+.mix-row{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.mix-row label{display:flex;justify-content:space-between;align-items:baseline;font-size:15px;font-weight:700}
+.mix-row output{font-weight:600;color:#7fe9ff;font-size:13px}
+.mix-ctl{display:flex;align-items:center;gap:10px;margin-top:6px}
+.mix-ctl input[type=range]{flex:1;min-height:44px;accent-color:#2fd3ff}
+.mix-test{width:44px;height:44px;border-radius:12px;border:1px solid rgba(127,233,255,.4);background:transparent;color:#bfefff;font-size:16px}
+.mix-voice{display:block;margin-top:12px}
+.workout-panel.immersive #controls:not(.show-more) #soundOpen{display:none!important}
+.workout-panel:not(.immersive) #soundOpen{display:none}
+/* ===== Ready screen matched to the owner-approved reference 14695.png (issue #73), with the owner's later removals kept
+   (no HIT 1.6 badge, no stats bar, no estimated calories). Scoped to the Ready stage only. ===== */
+.workout-panel.ready-view[data-stage="ready"]{position:relative}
+body .workout-panel.ready-view[data-stage="ready"] .ready-banner{display:block;position:relative;min-height:132px;margin:0 0 4px;padding:18px 0 10px 104px;background:url('ready-athlete.webp') left top/100px auto no-repeat;-webkit-mask-image:none}
+body .workout-panel.ready-view[data-stage="ready"] .ready-banner::after{content:"";position:absolute;left:104px;right:40%;bottom:6px;height:2px;border-radius:2px;background:linear-gradient(90deg,#2fd3ff,rgba(47,211,255,0));box-shadow:0 0 8px #2fd3ff}
+body .workout-panel.ready-view[data-stage="ready"] .ready-banner h2{max-width:8.2em;font-size:clamp(25px,7.6vw,34px);line-height:1.02;font-weight:900;font-style:italic;letter-spacing:-.01em;color:#fff;text-shadow:0 2px 14px rgba(47,211,255,.25)}
+body .workout-panel.ready-view[data-stage="ready"] .pure-tagline{display:block;margin-top:6px;font-size:13px;font-style:italic;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#35d8ff}
+body .workout-panel.ready-view[data-stage="ready"] .ready-chip{margin-top:8px}
+/* HRM: upper-right badge + bright green live BPM pill (only real readings), else a Connect pill */
+body .workout-panel.ready-view[data-stage="ready"] .workout-monitor{position:absolute;top:14px;right:0;z-index:2;display:flex;flex-direction:column;align-items:flex-end;gap:6px;width:auto;max-width:44%;margin:0;padding:0;background:none;border:0;box-shadow:none}
+body .workout-panel.ready-view[data-stage="ready"] #hrPreflight,body .workout-panel.ready-view[data-stage="ready"] #monitorStatus{display:none}
+body .workout-panel.ready-view[data-stage="ready"] #connectHr{min-height:44px;padding:8px 16px;border-radius:999px;background:rgba(10,24,44,.8)!important;border:1px solid rgba(127,233,255,.55)!important;color:#dff6ff!important;font-size:14px;font-weight:800;box-shadow:0 0 14px rgba(47,211,255,.25)}
+body .workout-panel.ready-view[data-stage="ready"] #connectHr::before{content:"ᛒ ";color:#2fd3ff}
+body .workout-panel.ready-view[data-stage="ready"] #monitorDetails summary{font-size:12px;color:#8fd8ff}
+body .workout-panel.ready-view[data-stage="ready"] .hr-live-card{min-width:132px;padding:8px 14px;border-radius:22px;border:2px solid #29e05f;background:rgba(6,30,18,.75);box-shadow:0 0 16px rgba(41,224,95,.45),inset 0 0 12px rgba(41,224,95,.15)}
+body .workout-panel.ready-view[data-stage="ready"] .hr-live-card[data-signal="offline"]{display:none}
+body .workout-panel.ready-view[data-stage="ready"] .hr-live-card .hr-pulse-icon{color:#ff2b3d;font-size:26px}
+body .workout-panel.ready-view[data-stage="ready"] .hr-live-number strong{font-size:28px}
+body .workout-panel.ready-view[data-stage="ready"] .hr-signal-age{color:#3df07a;font-weight:800;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+/* Sequence header */
+body .workout-panel.ready-view[data-stage="ready"] .ready-sequence{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0 6px;font-size:inherit}
+.seq-title{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0;border:0;background:none;color:#fff;font-size:clamp(14px,4.2vw,18px);font-weight:900;font-style:italic;letter-spacing:.02em;text-transform:uppercase}
+.seq-icon{width:24px;height:24px;fill:none;stroke:#2fd3ff;stroke-width:2;stroke-linejoin:round}
+.seq-chev{color:#2fd3ff;font-style:normal;font-size:20px;line-height:1}
+.seq-round{font-size:clamp(13px,3.9vw,17px);font-weight:900;font-style:italic;text-transform:uppercase;color:#fff;white-space:nowrap}.seq-round b{color:#2fd3ff}
+/* Category cards: glowing border + tinted fill, art | divider | name/subtitle | − value + */
+body .workout-panel.ready-view[data-stage="ready"] .station-row{--c:#2fd3ff;display:flex;align-items:center;gap:12px;min-height:96px;margin:0 0 10px;padding:10px 12px 10px 10px;border-radius:18px;border:2px solid var(--c);background:linear-gradient(90deg,color-mix(in srgb,var(--c) 30%,#0a1220),#0b1424 55%);box-shadow:0 0 14px color-mix(in srgb,var(--c) 45%,transparent),inset 0 0 18px color-mix(in srgb,var(--c) 14%,transparent)}
+body .workout-panel.ready-view[data-stage="ready"] .station-row[data-move=Push]{--c:#ff3b2f}
+body .workout-panel.ready-view[data-stage="ready"] .station-row[data-move=Squat]{--c:#2ee65a}
+body .workout-panel.ready-view[data-stage="ready"] .station-row[data-move=Pull]{--c:#c13bff}
+body .workout-panel.ready-view[data-stage="ready"] .station-row::before{width:72px!important;height:72px!important;flex:none;border-radius:12px;border-right:0;background:var(--move-image) center/cover no-repeat,#0b1324;box-shadow:14px 0 0 -12px color-mix(in srgb,var(--c) 70%,transparent)}
+body .workout-panel.ready-view[data-stage="ready"] .station-label{flex:1;min-width:0;padding-left:12px;border-left:1px solid color-mix(in srgb,var(--c) 55%,transparent)}
+body .workout-panel.ready-view[data-stage="ready"] .station-label strong{font-size:clamp(18px,5.4vw,23px);font-weight:800;color:#fff}
+body .workout-panel.ready-view[data-stage="ready"] [id^=stationVariant]{color:var(--c);font-size:11.5px}
+body .workout-panel.ready-view[data-stage="ready"] .station-equip{font-size:13.5px;color:#e4ecf6}
+body .workout-panel.ready-view[data-stage="ready"] .previous-max{display:none}
+body .workout-panel.ready-view[data-stage="ready"] .station-fields{display:flex!important;flex:none}
+body .workout-panel.ready-view[data-stage="ready"] .station-field>div{display:flex;align-items:center;gap:4px}
+body .workout-panel.ready-view[data-stage="ready"] .station-field button{width:38px;height:44px;border-radius:10px;border:1.5px solid rgba(127,233,255,.55);background:rgba(8,20,38,.85);color:#2fd3ff;font-size:24px;font-weight:700;opacity:.9}
+body .workout-panel.ready-view[data-stage="ready"] .station-field button:disabled{opacity:.75}
+body .workout-panel.ready-view[data-stage="ready"] .station-field input{width:34px;font-size:24px;font-weight:800;text-align:center;color:#fff;background:transparent;border:0}
+/* Instruction box with target icon */
+body .workout-panel.ready-view[data-stage="ready"] .ready-tip{display:flex;flex-direction:column;gap:2px;position:relative;margin:4px 0 12px;padding:12px 14px 12px 58px;border-radius:16px;border:1px solid rgba(127,233,255,.3);background:rgba(8,18,34,.7);font-size:14px;color:#fff}
+body .workout-panel.ready-view[data-stage="ready"] .ready-tip::before{content:"";position:absolute;left:14px;top:50%;width:30px;height:30px;margin-top:-15px;border-radius:50%;border:3px solid #2fd3ff;box-shadow:inset 0 0 0 5px #0b1424,inset 0 0 0 9px #2fd3ff}
+.ready-tip b{font-weight:800}.ready-tip i{color:#9fdcff}
+/* Start: dominant electric-blue pill with play icon */
+body .workout-panel.ready-view[data-stage="ready"] #start{min-height:60px;border-radius:30px;font-size:22px;font-weight:800;background:linear-gradient(180deg,#38c6ff,#1167f2)!important;border:2px solid #7fe2ff}
+body .workout-panel.ready-view[data-stage="ready"] #start::before{content:"▶";margin-right:14px;font-size:20px}
+@media (max-width:370px){body .workout-panel.ready-view[data-stage="ready"] .ready-banner{padding-left:86px;background-size:82px auto}body .workout-panel.ready-view[data-stage="ready"] .ready-banner::after{left:86px}body .workout-panel.ready-view[data-stage="ready"] .station-row::before{width:60px!important;height:60px!important}}
+/* 14695 pass 2: title on its own line; tagline + HRM on the second line; silhouette fades into the page */
+body .workout-panel.ready-view[data-stage="ready"] .ready-banner{background:none;min-height:118px;padding:14px 0 12px 100px}
+body .workout-panel.ready-view[data-stage="ready"] .ready-banner::before{content:"";position:absolute;left:-6px;top:-4px;width:108px;height:128px;background:url('ready-athlete.webp') center top/cover no-repeat;-webkit-mask-image:radial-gradient(ellipse 70% 75% at 45% 40%,#000 55%,transparent 100%);mask-image:radial-gradient(ellipse 70% 75% at 45% 40%,#000 55%,transparent 100%)}
+body .workout-panel.ready-view[data-stage="ready"] .ready-banner h2{max-width:none;white-space:nowrap;font-size:clamp(22px,6.6vw,30px)}
+body .workout-panel.ready-view[data-stage="ready"] .ready-banner::after{left:100px;right:46%}
+body .workout-panel.ready-view[data-stage="ready"] .workout-monitor{top:58px;max-width:48%}
+body .workout-panel.ready-view[data-stage="ready"] #connectHr{min-height:44px;padding:6px 14px;font-size:13px}
+body .workout-panel.ready-view[data-stage="ready"] #monitorDetails summary{display:none}
+body .workout-panel.ready-view[data-stage="ready"] .pure-tagline{font-size:12px;margin-top:8px}
+body .workout-panel.ready-view[data-stage="ready"] .ready-chip{font-size:11px;padding:2px 9px}
+body .workout-panel.ready-view[data-stage="ready"] .seq-title{font-size:clamp(13px,3.8vw,16px);white-space:nowrap}
+body .workout-panel.ready-view[data-stage="ready"] .seq-round{font-size:clamp(12px,3.6vw,15px)}
+body .workout-panel.ready-view[data-stage="ready"] [id^=stationVariant]{display:none}
+body .workout-panel.ready-view[data-stage="ready"] .station-label strong{font-size:clamp(17px,5vw,21px);line-height:1.15}
+body .workout-panel.ready-view[data-stage="ready"] .station-row{min-height:86px}
+body .workout-panel.ready-view[data-stage="ready"] .station-row::before{width:64px!important;height:64px!important}
+body .workout-panel.ready-view[data-stage="ready"] .station-equip{margin-top:3px}
+body .workout-panel.ready-view[data-stage="ready"] .ready-tip{order:2}
+body .workout-panel.ready-view[data-stage="ready"] #start{order:3}
+body .workout-panel.ready-view[data-stage="ready"] .practice-start{order:4;min-height:44px;border-radius:22px}
+/* 14695 pass 3: narrow and short phones keep all three cards + Start above the tab bar */
+body .workout-panel.ready-view[data-stage="ready"] .station-equip{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body .workout-panel.ready-view[data-stage="ready"] .station-label strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:440px){
+ body .workout-panel.ready-view[data-stage="ready"] .ready-banner{min-height:112px;padding-left:84px}
+ body .workout-panel.ready-view[data-stage="ready"] .ready-banner::before{width:90px;height:112px}
+ body .workout-panel.ready-view[data-stage="ready"] .ready-banner::after{left:84px}
+ body .workout-panel.ready-view[data-stage="ready"] .ready-chip{position:absolute;left:84px;top:92px;margin:0}
+ body .workout-panel.ready-view[data-stage="ready"] .pure-tagline{font-size:10.5px;letter-spacing:.04em}
+ body .workout-panel.ready-view[data-stage="ready"] .workout-monitor{top:auto;bottom:12px}
+ body .workout-panel.ready-view[data-stage="ready"] #connectHr{min-height:44px;padding:5px 12px;font-size:12.5px}
+ body .workout-panel.ready-view[data-stage="ready"] .station-row{min-height:78px;gap:9px;padding:8px 8px 8px 8px}
+ body .workout-panel.ready-view[data-stage="ready"] .station-row::before{width:56px!important;height:56px!important}
+ body .workout-panel.ready-view[data-stage="ready"] .station-label{padding-left:9px}
+ body .workout-panel.ready-view[data-stage="ready"] .station-label strong{font-size:17px}
+ body .workout-panel.ready-view[data-stage="ready"] .station-equip{font-size:12.5px}
+ body .workout-panel.ready-view[data-stage="ready"] .station-field button{width:32px;height:44px;font-size:20px}
+ body .workout-panel.ready-view[data-stage="ready"] .station-field input{width:22px;font-size:18px}
+ body .workout-panel.ready-view[data-stage="ready"] .ready-tip{padding:9px 12px 9px 50px;font-size:12.5px}
+ body .workout-panel.ready-view[data-stage="ready"] .ready-tip::before{left:11px;width:26px;height:26px;margin-top:-13px}
+ body .workout-panel.ready-view[data-stage="ready"] #start{min-height:54px;font-size:20px}
+}
+@media (max-height:720px){
+ body .workout-panel.ready-view[data-stage="ready"] .ready-tip{display:none}
+ body .workout-panel.ready-view[data-stage="ready"] .ready-banner{min-height:92px;padding-top:8px}
+ body .workout-panel.ready-view[data-stage="ready"] .ready-banner::before{height:96px;width:80px}
+ body .workout-panel.ready-view[data-stage="ready"] .station-row{min-height:72px;margin-bottom:7px}
+ body .workout-panel.ready-view[data-stage="ready"] .station-row::before{width:52px!important;height:52px!important}
+ body .workout-panel.ready-view[data-stage="ready"] .ready-sequence{padding:4px 0 2px}
+}
+@media (max-width:440px){
+ body .workout-panel.ready-view[data-stage="ready"] .workout-monitor{top:86px;bottom:auto}
+ body .workout-panel.ready-view[data-stage="ready"] .ready-banner{min-height:130px}
+ body .workout-panel.ready-view[data-stage="ready"] .ready-banner::after{right:52%}
+ body .workout-panel.ready-view[data-stage="ready"] .station-field input{display:none}
+ body .workout-panel.ready-view[data-stage="ready"] .station-field>div{gap:6px}
+ body .workout-panel.ready-view[data-stage="ready"] .station-label strong{font-size:16.5px}
+}
+@media (max-width:440px) and (max-height:720px){body .workout-panel.ready-view[data-stage="ready"] .ready-chip{top:84px}body .workout-panel.ready-view[data-stage="ready"] .ready-banner{min-height:124px}body .workout-panel.ready-view[data-stage="ready"] .workout-monitor{top:78px}}
+
+@media (max-width:379px){body .workout-panel.ready-view[data-stage="ready"] .ready-chip{display:none}}
+.workout-panel.immersive .ready-sequence,.workout-panel:not(.ready-view) .ready-sequence{display:none!important}
+/* ===== Results (sprint, Nov 14): one title, reps + 70% goal up front, cooldown first while it runs ===== */
+.results-sub{margin:2px 0 0;font-size:13px;color:#9fdcff;text-align:center;letter-spacing:.04em}
+.results-hero h2{margin-bottom:0}
+#savedReceipt.quiet-head #savedTitle,#savedReceipt.quiet-head #savedDetails,#savedReceipt.quiet-head .summary-progress{display:none}
+#savedReceipt.quiet-head .summary-heading{padding-bottom:0;margin-bottom:0}
+#savedReceipt{display:flex;flex-direction:column}
+#savedReceipt .summary-heading{order:0}#savedReceipt #premiumSummary{order:1}#savedReceipt #ladderReceiptBanner{order:2}#savedReceipt #gradePanel{order:3}#savedReceipt #hrResults{order:4}#savedReceipt .summary-details{order:5}#savedReceipt .summary-actions{order:6}
+.results-reps table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.results-reps th,.results-reps td{padding:9px 6px;border-bottom:1px solid rgba(255,255,255,.07);text-align:center;font-size:15px}
+.results-reps thead th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8fa1b6;font-weight:700}
+.results-reps tbody th{text-align:left;font-weight:700;color:#fff;border-left:3px solid #2fd3ff;padding-left:9px}
+.results-reps tbody th small{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
+.results-reps tr.cat-push th{border-left-color:#ff3b2f}.results-reps tr.cat-push th small{color:#ff7a5c}
+.results-reps tr.cat-squat th{border-left-color:#2ee65a}.results-reps tr.cat-squat th small{color:#5cf08a}
+.results-reps tr.cat-pull th{border-left-color:#c13bff}.results-reps tr.cat-pull th small{color:#cf86ff}
+.results-reps td{font-size:20px;font-weight:800;color:#fff}
+.results-reps td.goal-met{color:#3df07a}.results-reps td.goal-miss{color:#ff8a6a}.results-reps td.goal-none,.results-reps td.goal-wait{color:#8fa1b6}
+.results-reps .summary-muted{font-size:12px;margin-top:8px}
+/* Grade card: compact */
+#gradePanel{font-size:14px}#gradePanel li{margin:2px 0}
+/* Cooldown on top while it runs: live BPM, timer + drop, Finish; the full HR table waits for the final Results */
+.workout-panel.ph-cooldown .workout-monitor{order:-3}
+.workout-panel.ph-cooldown #recovery{order:-2;padding:14px;margin-bottom:12px}
+.workout-panel.ph-cooldown #liveCooldownSummary{order:-1}
+.workout-panel.ph-cooldown #hrCooldown,.workout-panel.ph-cooldown #monitorDetails,.workout-panel.ph-cooldown #modeBanner{display:none!important}
+.workout-panel.ph-cooldown #cooldownTime{font-size:clamp(24px,7vw,32px);line-height:1.15;margin:4px 0 8px}
+.workout-panel.ph-cooldown #hrSpark{height:56px}
+.workout-panel.ph-cooldown #finishCooldown{min-height:48px}
+.workout-panel.ph-cooldown #recoveryTime,.workout-panel.ph-cooldown #cooldownTime{font-size:clamp(22px,6.4vw,30px)!important;line-height:1.15}
+/* History + More (sprint): same wordmark header as the Ready screen, no developer text */
+body:not(.workout-mode) .topbar .mobile-brand{display:block;width:150px;height:36px;font-size:0;color:transparent;background:url('ready-wordmark.webp') left center/contain no-repeat}
+body:not(.workout-mode) .topbar .top-label{display:none}
+section[data-view="history"] .page-head .btn,section[data-view="history"]>details{display:none}
+.hist-card{padding:14px 14px 10px}
+.hist-card .result-head h2{font-size:18px}
+.hist-card .badge.ok{background:rgba(61,240,122,.15);color:#7ff0b0;border:1px solid rgba(61,240,122,.4)}
+.hist-meta{margin:4px 0 8px;color:#9fb2c8;font-size:13px}
+.hist-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.hist-table th,.hist-table td{padding:7px 6px;border-bottom:1px solid rgba(255,255,255,.07);text-align:center}
+.hist-table thead th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8fa1b6}
+.hist-table tbody th{text-align:left;font-weight:700;border-left:3px solid #2fd3ff;padding-left:9px;font-size:14px}
+.hist-table tbody th small{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
+.hist-table td{font-size:18px;font-weight:800}
+.hist-table tr.cat-push th{border-left-color:#ff3b2f}.hist-table tr.cat-push th small{color:#ff7a5c}
+.hist-table tr.cat-squat th{border-left-color:#2ee65a}.hist-table tr.cat-squat th small{color:#5cf08a}
+.hist-table tr.cat-pull th{border-left-color:#c13bff}.hist-table tr.cat-pull th small{color:#cf86ff}
+.hist-table td.goal-met{color:#3df07a}.hist-table td.goal-miss{color:#ff8a6a}

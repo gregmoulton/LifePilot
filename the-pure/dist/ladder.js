@@ -11,30 +11,31 @@ const PureLadder=(()=>{
  // Equipment/assistance/load is appended to the variant so each setup keeps its own best.
  const D=(id,category,rung,name,variant,o={})=>Object.freeze({id,category,rung,name,variant,short:o.short||name,
   unilateral:!!o.unilateral,side:category==='Pull'?'arm':'leg',graduate:o.graduate??null,entry:o.entry??null,
-  config:o.config||null,provisional:!!o.provisional,elite:rung==='ELITE',art:id+'.webp'});
+  config:o.config||null,provisional:!!o.provisional,elite:rung==='ELITE',art:id+'.webp',
+  equipment:Object.freeze(o.eq||[]),equipmentPending:o.eqPending||null});
  const P={graduate:15,entry:[8,10]},S2={graduate:30,entry:[15,20]},S1={graduate:15,entry:[8,10],unilateral:true};
  const EXERCISES=Object.freeze([
-  D('push-1-knee-incline','Push',1,'Knee/incline push-ups','',{...P,short:'Knee push-ups'}),
-  D('push-2-standard','Push',2,'Push-ups','Standard',P),
-  D('push-3-decline','Push',3,'Decline push-ups','',P),
-  D('push-4-ring','Push',4,'Ring push-ups','',P),
-  D('push-5-bar-dips','Push',5,'Parallel-bar dips','',{...P,short:'Bar dips'}),
-  D('push-6-ring-dips','Push',6,'Ring dips','',P),
-  D('push-elite-weighted-ring-dips','Push','ELITE','Weighted ring dips','',{config:'load',short:'Weighted dips'}),
-  D('squat-1-chair','Squat',1,'Chair squats','',S2),
-  D('squat-2-bodyweight','Squat',2,'Squats','Bodyweight',S2),
-  D('squat-3-jump','Squat',3,'Jump Squats','Bodyweight',{...S2,short:'Jump squats'}),
-  D('squat-4-step-up','Squat',4,'Step-ups','',{...S1,config:'box'}),
-  D('squat-5-bulgarian','Squat',5,'Bulgarian split squats','',{...S1,provisional:true,short:'Bulgarian squats'}),
-  D('squat-6-pistol','Squat',6,'Pistol squats','',{...S1,provisional:true,short:'Pistols'}),
-  D('squat-elite-weighted-pistol','Squat','ELITE','Weighted pistol squats','',{unilateral:true,config:'load',provisional:true,short:'Weighted pistols'}),
-  D('pull-1-inverted-bent','Pull',1,'Inverted rows','Bent-knee',{...P,short:'Bent-knee rows'}),
-  D('pull-2-inverted-straight','Pull',2,'Inverted rows','Straight-leg',{...P,short:'Straight-leg rows'}),
-  D('pull-3-assisted','Pull',3,'Assisted pull-ups','',{...P,config:'assist'}),
-  D('pull-4-pullup','Pull',4,'Pull-ups','',P),
-  D('pull-5-ring-pullup','Pull',5,'Ring pull-ups','',{...P,provisional:true}),
-  D('pull-6-assisted-archer','Pull',6,'Assisted archer pull-ups','',{...P,unilateral:true,config:'assist',provisional:true,short:'Archer pull-ups'}),
-  D('pull-elite-muscle-up','Pull','ELITE','Bar muscle-ups','Strict',{config:'load',short:'Muscle-ups'})
+  D('push-1-knee-incline','Push',1,'Knee/incline push-ups','',{...P,short:'Knee push-ups',eq:['Bench or box (incline)']}),
+  D('push-2-standard','Push',2,'Push-ups','Standard',{...P,eq:[]}),
+  D('push-3-decline','Push',3,'Decline push-ups','',{...P,eq:['Plyo box (feet)']}),
+  D('push-4-ring','Push',4,'Ring push-ups','',{...P,eq:['Rings']}),
+  D('push-5-bar-dips','Push',5,'Parallel-bar dips','',{...P,short:'Bar dips',eq:['Parallel bars']}),
+  D('push-6-ring-dips','Push',6,'Ring dips','',{...P,eq:['Rings']}),
+  D('push-elite-weighted-ring-dips','Push','ELITE','Weighted ring dips','',{config:'load',short:'Weighted dips',eq:['Rings','Weight vest']}),
+  D('squat-1-chair','Squat',1,'Chair squats','',{...S2,eq:['Chair']}),
+  D('squat-2-bodyweight','Squat',2,'Squats','Bodyweight',{...S2,eq:[]}),
+  D('squat-3-jump','Squat',3,'Jump Squats','Bodyweight',{...S2,short:'Jump squats',eq:[]}),
+  D('squat-4-step-up','Squat',4,'Step-ups','',{...S1,config:'box',eq:['Plyo box']}),
+  D('squat-5-bulgarian','Squat',5,'Bulgarian split squats','',{...S1,provisional:true,short:'Bulgarian squats',eq:['Bench (rear foot)']}),
+  D('squat-6-pistol','Squat',6,'Pistol squats','',{...S1,provisional:true,short:'Pistols',eq:[]}),
+  D('squat-elite-weighted-pistol','Squat','ELITE','Weighted pistol squats','',{unilateral:true,config:'load',provisional:true,short:'Weighted pistols',eq:['Weight vest']}),
+  D('pull-1-inverted-bent','Pull',1,'Inverted rows','Bent-knee',{...P,short:'Bent-knee rows',eq:['Rings, waist height']}),
+  D('pull-2-inverted-straight','Pull',2,'Inverted rows','Straight-leg',{...P,short:'Straight-leg rows',eq:['Rings, waist height']}),
+  D('pull-3-assisted','Pull',3,'Assisted pull-ups','',{...P,config:'assist',eq:['Pull-up bar','Band'],eqPending:'Assistance type is recorded per workout'}),
+  D('pull-4-pullup','Pull',4,'Pull-ups','',{...P,eq:['Pull-up bar']}),
+  D('pull-5-ring-pullup','Pull',5,'Ring pull-ups','',{...P,provisional:true,eq:['Rings']}),
+  D('pull-6-assisted-archer','Pull',6,'Assisted archer pull-ups','',{...P,unilateral:true,config:'assist',provisional:true,short:'Archer pull-ups',eq:['Pull-up bar','Band']}),
+  D('pull-elite-muscle-up','Pull','ELITE','Bar muscle-ups','Strict',{config:'load',short:'Muscle-ups',eq:['Pull-up bar']})
  ]);
  const BY_ID=Object.freeze(Object.fromEntries(EXERCISES.map(x=>[x.id,x])));
  // Owner's starting position (Nov 11–12): decline push-ups and jump squats; pull rung is owner-set.
@@ -63,6 +64,14 @@ const PureLadder=(()=>{
  function moveFor(id,s){const x=byId(id);return {category:x.category,name:x.name,variant:variantFor(x,s),unilateral:x.unilateral,exerciseId:x.id,rung:x.rung,ladderVersion:VERSION}}
  function planFor(s){return CATEGORIES.map(c=>moveFor(s.current[c],s))}
  function art(id){return ART.has(id)?'exercises/'+byId(id).art:null}
+ // Art status for the #121 manifest: final = owner-approved master; temporary = concept-sheet crop; missing = movement fallback.
+ const FINAL=new Set(['push-3-decline','squat-3-jump','pull-1-inverted-bent']);
+ function artStatus(id){return FINAL.has(id)?'final-approved':ART.has(id)?'temporary':'missing'}
+ // Equipment line for the current setup (box height, assistance, load come from recorded setup, never assumed).
+ function equipmentFor(id,s){const x=byId(id);if(!x)return [];const c=s?.config?.[id]||{};return x.equipment.map(e=>e.startsWith('Plyo box')&&BOX.includes(c.boxIn)?e.replace('Plyo box','Plyo box '+c.boxIn+'-in'):e)}
+ // NEW: reached by a graduation or owner change and not yet done in a real (non-practice) workout. Clears itself after the first one.
+ function isNew(id,s,history){const reached=(s?.events||[]).some(e=>(e.type==='graduated'||e.type==='elite-unlocked'||e.type==='owner-set-rung')&&e.to===id);if(!reached)return false;
+  return !(history||[]).some(w=>!w.practice&&w.status==='complete'&&(w.records||[]).some(r=>(r.exerciseId||(w.exercisePlan||[]).find(m=>m.category===r.exercise)?.exerciseId)===id))}
  function goalText(x){return x.graduate?x.graduate+(x.unilateral?' per '+x.side:'')+' clean reps':'add load when ready'}
  function entryText(x){return x.entry?x.entry[0]+'–'+x.entry[1]+(x.unilateral?' per '+x.side:''):''}
 
@@ -93,6 +102,6 @@ const PureLadder=(()=>{
  function confirmAchievement(s,key,now){if(!ACHIEVEMENTS[key])throw Error('Unknown achievement.');if(key==='first-clean-muscle-up'&&!s.unlocked.includes('pull-elite-muscle-up'))throw Error('Graduate Pull rung 6 first.');
   if(s.achievements.some(a=>a.key===key))return s;const st=copy(s);st.achievements.push({key,title:ACHIEVEMENTS[key],at:stamp(now),confirmedBy:'owner'});st.events.push({type:'achievement',key,at:stamp(now)});return st}
  function dismissCelebration(s){if(!s?.celebration)return s;const st=copy(s);st.celebration=null;return st}
- return {VERSION,CATEGORIES,EXERCISES,START,ACHIEVEMENTS,BOX,byId,rungs,next,upTo,fresh,valid,ensure,variantFor,moveFor,planFor,art,goalText,entryText,graduationsIn,sync,setCurrent,setConfig,confirmAchievement,dismissCelebration};
+ return {VERSION,CATEGORIES,EXERCISES,START,ACHIEVEMENTS,BOX,byId,rungs,next,upTo,fresh,valid,ensure,variantFor,moveFor,planFor,art,artStatus,equipmentFor,isNew,goalText,entryText,graduationsIn,sync,setCurrent,setConfig,confirmAchievement,dismissCelebration};
 })();
 if(typeof module!=='undefined')module.exports=PureLadder;

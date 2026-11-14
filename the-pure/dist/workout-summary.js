@@ -10,7 +10,8 @@ const PureSummary=(()=>{
   const total=r=>r.length?r.reduce((n,x)=>n+(x.sideReps?x.sideReps.left+x.sideReps.right:x.reps),0):null;
   const first=round('maximum'),second=round('conditioning');
   const recovery=w.recoveries?.filter(r=>r.kind==='post-workout'&&!r.manualOverride&&!r.readingStale&&Number.isFinite(r.checkpoint?.elapsedMs)).at(-1);
-  const peak=readings.length?Math.max(...readings.map(r=>r.bpm)):null;
+  // Same peak as the Heart rate card (working phases) so the two never disagree.
+  const hrPeak=typeof PureHR!=='undefined'?PureHR.summary(w)?.peak:null;const peak=Number.isFinite(hrPeak)?hrPeak:readings.length?Math.max(...readings.map(r=>r.bpm)):null;
   const avg=readings.length?Math.round(readings.reduce((n,r)=>n+r.bpm,0)/readings.length):null;
   return {start,readings,rounds:[total(first),total(second),total(w.records)],peak,avg,recovery:recovery?time(Math.round(recovery.checkpoint.elapsedMs/1000)):null};
  };
@@ -28,19 +29,21 @@ const PureSummary=(()=>{
   if(!w){el.summaryRecord=null;el.innerHTML='';return;}
   if(el.summaryRecord===w)return;el.summaryRecord=w;
   const d=data(w);
-  const byMove=new Map();for(const r of w.records){const key=r.exercise;const row=byMove.get(key)||{label:r.exerciseName||key,max:'—',cond:'—'};row[r.round==='maximum'?'max':'cond']=r.sideReps?'L '+r.sideReps.left+' / R '+r.sideReps.right:r.reps;byMove.set(key,row);}
-  const rows=[...byMove.values()].map(r=>'<tr><th scope="row">'+safe(r.label)+'</th><td>'+safe(r.max)+'</td><td>'+safe(r.cond)+'</td></tr>').join('');
+  const byMove=new Map();for(const r of w.records){const key=r.exercise;const fl=(w.floors||[]).find(f=>f.exercise===key);const row=byMove.get(key)||{label:r.exerciseName||key,cat:key,max:'—',cond:'—',condN:null,floor:Number.isSafeInteger(fl?.floor)?fl.floor:null};if(r.round==='conditioning'&&!r.sideReps)row.condN=r.reps;row[r.round==='maximum'?'max':'cond']=r.sideReps?'L '+r.sideReps.left+' / R '+r.sideReps.right:r.reps;byMove.set(key,row);}
+  const goalCell=r=>r.floor===null?'<td class="goal-none">—</td>':'<td class="'+(r.condN===null?'goal-wait':r.condN>=r.floor?'goal-met':'goal-miss')+'">'+r.floor+(r.condN===null?'':r.condN>=r.floor?' ✓':' ✗')+'</td>';
+  const rows=[...byMove.values()].map(r=>'<tr class="cat-'+safe(String(r.cat).toLowerCase())+'"><th scope="row"><small>'+safe(r.cat)+'</small>'+safe(r.label)+'</th><td>'+safe(r.max)+'</td><td>'+safe(r.cond)+'</td>'+goalCell(r)+'</tr>').join('');
   const metric=(label,v,unit)=>'<div><span>'+label+'</span><strong>'+(v??'—')+'</strong>'+(v!==null&&unit?' <small>'+unit+'</small>':'')+'</div>';
   const rounds=[firstRound(w,'maximum'),firstRound(w,'conditioning')];
   const between=w.recoveries?.find(r=>r.kind==='between-rounds');
   const duration=Number.isFinite(w.durationSeconds)?time(w.durationSeconds):null;
-  const status=w.status==='complete'?'Workout Complete!':'Workout Results';
+  const status=w.practice?'Practice complete':w.status==='complete'?'Workout Complete':'Workout Results';
+  const sub=w.practice?'Not recorded · nothing saved to history':w.status==='complete'?'Saved on this device':'Partial workout · saved on this device';
   const rowCount=rounds.filter(n=>n===3).length;
   const recoveryLabel=between?(Number.isFinite(between.durationSeconds)?time(between.durationSeconds):'Recorded'):'—';
-  el.innerHTML='<header class="results-hero"><span class="results-check" aria-hidden="true">'+(w.status==='complete'?'✓':'•')+'</span><h2>'+status+'</h2></header>'+
+  el.innerHTML='<header class="results-hero"><span class="results-check" aria-hidden="true">'+(w.status==='complete'?'✓':'•')+'</span><h2>'+status+'</h2><p class="results-sub">'+sub+'</p></header>'+
    '<div class="summary-tiles results-stats">'+metric('♥ Peak HR',d.peak,'BPM')+metric('◷ Total Time',duration,'')+metric('🏆 Rounds',rowCount+' / 2','')+'</div>'+
-   '<section class="summary-card results-overview"><h3><span aria-hidden="true">▥</span> Workout Summary</h3><div class="results-graph">'+graph(d)+'<ul><li>Round 1: '+(rounds[0]===3?'Complete':rounds[0]+' / 3')+'</li><li>Recovery 1: '+recoveryLabel+'</li><li>Round 2: '+(rounds[1]===3?'Complete':rounds[1]+' / 3')+'</li><li>Cooldown: '+(d.recovery??(w.incompleteRecovery?'Incomplete or still recording':'—'))+'</li></ul></div></section>'+
-   '<details class="summary-card"><summary>Exercise performance</summary>'+(rows?'<table><thead><tr><th>Exercise</th><th>Round 1</th><th>Round 2</th></tr></thead><tbody>'+rows+'</tbody></table>':'<p class="summary-muted">No exercise reps recorded.</p>')+'</details>';
+   '<section class="summary-card results-reps"><h3>Your reps</h3>'+(rows?'<table><thead><tr><th>Exercise</th><th>Round 1</th><th>Round 2</th><th>70% goal</th></tr></thead><tbody>'+rows+'</tbody></table><p class="summary-muted">Round 2 goal = 70% of your best Round 1, rounded up. — means no earlier best yet.</p>':'<p class="summary-muted">No exercise reps recorded.</p>')+'</section>'+
+   '<section class="summary-card results-overview"><h3><span aria-hidden="true">▥</span> Workout Summary</h3><div class="results-graph">'+graph(d)+'<ul><li>Round 1: '+(rounds[0]===3?'Complete':rounds[0]+' / 3')+'</li><li>Recovery 1: '+recoveryLabel+'</li><li>Round 2: '+(rounds[1]===3?'Complete':rounds[1]+' / 3')+'</li><li>Cooldown: '+(d.recovery??(w.cooldownRecording?'Recording…':w.incompleteRecovery?'Ended early':'—'))+'</li></ul></div></section>';
 
  }
  return {data,render};

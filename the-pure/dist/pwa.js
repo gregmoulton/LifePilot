@@ -12,6 +12,7 @@
   banner.textContent='The Pure update is ready. It installs automatically after your workout is saved.';
   document.body.appendChild(banner);
  };
+ const updating=()=>{if(document.getElementById('pure-update-notice'))return;const b=document.createElement('aside');b.id='pure-update-notice';b.setAttribute('role','status');b.textContent='Updating The Pure… it reloads by itself in a moment.';document.body.appendChild(b)};
  let reloading=false,waiting=null;
  const apply=()=>{if(!waiting)return;if(busy()){notice();return}waiting.postMessage({type:'SKIP_WAITING'})};
  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading)return;reloading=true;location.reload()});
@@ -22,6 +23,8 @@
    reg.addEventListener('updatefound',()=>{
     const worker=reg.installing;
     if(!worker)return;
+    // Say so while a new version downloads, so an old screen is never mistaken for the latest one.
+    if(navigator.serviceWorker.controller&&!busy())updating();
     worker.addEventListener('statechange',()=>{if(worker.state==='installed')take(worker)});
    });
    // Check for a newer version whenever the app comes back to the screen, and re-try a held update once idle.
